@@ -6,6 +6,7 @@ import {
   Building2,
   Users,
   UserCog,
+  Wallet,
   LogOut,
   X,
   ChevronLeft,
@@ -91,33 +92,13 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
       >
         {/* Logo */}
         <div className={clsx('flex items-center gap-2.5 h-16 border-b border-neutral-200 dark:border-neutral-800 shrink-0', collapsed ? 'lg:justify-center px-2 justify-between px-4' : 'px-5 justify-between')} style={{ background: 'var(--card-bg)' }}>
-          <Link
-            to="/"
-            className={clsx(
-              'group flex items-center gap-3 min-w-0 rounded-2xl transition-all duration-200 active:scale-[0.98]',
-              collapsed && 'lg:hidden'
-            )}
-            title="Go to homepage"
-          >
-            <div className="relative h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-br from-brand-600/15 via-brand-500/10 to-cyan-400/15 p-1.5 ring-1 ring-brand-500/20 shadow-glow transition-all duration-200 group-hover:scale-105 group-hover:ring-brand-500/40">
-              <div className="absolute inset-1 rounded-xl bg-white/70 dark:bg-neutral-950/70 backdrop-blur-sm" />
-              <img
-                src="/android-chrome-192x192.png"
-                alt="HubVault"
-                className="relative h-full w-full object-contain drop-shadow-sm"
-              />
+          <Link to="/" className={clsx('flex items-center gap-2.5 min-w-0 rounded-xl transition active:scale-95', collapsed && 'lg:hidden')} title="Go to homepage">
+            <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 p-2 text-white shadow-glow shrink-0 transition-transform group-hover:scale-105">
+              <Wallet className="h-5 w-5" />
             </div>
-            <div className="min-w-0 leading-none">
-              <div className="flex items-center gap-1.5">
-                <p className="truncate text-[15px] font-extrabold tracking-[-0.035em]">
-                  <span className="text-neutral-900 dark:text-white">Hub</span>
-                  <span className="bg-gradient-to-r from-brand-600 via-violet-500 to-cyan-500 bg-clip-text text-transparent">Vault</span>
-                </p>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.75)]" />
-              </div>
-              <p className="mt-1 truncate text-[9px] font-semibold uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400">
-                Reconciliation Suite
-              </p>
+            <div className="min-w-0">
+              <p className="font-bold text-neutral-900 dark:text-neutral-100 text-sm leading-tight truncate">HubVault</p>
+              <p className="text-[11px] text-neutral-500 leading-tight">Reconciliation Suite</p>
             </div>
           </Link>
           <button onClick={onClose} className="lg:hidden text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition active:scale-90">
@@ -127,18 +108,9 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
             <ChevronLeft className="h-5 w-5" />
           </button>
           {collapsed && (
-            <Link
-              to="/"
-              className="group hidden lg:block rounded-2xl transition active:scale-95"
-              title="Go to homepage"
-            >
-              <div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-brand-600/15 via-brand-500/10 to-cyan-400/15 p-1.5 ring-1 ring-brand-500/20 shadow-glow transition-all duration-200 group-hover:scale-105 group-hover:ring-brand-500/40">
-                <div className="absolute inset-1 rounded-xl bg-white/70 dark:bg-neutral-950/70 backdrop-blur-sm" />
-                <img
-                  src="/android-chrome-192x192.png"
-                  alt="HubVault"
-                  className="relative h-full w-full object-contain drop-shadow-sm"
-                />
+            <Link to="/" className="hidden lg:block rounded-xl transition active:scale-95 hover:shadow-glow" title="Go to homepage">
+              <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 p-2 text-white shadow-glow transition-transform hover:scale-105">
+                <Wallet className="h-5 w-5" />
               </div>
             </Link>
           )}
