@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /contact
+Allow: /faq
+Allow: /privacy
+Allow: /terms
+Allow: /blog
+Disallow: /dashboard
+Disallow: /reports
+Disallow: /hubs
+Disallow: /collectors
+Disallow: /dues
+Disallow: /recovery
+Disallow: /users
+Disallow: /messages
+Disallow: /audit-logs
+Disallow: /login
+
+Sitemap: https://hubvault.in/sitemap.xml

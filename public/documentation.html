@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HubVault — Complete System Documentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #1a1a1a;
+    background: #f8fafc;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .cover {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f4c75 100%);
+    color: white;
+    padding: 80px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+  }
+
+  .cover-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+
+  .cover-logo {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 40px;
+    box-shadow: 0 20px 60px rgba(59,130,246,0.4);
+  }
+
+  .cover h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+  .cover p { font-size: 18px; color: #94a3b8; font-weight: 400; }
+  .cover .version { margin-top: 24px; display: inline-block; padding: 6px 20px; border: 1px solid rgba(255,255,255,0.2); border-radius: 100px; font-size: 13px; color: #cbd5e1; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+  .toc {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 40px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+  }
+
+  .toc h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #0f172a; }
+
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; padding: 6px 0; }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: #3b82f6;
+    font-weight: 700;
+    font-size: 13px;
+    margin-right: 12px;
+  }
+  .toc a { color: #475569; text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .toc a:hover { color: #3b82f6; }
+
+  section { margin-bottom: 48px; }
+
+  h2.section-title {
+    font-size: 28px; font-weight: 700; color: #0f172a;
+    margin-bottom: 8px; letter-spacing: -0.5px;
+    padding-top: 20px;
+    border-top: 2px solid #e2e8f0;
+  }
+
+  h2.section-title .num {
+    display: inline-block;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    text-align: center; line-height: 36px;
+    font-size: 16px;
+    margin-right: 12px;
+  }
+
+  .section-sub { color: #64748b; font-size: 15px; margin-bottom: 24px; }
+
+  p { color: #334155; font-size: 15px; margin-bottom: 14px; }
+
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  @media (max-width: 640px) { .feature-grid { grid-template-columns: 1fr; } }
+
+  .feature-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    transition: box-shadow 0.2s;
+  }
+  .feature-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+  .feature-card .icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 12px;
+  }
+
+  .feature-card h4 { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: #0f172a; }
+  .feature-card p { font-size: 13px; color: #64748b; margin: 0; }
+
+  .role-table, .status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+  }
+
+  .role-table th, .status-table th {
+    background: #f1f5f9;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .role-table td, .status-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .role-table tr:last-child td, .status-table tr:last-child td { border-bottom: none; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-amber { background: #fef3c7; color: #b45309; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-slate { background: #e2e8f0; color: #475569; }
+
+  .callout {
+    border-left: 4px solid #3b82f6;
+    background: #eff6ff;
+    border-radius: 0 12px 12px 0;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .callout-amber { border-color: #f59e0b; background: #fffbeb; }
+  .callout-red { border-color: #ef4444; background: #fef2f2; }
+  .callout-green { border-color: #22c55e; background: #f0fdf4; }
+
+  .callout p { margin: 0; font-size: 14px; }
+  .callout strong { color: #0f172a; }
+
+  .image-block {
+    margin: 24px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+  .image-block img { width: 100%; display: block; }
+  .image-caption { padding: 12px 16px; background: #f8fafc; font-size: 13px; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; }
+
+  .step-list { counter-reset: step; list-style: none; margin: 20px 0; }
+  .step-list li {
+    counter-increment: step;
+    padding: 16px 16px 16px 56px;
+    position: relative;
+    margin-bottom: 8px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+  }
+  .step-list li::before {
+    content: counter(step);
+    position: absolute; left: 16px; top: 16px;
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+    border-radius: 8px;
+    text-align: center; line-height: 28px;
+    font-weight: 700; font-size: 13px;
+  }
+  .step-list li strong { color: #0f172a; }
+  .step-list li p { font-size: 14px; margin: 4px 0 0; color: #64748b; }
+
+  .divider { height: 1px; background: #e2e8f0; margin: 40px 0; }
+
+  .footer {
+    text-align: center;
+    padding: 40px 24px;
+    background: #0f172a;
+    color: #94a3b8;
+  }
+  .footer h3 { color: white; font-size: 20px; margin-bottom: 8px; }
+  .footer p { color: #64748b; font-size: 14px; }
+
+  @media print {
+    .cover { padding: 60px 20px; }
+    .cover h1 { font-size: 32px; }
+    body { background: white; }
+    .container { max-width: 100%; padding: 20px; }
+    section { page-break-inside: avoid; margin-bottom: 24px; }
+    .image-block { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-content">
+    <div class="cover-logo">🏛️</div>
+    <h1>HubVault</h1>
+    <p>Reconciliation Suite — Complete System Documentation</p>
+    <div class="version">Version 1.0 &nbsp;|&nbsp; July 2026</div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#overview">System Overview &amp; Purpose</a></li>
+    <li><a href="#roles">User Roles &amp; Access Levels</a></li>
+    <li><a href="#license">License Generation &amp; Activation System</a></li>
+    <li><a href="#hub">Hub Management &amp; Multi-Hub Access</a></li>
+    <li><a href="#dashboard">Dashboard — Daily Collection &amp; Reconciliation</a></li>
+    <li><a href="#reports">Reports &amp; Analytics</a></li>
+    <li><a href="#dues">Dues &amp; Recovery Management</a></li>
+    <li><a href="#deposits">CMS Deposition (Cash Deposit Tracking)</a></li>
+    <li><a href="#employees">Employee Management</a></li>
+    <li><a href="#users">User &amp; Access Management</a></li>
+    <li><a href="#excel">Excel Import &amp; Export</a></li>
+    <li><a href="#trial">Trial Users &amp; Purchase Requests</a></li>
+    <li><a href="#audit">Audit Logs</a></li>
+    <li><a href="#messages">Contact Messages</a></li>
+    <li><a href="#public">Public Website</a></li>
+    <li><a href="#security">Security &amp; Data Protection</a></li>
+  </ol>
+</div>
+
+<!-- 1. OVERVIEW -->
+<section id="overview">
+  <h2 class="section-title"><span class="num">1</span>System Overview</h2>
+  <p class="section-sub">What HubVault does and why it exists</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Dashboard Overview">
+    <div class="image-caption">HubVault brings all your cash reconciliation into one dashboard</div>
+  </div>
+
+  <p><strong>HubVault</strong> is a cash reconciliation and collection tracking system built for logistics, courier, and delivery companies that handle Cash-on-Delivery (COD) operations across multiple hubs or branches.</p>
+
+  <p>The system tracks the complete cash flow journey: from the moment a field collector returns with cash, through reconciliation against expected amounts, to final deposition at the bank or Cash Management System (CMS). It flags shortages, tracks outstanding dues, manages recovery collection, and provides full audit trails.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background:#dbeafe;color:#1d4ed8;">📊</div>
+      <h4>Daily Reconciliation</h4>
+      <p>Compare expected COD vs actual cash &amp; online collections with automatic gap detection</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#dcfce7;color:#15803d;">🏦</div>
+      <h4>Multi-Hub Support</h4>
+      <p>Manage multiple branches/hubs from a single account with hub switching</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#fef3c7;color:#b45309;">💵</div>
+      <h4>Dues &amp; Recovery</h4>
+      <p>Track outstanding amounts from shortages and record recovery payments</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#ede9fe;color:#6d28d9;">🔐</div>
+      <h4>License System</h4>
+      <p>Secure license-based access control with 24-hour activation window</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p><strong>Key Benefit:</strong> No more spreadsheets or manual tracking. Every rupee is accounted for — from collection to deposition — with a complete audit trail.</p>
+  </div>
+</section>
+
+<!-- 2. ROLES -->
+<section id="roles">
+  <h2 class="section-title"><span class="num">2</span>User Roles &amp; Access Levels</h2>
+  <p class="section-sub">Who can do what in the system</p>
+
+  <p>HubVault has six user roles, each with different access levels. Your role is assigned by the Super Admin when your account is created.</p>
+
+  <table class="role-table">
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Who They Are</th>
+        <th>What They Can Access</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-blue">Super Admin</span></td>
+        <td>System owner / top-level management</td>
+        <td>Everything — all hubs, all users, license management, trial users, messages, purchases, audit logs, Excel import/export</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">Hub Admin</span></td>
+        <td>Branch manager (requires license activation)</td>
+        <td>Dashboard, reports, hub management, employees, dues, deposits, recovery, user management (supervisors &amp; collectors). Can manage multiple hubs if assigned.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-amber">Supervisor</span></td>
+        <td>Team lead at a single hub</td>
+        <td>Dashboard, reports, employees, dues, deposits, recovery, user management (collectors only). Restricted to one hub.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-slate">Collector</span></td>
+        <td>Field employee collecting cash</td>
+        <td>Dashboard (view only) and recovery recording. Limited access.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-slate">Trial User</span></td>
+        <td>Evaluating the system (requires approval)</td>
+        <td>Read-only demo dashboard. Must be approved by Super Admin before login.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-slate">Guest</span></td>
+        <td>Public visitor exploring the demo</td>
+        <td>Read-only demo dashboard with locked features.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-amber">
+    <p><strong>Important:</strong> Only Hub Admins require license activation. All other roles can log in and use the system immediately after account creation.</p>
+  </div>
+</section>
+
+<!-- 3. LICENSE -->
+<section id="license">
+  <h2 class="section-title"><span class="num">3</span>License Generation &amp; Activation System</h2>
+  <p class="section-sub">How license keys work — from generation to activation</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/270408/pexels-photo-270408.jpeg?auto=compress&cs=tinysrgb&w=900" alt="License Security">
+    <div class="image-caption">License keys secure every Hub Admin account</div>
+  </div>
+
+  <p>The license system ensures that only authorized branch managers can access the system. Every Hub Admin account is tied to a unique license key that must be activated within <strong>24 hours</strong> of account creation.</p>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">How It Works — Step by Step</h3>
+
+  <ol class="step-list">
+    <li>
+      <strong>Account Creation by Super Admin</strong>
+      <p>When the Super Admin creates a new Hub Admin account, the system automatically generates a unique 16-character license code in the format <code>XXXX-XXXX-XXXX-XXXX</code>. The code appears on screen for the Super Admin to share with the Hub Admin.</p>
+    </li>
+    <li>
+      <strong>Hub Admin Logs In</strong>
+      <p>The Hub Admin logs in with their email and password. They go straight to the dashboard — an activation popup appears on top of the dashboard with a countdown timer showing the time remaining to activate.</p>
+    </li>
+    <li>
+      <strong>Activation Popup — Two Options</strong>
+      <p>The Hub Admin can either: (a) enter the license code immediately and click "Activate", or (b) click "Skip for now" to dismiss the popup and use the dashboard for the remaining time.</p>
+    </li>
+    <li>
+      <strong>Using Dashboard Without Activation (24-hour grace period)</strong>
+      <p>If the Hub Admin skips activation, a yellow warning banner stays at the top of the dashboard showing the live countdown. They can click "Activate Now" at any time to re-open the activation popup. The dashboard works normally during this period.</p>
+    </li>
+    <li>
+      <strong>24-Hour Deadline Passes — Account Locked</strong>
+      <p>If the Hub Admin does not activate within 24 hours, the account is automatically locked. They are signed out and cannot log back in until the Super Admin generates a new license code.</p>
+    </li>
+    <li>
+      <strong>Super Admin Regenerates License (if needed)</strong>
+      <p>If a license expires or the Hub Admin loses their code, the Super Admin can generate a new one from the License Management page. This creates a fresh code and restarts the 24-hour clock.</p>
+    </li>
+  </ol>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">License Statuses</h3>
+
+  <table class="status-table">
+    <thead>
+      <tr><th>Status</th><th>Meaning</th><th>Dashboard Access</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-amber">Pending</span></td>
+        <td>License generated, not yet activated. 24-hour countdown running.</td>
+        <td>Full access with activation popup &amp; warning banner</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">Activated</span></td>
+        <td>License code entered successfully. Account is permanent.</td>
+        <td>Full access, no restrictions</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">Expired</span></td>
+        <td>24 hours passed without activation. Account is locked.</td>
+        <td>Blocked — cannot log in until new code is issued</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-slate">No Key</span></td>
+        <td>No license key generated yet (rare — only for very old accounts).</td>
+        <td>Super Admin can generate one from License Management</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-amber">
+    <p><strong>For Hub Admins:</strong> You have 24 hours from the moment your account is created to enter your activation code. You can use the dashboard during this time, but if you don't activate before the timer runs out, you will be locked out. Contact your Super Admin immediately if you lose your code.</p>
+  </div>
+
+  <div class="callout callout-green">
+    <p><strong>For Super Admins:</strong> You can view all licenses, generate new codes, and regenerate expired ones from the <strong>License Management</strong> page. The code is shown only once — make sure to copy it and share it securely with the Hub Admin.</p>
+  </div>
+</section>
+
+<!-- 4. HUB -->
+<section id="hub">
+  <h2 class="section-title"><span class="num">4</span>Hub Management &amp; Multi-Hub Access</h2>
+  <p class="section-sub">Managing branches and switching between them</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/417273/pexels-photo-417273.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Warehouse Hub">
+    <div class="image-caption">Each hub represents a physical branch or warehouse location</div>
+  </div>
+
+  <p>A <strong>Hub</strong> represents a physical branch, warehouse, or office location. All data in HubVault — collections, dues, deposits, employees — is organized by hub. Users see only the hubs they are assigned to.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background:#dbeafe;color:#1d4ed8;">🏢</div>
+      <h4>Hub Creation</h4>
+      <p>Super Admins can always create hubs. Hub Admins can create hubs only if granted permission.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#dcfce7;color:#15803d;">🔄</div>
+      <h4>Hub Switching</h4>
+      <p>If you manage multiple hubs, switch between them instantly from the top navigation bar.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#fef3c7;color:#b45309;">📊</div>
+      <h4>"All Hubs" View</h4>
+      <p>Super Admins can view aggregated data across all hubs at once.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#ede9fe;color:#6d28d9;">👥</div>
+      <h4>Multi-Hub Assignment</h4>
+      <p>Hub Admins can be assigned to multiple hubs. Supervisors are restricted to one hub.</p>
+    </div>
+  </div>
+
+  <p>Each hub has a <strong>name</strong>, <strong>code</strong> (short identifier), <strong>location</strong>, and <strong>status</strong> (active or inactive). The hub card shows the number of admins, supervisors, collections, and total amount processed.</p>
+</section>
+
+<!-- 5. DASHBOARD -->
+<section id="dashboard">
+  <h2 class="section-title"><span class="num">5</span>Dashboard — Daily Collection &amp; Reconciliation</h2>
+  <p class="section-sub">The heart of the system — track every rupee collected</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Financial Dashboard">
+    <div class="image-caption">The dashboard shows a complete picture of daily collections</div>
+  </div>
+
+  <p>The Dashboard is the main working screen. It shows the day's collections for the selected hub, with powerful filtering, reconciliation status, and detailed breakdowns.</p>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Key Information at a Glance</h3>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background:#dbeafe;color:#1d4ed8;">💰</div>
+      <h4>5 KPI Cards</h4>
+      <p>Total Expected COD, Total Collection, Cash Collected, Online Collected, and Gap (shortage/excess/on track)</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#dcfce7;color:#15803d;">📋</div>
+      <h4>Reconciliation Rate</h4>
+      <p>Visual progress bar showing what percentage of entries are reconciled vs pending vs shortage vs excess</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#fef3c7;color:#b45309;">👥</div>
+      <h4>Staff Activity Table</h4>
+      <p>See each collector's entries with search by name, employee ID, or phone. Filter by status tabs.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#ede9fe;color:#6d28d9;">🧮</div>
+      <h4>Denomination Breakdown</h4>
+      <p>Every cash entry tracks note counts: ₹500, ₹200, ₹100, ₹50, ₹20, ₹10, ₹5, ₹2, ₹1</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Collection Entry Details</h3>
+
+  <p>Each collection entry records:</p>
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li><strong>Collection Date</strong> — the day the cash was collected</li>
+    <li><strong>Collector</strong> — which field employee collected the cash</li>
+    <li><strong>Expected COD</strong> — the amount that was supposed to be collected</li>
+    <li><strong>Cash Amount</strong> — physical cash collected (with denomination breakdown)</li>
+    <li><strong>Online Amount</strong> — digital payments (UPI, bank transfer, other)</li>
+    <li><strong>Total Collection</strong> — cash + online combined</li>
+    <li><strong>Gap</strong> — difference between total and expected (negative = shortage, positive = excess)</li>
+    <li><strong>Status</strong> — automatically set: Reconciled, Pending, Shortage, or Excess</li>
+    <li><strong>Remarks</strong> — optional notes about the collection</li>
+  </ul>
+
+  <div class="callout">
+    <p><strong>Reconciliation Status Logic:</strong> If the total collection exactly matches the expected COD, the entry is "Reconciled". If less cash was collected than expected, it's a "Shortage". If more was collected, it's "Excess". If the entry is not yet complete, it's "Pending".</p>
+  </div>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Date Navigation</h3>
+  <p>The dashboard has a date toolbar at the top. You can move to the previous or next day, jump to "Today", or pick any date from the calendar. All data on the page updates for the selected date and hub.</p>
+</section>
+
+<!-- 6. REPORTS -->
+<section id="reports">
+  <h2 class="section-title"><span class="num">6</span>Reports &amp; Analytics</h2>
+  <p class="section-sub">Gain insights from your collection data</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/7681091/pexels-photo-7681091.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Reports Analytics">
+    <div class="image-caption">Reports give you trends and performance metrics</div>
+  </div>
+
+  <p>The Reports page provides aggregated analytics across your collection data. It is available to Super Admins, Hub Admins, and Supervisors.</p>
+
+  <p>Reports include collection trends over time, reconciliation rates, top-performing collectors, shortage/excess analysis, dues aging, and recovery performance. All reports are hub-scoped (showing data for the currently selected hub) or show "All Hubs" for Super Admins.</p>
+
+  <p>Reports can also be exported to Excel for offline analysis or sharing with management.</p>
+</section>
+
+<!-- 7. DUES & RECOVERY -->
+<section id="dues">
+  <h2 class="section-title"><span class="num">7</span>Dues &amp; Recovery Management</h2>
+  <p class="section-sub">Track outstanding amounts and collect them back</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/4968391/pexels-photo-4968391.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Money Recovery">
+    <div class="image-caption">Track every outstanding rupee until it's recovered</div>
+  </div>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Dues</h3>
+  <p>When a collector has a shortage (collected less than expected), the shortfall amount becomes a <strong>Due</strong>. The Dues page tracks all outstanding amounts owed by collectors. Each due records:</p>
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li><strong>Original Amount</strong> — the full shortage amount</li>
+    <li><strong>Recovered Amount</strong> — how much has been paid back so far</li>
+    <li><strong>Remaining Amount</strong> — what's still outstanding</li>
+    <li><strong>Due Date</strong> — when the amount became due</li>
+    <li><strong>Status</strong> — Outstanding, Partially Recovered, or Fully Recovered</li>
+  </ul>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Recovery</h3>
+  <p>Recovery records payments made by collectors to clear their dues. Each recovery entry tracks the payment date, amount, payment mode (cash, online, other), reference number, and notes. When a recovery is recorded:</p>
+  <ol style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li>The recovery is logged with full details</li>
+    <li>The parent due's recovered amount increases and remaining amount decreases</li>
+    <li>The due status automatically updates to "Partially Recovered" or "Fully Recovered"</li>
+  </ol>
+
+  <div class="callout callout-green">
+    <p><strong>Recovery access for collectors:</strong> Field collectors can record their own recovery payments directly from the Recovery page, making it easy to update the system as they collect outstanding amounts.</p>
+  </div>
+</section>
+
+<!-- 8. DEPOSITS -->
+<section id="deposits">
+  <h2 class="section-title"><span class="num">8</span>CMS Deposition (Cash Deposit Tracking)</h2>
+  <p class="section-sub">Track cash deposited at the bank or Cash Management System</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/3943723/pexels-photo-3943723.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Bank Deposit">
+    <div class="image-caption">Verify that all collected cash reaches the bank</div>
+  </div>
+
+  <p>After cash is collected and reconciled, it must be deposited at the bank or Cash Management System (CMS). The Deposits page tracks this final step in the cash flow.</p>
+
+  <p>Each deposit entry records:</p>
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li><strong>Deposit Date</strong> — when the cash was deposited</li>
+    <li><strong>Total Cash Collected</strong> — cash collected that day</li>
+    <li><strong>Cash Deposited</strong> — actual amount deposited at CMS/bank</li>
+    <li><strong>Online Amount</strong> — digital payments (no deposit needed)</li>
+    <li><strong>Short Amount</strong> — any shortfall between collected and deposited cash</li>
+    <li><strong>Reference Number</strong> — deposit slip or transaction reference</li>
+    <li><strong>Remarks</strong> — additional notes</li>
+  </ul>
+
+  <div class="callout callout-amber">
+    <p><strong>Why this matters:</strong> The CMS Deposition feature closes the loop. It ensures that the cash collected by field employees actually reaches the bank. Any shortfall between collected cash and deposited cash is immediately flagged.</p>
+  </div>
+</section>
+
+<!-- 9. EMPLOYEES -->
+<section id="employees">
+  <h2 class="section-title"><span class="num">9</span>Employee Management</h2>
+  <p class="section-sub">Manage your field collectors and their records</p>
+
+  <p>The Employees page (called "Collectors" in the system) is where you manage all field staff who collect cash. Each employee record includes their name, employee ID, phone number, and assigned hub.</p>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Employee Profile</h3>
+  <p>Clicking on an employee opens a detailed profile showing:</p>
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li>Today's collection amount</li>
+    <li>Total collection (all time)</li>
+    <li>Total pending dues</li>
+    <li>Total recovered amount</li>
+    <li>Current outstanding due</li>
+    <li>Full history of dues and recoveries</li>
+  </ul>
+
+  <p>You can also record a recovery payment directly from the employee profile — select the due, enter the amount, and save.</p>
+</section>
+
+<!-- 10. USERS -->
+<section id="users">
+  <h2 class="section-title"><span class="num">10</span>User &amp; Access Management</h2>
+  <p class="section-sub">Create and manage system users</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/3184339/pexels-photo-3184339.jpeg?auto=compress&cs=tinysrgb&w=900" alt="User Management">
+    <div class="image-caption">Manage who has access and what they can do</div>
+  </div>
+
+  <p>The Users &amp; Access page is where Super Admins and Hub Admins create and manage system users. Depending on your role, you can create:</p>
+
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li><strong>Super Admin</strong> can create: Hub Admins, Supervisors, Collectors</li>
+    <li><strong>Hub Admin</strong> can create: Supervisors, Collectors (for their hub only)</li>
+    <li><strong>Supervisor</strong> can create: Collectors (for their hub only)</li>
+  </ul>
+
+  <p>When creating a Hub Admin, the system automatically generates a license code (see Section 3). For other roles, no license is needed.</p>
+
+  <p>Additional features on the Users page:</p>
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li><strong>Search &amp; filter</strong> users by name, email, or role</li>
+    <li><strong>Edit</strong> user details, role, and hub assignments</li>
+    <li><strong>Reset password</strong> for any user</li>
+    <li><strong>View license</strong> for Hub Admins (key icon)</li>
+    <li><strong>Delete</strong> users (Super Admin only, with confirmation)</li>
+    <li><strong>Assign multiple hubs</strong> to Hub Admins</li>
+  </ul>
+</section>
+
+<!-- 11. EXCEL -->
+<section id="excel">
+  <h2 class="section-title"><span class="num">11</span>Excel Import &amp; Export</h2>
+  <p class="section-sub">Bulk data entry and offline reporting</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/590016/pexels-photo-590016.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Excel Spreadsheet">
+    <div class="image-caption">Import and export collection data in Excel format</div>
+  </div>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Export to Excel</h3>
+  <p>From the Dashboard, you can export all collection entries for the current date and hub to an Excel file (.xlsx). The export includes all fields: collector name, expected COD, cash amount, online amount, total, gap, status, denominations, and remarks. The filename includes the date and hub code for easy identification.</p>
+
+  <h3 style="font-size:20px;font-weight:600;margin:24px 0 12px;color:#0f172a;">Import from Excel</h3>
+  <p>Managers (Super Admins, Hub Admins, and Supervisors) can bulk-import collection entries via an Excel file. This is useful for entering historical data or when multiple entries need to be added at once. The import validates the data and creates entries in the system.</p>
+
+  <div class="callout">
+    <p><strong>Tip:</strong> Use the Export function first to get a template with the correct column structure, then fill in new data and use Import to add entries in bulk.</p>
+  </div>
+</section>
+
+<!-- 12. TRIAL & PURCHASES -->
+<section id="trial">
+  <h2 class="section-title"><span class="num">12</span>Trial Users &amp; Purchase Requests</h2>
+  <p class="section-sub">Managing leads and trial accounts</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background:#dbeafe;color:#1d4ed8;">👤</div>
+      <h4>Trial Users</h4>
+      <p>Visitors can sign up for a trial account from the public website. Trial accounts require Super Admin approval before they can log in. Once approved, they get read-only access to a demo dashboard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#dcfce7;color:#15803d;">🛒</div>
+      <h4>Purchase Requests</h4>
+      <p>When someone wants to buy the system, their request appears here. The Super Admin can track each request through the pipeline: Pending → Contacted → Completed or Rejected.</p>
+    </div>
+  </div>
+
+  <p>Both features are only accessible to the Super Admin.</p>
+</section>
+
+<!-- 13. AUDIT LOGS -->
+<section id="audit">
+  <h2 class="section-title"><span class="num">13</span>Audit Logs</h2>
+  <p class="section-sub">A complete record of who did what, and when</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/546819/pexels-photo-546819.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Audit Security">
+    <div class="image-caption">Every important action is logged for accountability</div>
+  </div>
+
+  <p>The Audit Logs page (Super Admin only) provides a complete trail of all important actions in the system. Every time a user creates, updates, or deletes something significant, an audit log entry is created recording:</p>
+
+  <ul style="margin:12px 0 12px 24px;color:#334155;font-size:14px;">
+    <li><strong>Action</strong> — what was done (e.g., "Hub Created", "User Updated", "License Regenerated")</li>
+    <li><strong>Performed By</strong> — which user did it</li>
+    <li><strong>Target</strong> — which user or hub was affected</li>
+    <li><strong>Details</strong> — a human-readable description of the action</li>
+    <li><strong>Timestamp</strong> — when the action occurred</li>
+  </ul>
+
+  <div class="callout callout-green">
+    <p><strong>Why this matters:</strong> Audit logs provide full accountability. If there's ever a dispute or discrepancy, you can trace exactly who made which change and when.</p>
+  </div>
+</section>
+
+<!-- 14. MESSAGES -->
+<section id="messages">
+  <h2 class="section-title"><span class="num">14</span>Contact Messages</h2>
+  <p class="section-sub">Messages from the public contact form</p>
+
+  <p>When a visitor fills out the contact form on the public website, their message appears in the Messages page (Super Admin only). Each message includes the sender's name, email, phone, company, subject, and message body. Unread messages are highlighted, and the Super Admin can mark them as read.</p>
+</section>
+
+<!-- 15. PUBLIC WEBSITE -->
+<section id="public">
+  <h2 class="section-title"><span class="num">15</span>Public Website</h2>
+  <p class="section-sub">Marketing pages visible to everyone</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/196645/pexels-photo-196645.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Website">
+    <div class="image-caption">The public website showcases your product to potential customers</div>
+  </div>
+
+  <p>HubVault includes a complete public website with the following pages:</p>
+
+  <table class="role-table">
+    <thead><tr><th>Page</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Home</strong></td><td>Landing page with features, benefits, and call-to-action</td></tr>
+      <tr><td><strong>About</strong></td><td>Company and product information</td></tr>
+      <tr><td><strong>Contact</strong></td><td>Contact form — messages go to Super Admin's Messages page</td></tr>
+      <tr><td><strong>FAQ</strong></td><td>Frequently asked questions</td></tr>
+      <tr><td><strong>Blog</strong></td><td>Blog listing and individual blog posts</td></tr>
+      <tr><td><strong>Trial Signup</strong></td><td>Registration form for trial accounts</td></tr>
+      <tr><td><strong>Privacy Policy</strong></td><td>Privacy policy page</td></tr>
+      <tr><td><strong>Terms of Service</strong></td><td>Terms and conditions page</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 16. SECURITY -->
+<section id="security">
+  <h2 class="section-title"><span class="num">16</span>Security &amp; Data Protection</h2>
+  <p class="section-sub">How your data is kept safe</p>
+
+  <div class="image-block">
+    <img src="https://images.pexels.com/photos/60504/security-protection-anti-virus-software-60504.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Security">
+    <div class="image-caption">Bank-grade security protects your data</div>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background:#dbeafe;color:#1d4ed8;">🔐</div>
+      <h4>Row-Level Security</h4>
+      <p>Every database table has row-level security enabled — users can only see and modify data for their assigned hubs.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#dcfce7;color:#15803d;">🔑</div>
+      <h4>License-Based Access</h4>
+      <p>Hub Admin accounts require license activation within 24 hours, preventing unauthorized access.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#fef3c7;color:#b45309;">📝</div>
+      <h4>Full Audit Trail</h4>
+      <p>Every significant action is logged with user, timestamp, and details — no change goes unrecorded.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background:#ede9fe;color:#6d28d9;">🎭</div>
+      <h4>Role-Based Access</h4>
+      <p>Six distinct roles ensure users only see features and data relevant to their job function.</p>
+    </div>
+  </div>
+
+  <div class="callout callout-green">
+    <p><strong>Your data is safe:</strong> All data is stored in a secure PostgreSQL database with encryption at rest. Authentication is handled by Supabase Auth with industry-standard JWT tokens. Passwords are never stored in plain text.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <h3>HubVault — Reconciliation Suite</h3>
+  <p>This document provides a complete overview of the HubVault system.</p>
+  <p style="margin-top:8px;">For technical support or questions, contact your system administrator.</p>
+  <p style="margin-top:16px;font-size:12px;color:#475569;">© 2026 HubVault. All rights reserved. | Version 1.0 | July 2026</p>
+</div>
+
+</div>
+
+</body>
+</html>
