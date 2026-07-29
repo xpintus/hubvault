@@ -6,7 +6,6 @@ import {
   Building2,
   Users,
   UserCog,
-  Wallet,
   LogOut,
   X,
   ChevronLeft,
@@ -93,8 +92,12 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
         {/* Logo */}
         <div className={clsx('flex items-center gap-2.5 h-16 border-b border-neutral-200 dark:border-neutral-800 shrink-0', collapsed ? 'lg:justify-center px-2 justify-between px-4' : 'px-5 justify-between')} style={{ background: 'var(--card-bg)' }}>
           <Link to="/" className={clsx('flex items-center gap-2.5 min-w-0 rounded-xl transition active:scale-95', collapsed && 'lg:hidden')} title="Go to homepage">
-            <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 p-2 text-white shadow-glow shrink-0 transition-transform group-hover:scale-105">
-              <Wallet className="h-5 w-5" />
+            <div className="rounded-xl p-0 shrink-0 transition-transform group-hover:scale-105">
+              <img
+                  src="/android-chrome-192x192.png"
+                  alt="HubVault"
+                  className="h-8 w-8 object-contain"
+                />
             </div>
             <div className="min-w-0">
               <p className="font-bold text-neutral-900 dark:text-neutral-100 text-sm leading-tight truncate">HubVault</p>
@@ -109,8 +112,12 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
           </button>
           {collapsed && (
             <Link to="/" className="hidden lg:block rounded-xl transition active:scale-95 hover:shadow-glow" title="Go to homepage">
-              <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 p-2 text-white shadow-glow transition-transform hover:scale-105">
-                <Wallet className="h-5 w-5" />
+              <div className="rounded-xl p-0 transition-transform hover:scale-105">
+                <img
+                  src="/android-chrome-192x192.png"
+                  alt="HubVault"
+                  className="h-8 w-8 object-contain"
+                />
               </div>
             </Link>
           )}
