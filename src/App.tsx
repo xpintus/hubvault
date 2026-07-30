@@ -25,6 +25,7 @@ import BlogList from '@/pages/public/BlogList';
 import BlogPost from '@/pages/public/BlogPost';
 import TrialSignup from '@/pages/public/TrialSignup';
 import BuyNow from '@/pages/public/BuyNow';
+import PaymentPage from '@/pages/PaymentPage';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const ActivateLicense = lazy(() => import('@/pages/ActivateLicense'));
@@ -103,6 +104,7 @@ export default function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/trial-signup" element={<TrialSignup />} />
                   <Route path="/buy-now" element={<BuyNow />} />
+                  <Route path="/payment" element={<PaymentPage />} />
                   <Route path="/faq" element={<FAQ />} />
                   <Route path="/privacy" element={<Privacy />} />
                   <Route path="/terms" element={<Terms />} />
