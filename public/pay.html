@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <meta name="theme-color" content="#2563eb" />
+
+  <title>Pay ₹999 | HubVault</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 14px;
+      background:
+        linear-gradient(
+          135deg,
+          #eff6ff 0%,
+          #f8fafc 45%,
+          #ecfdf5 100%
+        );
+      font-family: Arial, Helvetica, sans-serif;
+      color: #334155;
+    }
+
+    .payment-card {
+      width: 100%;
+      max-width: 460px;
+      margin: 20px auto;
+      overflow: hidden;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+    }
+
+    .header {
+      padding: 28px 24px 22px;
+      text-align: center;
+      background:
+        linear-gradient(
+          135deg,
+          #eff6ff,
+          #ffffff
+        );
+    }
+
+    .logo {
+      display: block;
+      width: 210px;
+      max-width: 82%;
+      height: auto;
+      margin: 0 auto 18px;
+    }
+
+    .header h1 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 27px;
+      line-height: 1.25;
+    }
+
+    .header p {
+      margin: 10px 0 0;
+      color: #64748b;
+      font-size: 15px;
+      line-height: 24px;
+    }
+
+    .content {
+      padding: 26px 24px 30px;
+    }
+
+    .amount-box {
+      padding: 22px;
+      text-align: center;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 16px;
+    }
+
+    .amount-label {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .amount {
+      margin-top: 5px;
+      color: #16a34a;
+      font-size: 44px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .plan-name {
+      margin-top: 5px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .upi-section {
+      margin-top: 22px;
+    }
+
+    .section-label {
+      margin-bottom: 8px;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .upi-id-box {
+      padding: 15px 12px;
+      text-align: center;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      color: #1d4ed8;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 24px;
+      word-break: break-all;
+    }
+
+    .pay-button {
+      display: block;
+      width: 100%;
+      margin-top: 22px;
+      padding: 17px 18px;
+      border: 0;
+      border-radius: 13px;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+      transition:
+        transform 0.2s ease,
+        background 0.2s ease;
+    }
+
+    .pay-button:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .pay-button:active {
+      transform: translateY(1px);
+    }
+
+    .message {
+      min-height: 22px;
+      margin: 12px 0 0;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 21px;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 26px 0;
+      background: #e2e8f0;
+    }
+
+    .qr-title {
+      margin: 0;
+      text-align: center;
+      color: #0f172a;
+      font-size: 18px;
+    }
+
+    .qr-text {
+      margin: 8px 0 18px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 22px;
+    }
+
+    .qr-wrapper {
+      text-align: center;
+    }
+
+    .qr-image {
+      display: inline-block;
+      width: 230px;
+      max-width: 85%;
+      height: auto;
+      padding: 8px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+    }
+
+    .steps {
+      margin-top: 26px;
+      padding: 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+    }
+
+    .steps h3 {
+      margin: 0 0 12px;
+      color: #0f172a;
+      font-size: 16px;
+    }
+
+    .steps p {
+      margin: 8px 0;
+      color: #475569;
+      font-size: 14px;
+      line-height: 22px;
+    }
+
+    .support {
+      margin-top: 22px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 21px;
+    }
+
+    .support a {
+      color: #2563eb;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .footer {
+      padding: 20px;
+      background: #0f172a;
+      text-align: center;
+      color: #cbd5e1;
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .footer strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffffff;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 12px;
+      }
+
+      .payment-card {
+        margin: 8px auto;
+        border-radius: 18px;
+      }
+
+      .header {
+        padding: 24px 18px 20px;
+      }
+
+      .content {
+        padding: 22px 18px 26px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .amount {
+        font-size: 40px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="payment-card">
+
+    <section class="header">
+      <img
+        src="/logo.png"
+        alt="HubVault"
+        class="logo"
+      />
+
+      <h1>Complete Your Payment</h1>
+
+      <p>
+        Pay securely using any supported UPI application.
+      </p>
+    </section>
+
+    <section class="content">
+
+      <div class="amount-box">
+        <div class="amount-label">
+          Total Payable Amount
+        </div>
+
+        <div class="amount">
+          ₹999
+        </div>
+
+        <div class="plan-name">
+          HubVault License Activation
+        </div>
+      </div>
+
+      <div class="upi-section">
+        <div class="section-label">
+          UPI ID
+        </div>
+
+        <div class="upi-id-box">
+          BHARATPE09899107906@yesbankltd
+        </div>
+      </div>
+
+      <button
+        id="payButton"
+        class="pay-button"
+        type="button"
+      >
+        Pay ₹999 via UPI
+      </button>
+
+      <p
+        id="paymentMessage"
+        class="message"
+      >
+        Tap the button on your mobile device to open a UPI application.
+      </p>
+
+      <div class="divider"></div>
+
+      <h2 class="qr-title">
+        Scan and Pay
+      </h2>
+
+      <p class="qr-text">
+        You can also scan the QR code using Google Pay, PhonePe,
+        Paytm, BHIM, or another UPI application.
+      </p>
+
+      <div class="qr-wrapper">
+        <img
+          src="/ChatGPT_Image_Jul_28,_2026,_11_30_59_PM.png"
+          alt="HubVault Payment QR Code"
+          class="qr-image"
+        />
+      </div>
+
+      <div class="steps">
+        <h3>After Payment</h3>
+
+        <p>
+          1. Take a screenshot of the successful payment.
+        </p>
+
+        <p>
+          2. Reply to the payment email with the screenshot or UTR number.
+        </p>
+
+        <p>
+          3. Your HubVault license code will be issued after verification.
+        </p>
+      </div>
+
+      <div class="support">
+        Need help?
+        <a href="mailto:billing@hubvault.in">
+          Contact HubVault Billing
+        </a>
+      </div>
+
+    </section>
+
+    <footer class="footer">
+      <strong>
+        Smarter Collections. Stronger Control.
+      </strong>
+
+      © 2026 HubVault. All Rights Reserved.
+    </footer>
+
+  </main>
+
+  <script>
+    const UPI_ID =
+      'BHARATPE09899107906@yesbankltd';
+
+    const PAYEE_NAME =
+      'HubVault Billing';
+
+    const PAYMENT_AMOUNT =
+      '999.00';
+
+    const TRANSACTION_NOTE =
+      'HubVault License Payment';
+
+    const upiUrl =
+      'upi://pay' +
+      '?pa=' + encodeURIComponent(UPI_ID) +
+      '&pn=' + encodeURIComponent(PAYEE_NAME) +
+      '&am=' + encodeURIComponent(PAYMENT_AMOUNT) +
+      '&cu=INR' +
+      '&tn=' + encodeURIComponent(TRANSACTION_NOTE);
+
+    const payButton =
+      document.getElementById('payButton');
+
+    const paymentMessage =
+      document.getElementById('paymentMessage');
+
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod/i.test(
+        navigator.userAgent
+      );
+    }
+
+    payButton.addEventListener(
+      'click',
+      function () {
+        if (!isMobileDevice()) {
+          paymentMessage.textContent =
+            'UPI applications open only on supported mobile devices. Please scan the QR code using your phone.';
+
+          return;
+        }
+
+        paymentMessage.textContent =
+          'Opening your UPI application...';
+
+        window.location.href = upiUrl;
+
+        setTimeout(function () {
+          paymentMessage.textContent =
+            'If the UPI application did not open, please scan the QR code or enter the UPI ID manually.';
+        }, 2500);
+      }
+    );
+  </script>
+</body>
+</html>
