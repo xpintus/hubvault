@@ -118,7 +118,7 @@ export default async function handler(req, res) {
           reply_to: 'billing@hubvault.in',
 
           subject:
-            'Complete ₹999 Payment to Activate Your HubVault License 🚀',
+            '🎉 Your HubVault Purchase Request Has Been Received – Complete ₹999 Payment to Activate Your HubVault License 🚀',
 
           html: `
 <!DOCTYPE html>
