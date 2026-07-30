@@ -72,7 +72,7 @@ export default async function handler(req, res) {
         from: 'HubVault <billing@hubvault.in>',
         to: [email],
         reply_to: 'billing@hubvault.in',
-        subject: 'Complete Your HubVault Payment',
+        subject: '🎉 Your HubVault Purchase Request Has Been Received – Complete Your Payment',
         html: `<!doctype html>
 <html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#334155">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:24px 10px"><tr><td align="center">
