@@ -25,6 +25,7 @@ export default function Purchases() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | PurchaseStatus>('all');
   const [selected, setSelected] = useState<PurchaseRequest | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,6 +82,46 @@ export default function Purchases() {
     setSelected((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
     toast.success(`Marked as ${PURCHASE_STATUS_LABELS[status]}`);
   }, [toast]);
+
+  const sendPaymentEmail = useCallback(async (request: PurchaseRequest) => {
+    setSendingEmail(true);
+    try {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Please log in again');
+
+      const response = await fetch('/api/send-payment-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: request.name,
+          email: request.email,
+          phone: request.phone,
+          company: request.company,
+          date: formatDateTime(request.created_at),
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.message || 'Email could not be sent');
+      }
+
+      toast.success(`Payment email sent to ${request.email}`);
+      if (request.status === 'pending') {
+        await updateStatus(request.id, 'contacted');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Email could not be sent');
+    } finally {
+      setSendingEmail(false);
+    }
+  }, [toast, updateStatus]);
 
   const handleDelete = async (id: string) => {
     const ok = await confirm({
@@ -187,6 +228,15 @@ export default function Purchases() {
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => sendPaymentEmail(selected)}
+                disabled={sendingEmail}
+              >
+                <Mail className="h-4 w-4" />
+                {sendingEmail ? 'Sending…' : 'Send Payment Email'}
+              </Button>
               <a href={`mailto:${selected.email}?subject=HubVault Lifetime License — Payment Options`}>
                 <Button variant="outline" size="md">
                   <Mail className="h-4 w-4" />
