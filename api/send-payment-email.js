@@ -83,9 +83,10 @@ export default async function handler(req, res) {
 <h2 style="margin:0 0 18px;color:#1d4ed8">Hi ${safeName},</h2>
 <p style="font-size:16px;line-height:1.7">Thank you for choosing <strong>HubVault</strong>. We received your purchase request. Complete the payment below to receive your License Code.</p>
 <div style="margin:22px 0;padding:18px;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;line-height:1.9">
-<strong>Purchase Details</strong><br>Name: ${safeName}<br>Email: ${safeEmail}<br>Mobile: ${safePhone}<br>Company/Hub: ${safeCompany}<br>Date: ${safeDate}
+<strong>Purchase Details</strong><br>👤 <b>Name:</b> ${safeName}<br>📧 <b>Email:</b> ${safeEmail}<br>📱 <b>Mobile:</b> ${safePhone}<br>🏢<b>Company/Hub:</b> ${safeCompany}<br>📅 <b>Date:</b> ${safeDate}
 </div>
-<h3 style="color:#1d4ed8">Payment Details</h3>
+<h3 style="color:#1d4ed8">💳 Complete Your Payment</h3>
+<p Please pay using the UPI ID below or scan the QR Code.</p>
 <div style="padding:18px;text-align:center;background:#eff6ff;border-radius:12px"><small>UPI ID</small><br><strong style="font-size:18px;color:#1d4ed8;word-break:break-all">BHARATPE09899107906@yesbankltd</strong></div>
 <div style="text-align:center;margin:24px 0"><img src="https://hubvault.in/ChatGPT_Image_Jul_28,_2026,_11_30_59_PM.png" width="220" alt="Payment QR" style="max-width:100%;border-radius:12px;border:1px solid #e2e8f0"></div>
 <p style="font-size:16px;line-height:1.8">After payment, reply with the payment screenshot or UTR number. After verification, your HubVault License Code will be emailed to you.</p>
