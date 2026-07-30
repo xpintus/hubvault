@@ -69,9 +69,9 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'HubVault <support@hubvault.in>',
+        from: 'HubVault <billing@hubvault.in>',
         to: [email],
-        reply_to: 'support@hubvault.in',
+        reply_to: 'billing@hubvault.in',
         subject: 'Complete Your HubVault Payment',
         html: `<!doctype html>
 <html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#334155">
