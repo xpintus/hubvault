@@ -41,7 +41,7 @@ export default function Hubs() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      let q = supabase.from('hubs').select('*, creator: profiles!hubs_created_by_fkey(*)').order('name');
+      const q = supabase.from('hubs').select('*, creator: profiles!hubs_created_by_fkey(*)').order('name');
       const { data, error } = await q;
       if (error) throw error;
       setHubs(data ?? []);
