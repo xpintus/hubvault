@@ -95,13 +95,6 @@ export default async function handler(req, res) {
     const safeCompany = escapeHtml(company);
     const safeDate = escapeHtml(date);
 
-    const upiLink =
-      `upi://pay?pa=${encodeURIComponent(UPI_ID)}` +
-      `&pn=${encodeURIComponent('HubVault Billing')}` +
-      `&am=${encodeURIComponent(PAYMENT_AMOUNT)}` +
-      `&cu=INR` +
-      `&tn=${encodeURIComponent('HubVault License Payment')}`;
-
     const resendResponse = await fetch(
       'https://api.resend.com/emails',
       {
@@ -275,7 +268,9 @@ ${UPI_ID}
 <td align="center">
 
 <a
-  href="${upiLink}"
+  href="https://www.hubvault.in/#/payment"
+  target="_blank"
+  rel="noopener noreferrer"
   style="display:inline-block;background:#2563eb;color:#ffffff;padding:16px 38px;font-size:18px;font-weight:bold;text-decoration:none;border-radius:10px;box-shadow:0 6px 14px rgba(37,99,235,.25);"
 >
 💳 Pay ₹${PAYMENT_AMOUNT} Now
@@ -286,7 +281,7 @@ ${UPI_ID}
 </table>
 
 <p align="center" style="font-size:13px;color:#64748b;margin:0 0 25px;">
-Tap the button on your mobile to open a supported UPI app.
+Click the button above to open the secure HubVault payment page.
 </p>
 
 <!-- QR Code -->
