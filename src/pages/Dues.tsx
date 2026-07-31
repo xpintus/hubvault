@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle, Search, RotateCcw, Eye, TrendingDown, Users as UsersIcon,
-  CheckCircle2, Clock, ChevronDown, ChevronUp,
+  CheckCircle2, Clock, ChevronDown, ChevronUp, ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
@@ -35,6 +35,18 @@ const statusConfig: Record<DueStatus, { color: string; dot: string; badge: strin
   },
 };
 
+interface EmployeeOutstandingGroup {
+  collectorId: string;
+  collectorName: string;
+  employeeId: string;
+  phone: string;
+  entriesCount: number;
+  totalOriginal: number;
+  totalRecovered: number;
+  totalRemaining: number;
+  dueRecords: Due[];
+}
+
 export default function Dues() {
   const { profile } = useAuth();
   const hubCtx = useHub();
@@ -51,6 +63,10 @@ export default function Dues() {
   const [recoveryNotes, setRecoveryNotes] = useState('');
   const [recoveryRef, setRecoveryRef] = useState('');
   const [savingRecovery, setSavingRecovery] = useState(false);
+
+  const [showOutstandingModal, setShowOutstandingModal] = useState(false);
+  const [modalSearch, setModalSearch] = useState('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
   const isSuperAdmin = profile?.role === 'super_admin';
   const canManage = ['super_admin', 'hub_admin', 'supervisor'].includes(profile?.role ?? '');
@@ -84,7 +100,6 @@ export default function Dues() {
         if (error) throw error;
         setDues(data ?? []);
 
-        // Cache
         const pureDues = (data ?? []).map(d => {
             const { collector, hub, collection_entry, ...rest } = d as any;
             return rest;
@@ -130,6 +145,79 @@ export default function Dues() {
     const pendingRecovery = totalOutstanding;
     return { totalOutstanding, employeesWithDues, recoveredThisMonth, pendingRecovery };
   }, [dues]);
+
+  const employeeOutstandingSummary = useMemo<EmployeeOutstandingGroup[]>(() => {
+    const map = new Map<string, EmployeeOutstandingGroup>();
+
+    for (const due of dues) {
+      const rem = Number(due.remaining_amount || 0);
+      if (rem <= 0) continue;
+
+      const cid = due.collector_id || due.collector?.id || 'unknown';
+      const cName = due.collector?.name || 'Unknown Employee';
+      const empCode = due.collector?.employee_id || 'N/A';
+      const phone = due.collector?.phone || 'N/A';
+      const orig = Number(due.original_amount || 0);
+      const rec = Number(due.recovered_amount || 0);
+
+      if (!map.has(cid)) {
+        map.set(cid, {
+          collectorId: cid,
+          collectorName: cName,
+          employeeId: empCode,
+          phone,
+          entriesCount: 1,
+          totalOriginal: orig,
+          totalRecovered: rec,
+          totalRemaining: rem,
+          dueRecords: [due],
+        });
+      } else {
+        const existing = map.get(cid)!;
+        existing.entriesCount += 1;
+        existing.totalOriginal += orig;
+        existing.totalRecovered += rec;
+        existing.totalRemaining += rem;
+        existing.dueRecords.push(due);
+      }
+    }
+
+    const result = Array.from(map.values());
+
+    result.sort((a, b) => {
+      if (b.totalRemaining !== a.totalRemaining) {
+        return b.totalRemaining - a.totalRemaining;
+      }
+      return a.collectorName.localeCompare(b.collectorName);
+    });
+
+    return result;
+  }, [dues]);
+
+  const filteredEmployeeSummary = useMemo(() => {
+    const q = modalSearch.trim().toLowerCase();
+    if (!q) return employeeOutstandingSummary;
+    return employeeOutstandingSummary.filter((group) => {
+      const name = group.collectorName.toLowerCase();
+      const empId = group.employeeId.toLowerCase();
+      const phone = group.phone.toLowerCase();
+      return name.includes(q) || empId.includes(q) || phone.includes(q);
+    });
+  }, [employeeOutstandingSummary, modalSearch]);
+
+  const selectedEmployeeGroup = useMemo(() => {
+    if (!selectedEmployeeId) return null;
+    const group = employeeOutstandingSummary.find((g) => g.collectorId === selectedEmployeeId);
+    if (!group) return null;
+    const sortedRecords = [...group.dueRecords].sort(
+      (a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()
+    );
+    return { ...group, dueRecords: sortedRecords };
+  }, [selectedEmployeeId, employeeOutstandingSummary]);
+
+  const grandTotalOutstandingModal = useMemo(() => {
+    return employeeOutstandingSummary.reduce((sum, g) => sum + g.totalRemaining, 0);
+  }, [employeeOutstandingSummary]);
 
   const handleRecovery = async () => {
     if (!recoveryForDue) return;
@@ -190,7 +278,6 @@ export default function Dues() {
           });
 
           if (rpcErr) {
-            // Fallback if RPC migration not applied on server yet
             const { error: recErr } = await supabase.from('recoveries').insert(recoveryPayload);
             if (recErr) throw recErr;
 
@@ -270,29 +357,54 @@ export default function Dues() {
         </div>
       </div>
 
-      {/* KPI cards */}
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {kpiCards.map((c) => (
-            <Card key={c.label} hover className="p-5 animate-fade-in">
-              <div className={clsx('inline-flex h-11 w-11 items-center justify-center rounded-xl ring-1', accentMap[c.accent])}>
-                <c.icon className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-sm font-medium text-neutral-500">{c.label}</p>
-              <p className="mt-1 text-2xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">
-                {c.isCount ? c.value : formatINR(c.value)}
-              </p>
-              <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">{c.sub}</p>
-            </Card>
-          ))}
+          {kpiCards.map((c) => {
+            const isOutstandingCard = c.label === 'Total Outstanding Dues';
+            return (
+              <Card
+                key={c.label}
+                hover
+                onClick={
+                  isOutstandingCard
+                    ? () => {
+                        setModalSearch('');
+                        setSelectedEmployeeId(null);
+                        setShowOutstandingModal(true);
+                      }
+                    : undefined
+                }
+                className={clsx(
+                  'p-5 animate-fade-in',
+                  isOutstandingCard &&
+                    'cursor-pointer hover:border-red-500/50 dark:hover:border-red-500/50 hover:shadow-md transition-all group'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className={clsx('inline-flex h-11 w-11 items-center justify-center rounded-xl ring-1', accentMap[c.accent])}>
+                    <c.icon className="h-5 w-5" />
+                  </div>
+                  {isOutstandingCard && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                      Click to view details <Eye className="w-3 h-3" />
+                    </span>
+                  )}
+                </div>
+                <p className="mt-3 text-sm font-medium text-neutral-500">{c.label}</p>
+                <p className="mt-1 text-2xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">
+                  {c.isCount ? c.value : formatINR(c.value)}
+                </p>
+                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">{c.sub}</p>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {/* Search and filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 dark:text-neutral-400" />
@@ -325,7 +437,6 @@ export default function Dues() {
         </div>
       </div>
 
-      {/* Dues table */}
       {loading ? (
         <Card className="p-8 flex justify-center"><Spinner className="h-6 w-6" /></Card>
       ) : filtered.length === 0 ? (
@@ -355,58 +466,55 @@ export default function Dues() {
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                 {filtered.map((d) => {
                   const sc = statusConfig[d.status];
-                  const isExpanded = expandedDue === d.id;
                   return (
-                    <>
-                      <tr key={d.id} className="group hover:bg-neutral-100 dark:hover:bg-neutral-950/70 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
-                              {d.collector?.name?.charAt(0).toUpperCase() ?? '?'}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">{d.collector?.name ?? '—'}</p>
-                              <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:hidden font-mono">{d.collector?.employee_id}</p>
-                            </div>
+                    <tr key={d.id} className="group hover:bg-neutral-100 dark:hover:bg-neutral-950/70 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            {d.collector?.name?.charAt(0).toUpperCase() ?? '?'}
                           </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-neutral-500 font-mono text-xs hidden sm:table-cell">{d.collector?.employee_id}</td>
-                        <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-neutral-700 dark:text-neutral-300">{formatINR(d.original_amount)}</td>
-                        <td className="px-4 py-3.5 text-right tabular-nums text-brand-600 hidden md:table-cell">{formatINR(d.recovered_amount)}</td>
-                        <td className={clsx('px-4 py-3.5 text-right tabular-nums font-bold', d.remaining_amount > 0 ? 'text-red-400' : 'text-brand-600')}>
-                          {formatINR(d.remaining_amount)}
-                        </td>
-                        <td className="px-4 py-3.5 text-neutral-500 text-xs hidden lg:table-cell">{formatDate(d.due_date)}</td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span className={clsx('inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset', sc.badge)}>
-                            <span className={clsx('h-1.5 w-1.5 rounded-full', sc.dot)} />
-                            {DUE_STATUS_LABELS[d.status]}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center justify-end gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                            {canManage && d.status !== 'fully_recovered' && (
-                              <button
-                                onClick={() => { setRecoveryForDue(d); setRecoveryAmount(''); setRecoveryNotes(''); setRecoveryRef(''); }}
-                                title="Record Recovery"
-                                className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-400 hover:bg-blue-500/10 transition active:scale-90"
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </button>
-                            )}
-                            {canManage && (
-                              <button
-                                onClick={() => handleDeleteDue(d)}
-                                title="Delete"
-                                className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition active:scale-90"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                            )}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">{d.collector?.name ?? '—'}</p>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:hidden font-mono">{d.collector?.employee_id}</p>
                           </div>
-                        </td>
-                      </tr>
-                    </>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-neutral-500 font-mono text-xs hidden sm:table-cell">{d.collector?.employee_id}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-neutral-700 dark:text-neutral-300">{formatINR(d.original_amount)}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums text-brand-600 hidden md:table-cell">{formatINR(d.recovered_amount)}</td>
+                      <td className={clsx('px-4 py-3.5 text-right tabular-nums font-bold', d.remaining_amount > 0 ? 'text-red-400' : 'text-brand-600')}>
+                        {formatINR(d.remaining_amount)}
+                      </td>
+                      <td className="px-4 py-3.5 text-neutral-500 text-xs hidden lg:table-cell">{formatDate(d.due_date)}</td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={clsx('inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset', sc.badge)}>
+                          <span className={clsx('h-1.5 w-1.5 rounded-full', sc.dot)} />
+                          {DUE_STATUS_LABELS[d.status]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-end gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          {canManage && d.status !== 'fully_recovered' && (
+                            <button
+                              onClick={() => { setRecoveryForDue(d); setRecoveryAmount(''); setRecoveryNotes(''); setRecoveryRef(''); }}
+                              title="Record Recovery"
+                              className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-400 hover:bg-blue-500/10 transition active:scale-90"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                          )}
+                          {canManage && (
+                            <button
+                              onClick={() => handleDeleteDue(d)}
+                              title="Delete"
+                              className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition active:scale-90"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -415,7 +523,6 @@ export default function Dues() {
         </Card>
       )}
 
-      {/* Recovery modal */}
       <Modal
         open={!!recoveryForDue}
         onClose={() => setRecoveryForDue(null)}
@@ -484,6 +591,192 @@ export default function Dues() {
                 placeholder="Any notes about this recovery…"
                 className="input-base resize-none"
               />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={showOutstandingModal}
+        onClose={() => {
+          setShowOutstandingModal(false);
+          setSelectedEmployeeId(null);
+        }}
+        title={
+          selectedEmployeeGroup
+            ? `${selectedEmployeeGroup.collectorName} — Pending Dues`
+            : 'Total Outstanding Dues — Employee Breakdown'
+        }
+        subtitle={
+          selectedEmployeeGroup
+            ? `Date-wise breakdown for Emp ID: ${selectedEmployeeGroup.employeeId}`
+            : 'Employee-wise summary of all pending dues'
+        }
+        size="xl"
+      >
+        {selectedEmployeeGroup ? (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50 dark:bg-neutral-900/60 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800">
+              <button
+                onClick={() => setSelectedEmployeeId(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition active:scale-95 self-start sm:self-auto"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Employee Summary
+              </button>
+
+              <div className="text-left sm:text-right">
+                <p className="text-xs text-neutral-500">Employee Total Outstanding</p>
+                <p className="text-base font-bold text-red-500 tabular-nums">
+                  {formatINR(selectedEmployeeGroup.totalRemaining)}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-semibold">Due Date</th>
+                      <th className="text-right px-4 py-3 font-semibold">Original Due</th>
+                      <th className="text-right px-4 py-3 font-semibold">Recovered</th>
+                      <th className="text-right px-4 py-3 font-semibold">Outstanding</th>
+                      <th className="text-center px-4 py-3 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                    {selectedEmployeeGroup.dueRecords.map((d) => (
+                      <tr key={d.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition">
+                        <td className="px-4 py-3 font-medium text-neutral-800 dark:text-neutral-200">
+                          {formatDate(d.due_date)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-neutral-600 dark:text-neutral-400 font-mono">
+                          {formatINR(d.original_amount)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-brand-600 font-mono">
+                          {formatINR(d.recovered_amount)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums font-bold text-red-500 font-mono">
+                          {formatINR(d.remaining_amount)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={clsx(
+                              'inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+                              statusConfig[d.status]?.badge
+                            )}
+                          >
+                            <span className={clsx('h-1.5 w-1.5 rounded-full', statusConfig[d.status]?.dot)} />
+                            {DUE_STATUS_LABELS[d.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between text-sm font-bold text-red-500">
+              <span>{selectedEmployeeGroup.collectorName} Total Outstanding:</span>
+              <span className="tabular-nums font-mono text-base">{formatINR(selectedEmployeeGroup.totalRemaining)}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+              <input
+                type="text"
+                value={modalSearch}
+                onChange={(e) => setModalSearch(e.target.value)}
+                placeholder="Search employee by name, ID, or phone…"
+                className="input-base pl-10"
+              />
+            </div>
+
+            {filteredEmployeeSummary.length === 0 ? (
+              <EmptyState
+                icon={<AlertCircle className="h-7 w-7" />}
+                title="No outstanding dues"
+                message={modalSearch ? 'No employee matches your search query.' : 'There are currently no active employee outstanding dues.'}
+              />
+            ) : (
+              <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
+                      <tr>
+                        <th className="text-left px-4 py-3 font-semibold">Employee</th>
+                        <th className="text-left px-3 py-3 font-semibold">Emp ID</th>
+                        <th className="text-left px-3 py-3 font-semibold">Phone</th>
+                        <th className="text-right px-3 py-3 font-semibold">Entries</th>
+                        <th className="text-right px-3 py-3 font-semibold">Original</th>
+                        <th className="text-right px-3 py-3 font-semibold">Recovered</th>
+                        <th className="text-right px-4 py-3 font-semibold">Outstanding</th>
+                        <th className="text-center px-4 py-3 font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                      {filteredEmployeeSummary.map((emp) => (
+                        <tr
+                          key={emp.collectorId}
+                          onClick={() => setSelectedEmployeeId(emp.collectorId)}
+                          className="group hover:bg-neutral-50 dark:hover:bg-neutral-900/60 transition cursor-pointer"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 text-red-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                {emp.collectorName.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-semibold text-neutral-800 dark:text-neutral-200 group-hover:text-red-500 transition-colors">
+                                {emp.collectorName}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 font-mono text-xs text-neutral-500">{emp.employeeId}</td>
+                          <td className="px-3 py-3 font-mono text-xs text-neutral-500">{emp.phone}</td>
+                          <td className="px-3 py-3 text-right font-medium tabular-nums text-neutral-700 dark:text-neutral-300">
+                            {emp.entriesCount}
+                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums text-neutral-600 dark:text-neutral-400 font-mono">
+                            {formatINR(emp.totalOriginal)}
+                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums text-brand-600 font-mono">
+                            {formatINR(emp.totalRecovered)}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums font-bold text-red-500 font-mono">
+                            {formatINR(emp.totalRemaining)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEmployeeId(emp.collectorId);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition active:scale-95"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-neutral-500" /> View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-red-500">
+              <div>
+                <p className="text-xs uppercase tracking-wider font-semibold">Grand Total Outstanding Dues</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 font-normal">
+                  Matches KPI Card Total Across {employeeOutstandingSummary.length} Employees
+                </p>
+              </div>
+              <p className="text-xl font-bold tabular-nums font-mono">
+                {formatINR(grandTotalOutstandingModal)}
+              </p>
             </div>
           </div>
         )}
