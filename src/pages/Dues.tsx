@@ -142,8 +142,8 @@ export default function Dues() {
       if (new Date(d.updated_at) >= monthStart) return s + Number(d.recovered_amount);
       return s;
     }, 0);
-    const pendingRecovery = totalOutstanding;
-    return { totalOutstanding, employeesWithDues, recoveredThisMonth, pendingRecovery };
+    const totalDuesIssued = dues.reduce((s, d) => s + Number(d.original_amount || 0), 0);
+    return { totalOutstanding, employeesWithDues, recoveredThisMonth, totalDuesIssued };
   }, [dues]);
 
   const employeeOutstandingSummary = useMemo<EmployeeOutstandingGroup[]>(() => {
@@ -330,7 +330,7 @@ export default function Dues() {
     { label: 'Total Outstanding Dues', value: stats.totalOutstanding, icon: TrendingDown, accent: 'red', sub: `${stats.employeesWithDues} employees` },
     { label: 'Employees With Dues', value: stats.employeesWithDues, icon: UsersIcon, accent: 'amber', sub: 'have pending balances', isCount: true },
     { label: 'Recovered This Month', value: stats.recoveredThisMonth, icon: CheckCircle2, accent: 'brand', sub: 'total recovery payments' },
-    { label: 'Pending Recovery', value: stats.pendingRecovery, icon: Clock, accent: 'slate', sub: 'awaiting collection' },
+    { label: 'Total Dues Issued', value: stats.totalDuesIssued, icon: Clock, accent: 'slate', sub: 'across all records' },
   ];
 
   const accentMap: Record<string, string> = {
