@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Landmark, Search, Plus, Trash2, Banknote, TrendingDown,
+  Landmark, Search, Plus, Trash2, Banknote, TrendingDown, TrendingUp,
   Wallet, Calendar, FileBarChart, Edit3, Eye, ArrowRight,
   X, CheckCircle2, RotateCcw, Clock, Building2,
   Download, AlertCircle, FileText, Smartphone
