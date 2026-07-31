@@ -26,8 +26,12 @@ const safeAmount = (val: any): number => {
   return isNaN(num) ? 0 : num;
 };
 
-// Shared helper to normalize deposited amounts across legacy and new deposit records
+// Shared helper to normalize total deposited amounts across legacy and new deposit records
 export function getDepositAmount(deposit: CmsDeposit): number {
+  const splitTotal = safeAmount(deposit.cash_submitted) + safeAmount(deposit.online_submitted);
+  if (splitTotal > 0) {
+    return splitTotal;
+  }
   return safeAmount(
     deposit.total_deposited ??
     (deposit as any).deposited_amount ??
@@ -35,6 +39,23 @@ export function getDepositAmount(deposit: CmsDeposit): number {
     deposit.cash_deposited ??
     (deposit as any).amount
   );
+}
+
+// Helpers for Cash and Online submitted amounts
+export function getCashSubmittedAmount(deposit: CmsDeposit): number {
+  if (deposit.cash_submitted !== undefined && deposit.cash_submitted !== null && deposit.cash_submitted > 0) {
+    return safeAmount(deposit.cash_submitted);
+  }
+  const total = getDepositAmount(deposit);
+  const online = safeAmount(deposit.online_submitted ?? (deposit as any).online_amount);
+  return Math.max(0, total - online);
+}
+
+export function getOnlineSubmittedAmount(deposit: CmsDeposit): number {
+  if (deposit.online_submitted !== undefined && deposit.online_submitted !== null) {
+    return safeAmount(deposit.online_submitted);
+  }
+  return safeAmount((deposit as any).online_amount);
 }
 
 const SHORTAGE_REASONS = [
@@ -60,6 +81,8 @@ export interface DailyCmsRow {
   totalCollection: number; // cashCollected + onlineCollected
   collectionShortage: number; // max(expectedCod - totalCollection, 0)
   totalExpectedCms: number; // strictly equals expectedCod
+  cashSubmitted: number; // sum of getCashSubmittedAmount(deposit)
+  onlineSubmitted: number; // sum of getOnlineSubmittedAmount(deposit)
   totalDeposited: number; // sum of getDepositAmount(deposit)
   cmsPending: number; // max(totalExpectedCms - totalDeposited, 0)
   cmsExcess: number; // max(totalDeposited - totalExpectedCms, 0)
@@ -74,7 +97,8 @@ interface FormState {
   collection_date: string;
   deposit_date: string;
   hub_id: string;
-  total_deposited: string;
+  cash_submitted: string;
+  online_submitted: string;
   reference_number: string;
   bank_name: string;
   remarks: string;
@@ -84,7 +108,8 @@ const emptyForm: FormState = {
   collection_date: toISODate(new Date()),
   deposit_date: toISODate(new Date()),
   hub_id: '',
-  total_deposited: '',
+  cash_submitted: '',
+  online_submitted: '',
   reference_number: '',
   bank_name: '',
   remarks: '',
@@ -291,6 +316,8 @@ export default function DepositsPage() {
 
       // Total Expected CMS strictly equals Total Expected COD!
       const totalExpectedCms = expectedCod;
+      const cashSubmitted = dateDeposits.reduce((s, d) => s + getCashSubmittedAmount(d), 0);
+      const onlineSubmitted = dateDeposits.reduce((s, d) => s + getOnlineSubmittedAmount(d), 0);
       const totalDeposited = dateDeposits.reduce((s, d) => s + getDepositAmount(d), 0);
 
       const cmsPending = Math.max(0, totalExpectedCms - totalDeposited);
@@ -323,6 +350,8 @@ export default function DepositsPage() {
         totalCollection,
         collectionShortage,
         totalExpectedCms,
+        cashSubmitted,
+        onlineSubmitted,
         totalDeposited,
         cmsPending,
         cmsExcess,
@@ -392,7 +421,8 @@ export default function DepositsPage() {
       collection_date: defaultDate,
       deposit_date: toISODate(new Date()),
       hub_id: presetHub,
-      total_deposited: prefillRow ? String(prefillRow.cmsPending) : '',
+      cash_submitted: '',
+      online_submitted: '',
       reference_number: '',
       bank_name: '',
       remarks: '',
@@ -407,7 +437,8 @@ export default function DepositsPage() {
       collection_date: d.collection_date || d.deposit_date,
       deposit_date: d.deposit_date,
       hub_id: d.hub_id,
-      total_deposited: String(getDepositAmount(d)),
+      cash_submitted: String(getCashSubmittedAmount(d)),
+      online_submitted: String(getOnlineSubmittedAmount(d)),
       reference_number: d.reference_number ?? '',
       bank_name: d.bank_name ?? '',
       remarks: d.remarks ?? '',
@@ -431,9 +462,11 @@ export default function DepositsPage() {
     const priorDeposits = deposits.filter(d => (d.collection_date === cDate || d.deposit_date === cDate) && (!editing || d.id !== editing.id));
     const alreadySubmitted = priorDeposits.reduce((s, d) => s + getDepositAmount(d), 0);
 
-    const newDeposit = safeAmount(form.total_deposited);
-    const totalAfterDeposit = alreadySubmitted + newDeposit;
+    const newCashSubmitted = safeAmount(form.cash_submitted);
+    const newOnlineSubmitted = safeAmount(form.online_submitted);
+    const submittedNow = newCashSubmitted + newOnlineSubmitted;
 
+    const totalAfterDeposit = alreadySubmitted + submittedNow;
     const remainingPending = Math.max(0, totalExpectedCms - totalAfterDeposit);
     const isOverDeposit = totalAfterDeposit > totalExpectedCms;
 
@@ -444,12 +477,14 @@ export default function DepositsPage() {
       totalCollection,
       totalExpectedCms,
       alreadySubmitted,
-      newDeposit,
+      newCashSubmitted,
+      newOnlineSubmitted,
+      submittedNow,
       totalAfterDeposit,
       remainingPending,
       isOverDeposit,
     };
-  }, [form.collection_date, form.total_deposited, entries, deposits, editing]);
+  }, [form.collection_date, form.cash_submitted, form.online_submitted, entries, deposits, editing]);
 
   const handleSaveGeneralDeposit = async () => {
     const hubId = form.hub_id || activeHubId;
@@ -457,8 +492,14 @@ export default function DepositsPage() {
     if (!form.collection_date) { toast.error('Select a collection date'); return; }
     if (!form.deposit_date) { toast.error('Select a deposit date'); return; }
 
-    const submitted = safeAmount(form.total_deposited);
-    if (submitted <= 0) { toast.error('CMS Deposited amount must be greater than ₹0'); return; }
+    const cashSubmitted = safeAmount(form.cash_submitted);
+    const onlineSubmitted = safeAmount(form.online_submitted);
+    const submittedNow = cashSubmitted + onlineSubmitted;
+
+    if (submittedNow <= 0) {
+      toast.error('At least one submitted amount (Cash or Online) must be greater than ₹0');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -466,15 +507,15 @@ export default function DepositsPage() {
         deposit_date: form.deposit_date,
         collection_date: form.collection_date,
         hub_id: hubId,
-        total_cash_collected: depositPreview?.expectedCod ?? submitted,
-        cash_deposited: submitted,
-        online_amount: 0,
-        total_expected_cms: depositPreview?.expectedCod ?? submitted,
-        total_deposited: submitted,
-        cash_submitted: submitted,
-        online_submitted: 0,
-        total_submitted: submitted,
-        short_amount: Math.max(0, (depositPreview?.expectedCod ?? submitted) - submitted),
+        total_cash_collected: depositPreview?.expectedCod ?? submittedNow,
+        cash_deposited: cashSubmitted,
+        online_amount: onlineSubmitted,
+        total_expected_cms: depositPreview?.expectedCod ?? submittedNow,
+        total_deposited: submittedNow,
+        cash_submitted: cashSubmitted,
+        online_submitted: onlineSubmitted,
+        total_submitted: submittedNow,
+        short_amount: Math.max(0, (depositPreview?.expectedCod ?? submittedNow) - submittedNow),
         reference_number: form.reference_number.trim() || null,
         bank_name: form.bank_name.trim() || null,
         remarks: form.remarks.trim() || null,
@@ -487,7 +528,7 @@ export default function DepositsPage() {
       } else {
         const { error } = await supabase.from('cms_deposits').insert({ ...payload, created_by: profile?.id ?? null });
         if (error) throw error;
-        await logAudit('cms_deposit_create', profile?.id ?? null, `Recorded CMS deposit of ${formatINR(submitted)} for collection date ${formatDate(form.collection_date)}`, null, hubId);
+        await logAudit('cms_deposit_create', profile?.id ?? null, `Recorded CMS deposit of ${formatINR(submittedNow)} (Cash: ${formatINR(cashSubmitted)}, Online: ${formatINR(onlineSubmitted)}) for collection date ${formatDate(form.collection_date)}`, null, hubId);
         toast.success('CMS deposit recorded successfully');
       }
       setModalOpen(false);
@@ -744,6 +785,8 @@ export default function DepositsPage() {
       'Total Collection': r.totalCollection,
       'Collection Shortage': r.collectionShortage,
       'Total Expected CMS': r.totalExpectedCms,
+      'Cash Submitted': r.cashSubmitted,
+      'Online Submitted': r.onlineSubmitted,
       'Total Deposited': r.totalDeposited,
       'CMS Pending': r.cmsPending,
       'CMS Excess': r.cmsExcess,
@@ -1038,10 +1081,10 @@ export default function DepositsPage() {
                   <tr>
                     <th className="text-left px-5 py-3 font-semibold">Collection Date</th>
                     {isSuperAdmin && <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Hub</th>}
-                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Cash Collected</th>
-                    <th className="text-right px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">Online Collected</th>
                     <th className="text-right px-4 py-3 font-semibold">Expected CMS</th>
-                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Total Deposited</th>
+                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Cash Submitted</th>
+                    <th className="text-right px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">Online Submitted</th>
+                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Total Submitted</th>
                     <th className="text-right px-4 py-3 font-semibold text-red-500">CMS Pending</th>
                     <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">Reference</th>
                     <th className="text-center px-4 py-3 font-semibold">Status</th>
@@ -1053,9 +1096,9 @@ export default function DepositsPage() {
                     <tr key={`${r.date}_${r.hubId}`} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
                       <td className="px-5 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatDate(r.date)}</td>
                       {isSuperAdmin && <td className="px-4 py-3.5 text-neutral-500 hidden md:table-cell">{r.hubName}</td>}
-                      <td className="px-4 py-3.5 text-right tabular-nums text-emerald-600 font-medium">{formatINR(r.cashCollected)}</td>
-                      <td className="px-4 py-3.5 text-right tabular-nums text-blue-600 font-medium">{formatINR(r.onlineCollected)}</td>
                       <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-900 dark:text-neutral-100">{formatINR(r.totalExpectedCms)}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums text-emerald-600 font-medium">{formatINR(r.cashSubmitted)}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums text-blue-600 font-medium">{formatINR(r.onlineSubmitted)}</td>
                       <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">{formatINR(r.totalDeposited)}</td>
                       <td className={clsx('px-4 py-3.5 text-right tabular-nums font-bold', r.cmsPending > 0 ? 'text-red-500 dark:text-red-400' : 'text-neutral-400')}>{formatINR(r.cmsPending)}</td>
                       <td className="px-4 py-3.5 text-neutral-500 font-mono text-xs hidden lg:table-cell">
@@ -1153,15 +1196,17 @@ export default function DepositsPage() {
                 </div>
               </div>
 
-              {/* Live Deposit Preview */}
+              {/* Live Deposit Calculation Preview */}
               <div className="border-t border-neutral-200 dark:border-neutral-800 pt-2 grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <p className="text-neutral-500">Expected CMS: <strong className="text-neutral-900 dark:text-neutral-100">{formatINR(depositPreview.totalExpectedCms)}</strong></p>
-                  <p className="text-neutral-500">Already Deposited: <strong>{formatINR(depositPreview.alreadySubmitted)}</strong></p>
+                  <p className="text-neutral-500">Already Submitted: <strong>{formatINR(depositPreview.alreadySubmitted)}</strong></p>
                 </div>
                 <div>
-                  <p className="text-emerald-500 font-bold">New CMS Deposit: {formatINR(depositPreview.newDeposit)}</p>
-                  <p className={clsx('font-bold', depositPreview.remainingPending > 0 ? 'text-red-500' : 'text-emerald-500')}>
+                  <p className="text-emerald-500 font-bold">New Cash Submission: {formatINR(depositPreview.newCashSubmitted)}</p>
+                  <p className="text-blue-500 font-bold">New Online Submission: {formatINR(depositPreview.newOnlineSubmitted)}</p>
+                  <p className="text-brand-600 font-bold">Total CMS Submitted Now: {formatINR(depositPreview.submittedNow)}</p>
+                  <p className={clsx('font-bold mt-0.5', depositPreview.remainingPending > 0 ? 'text-red-500' : 'text-emerald-500')}>
                     Remaining CMS Pending: {formatINR(depositPreview.remainingPending)}
                   </p>
                 </div>
@@ -1169,13 +1214,23 @@ export default function DepositsPage() {
             </div>
           )}
 
-          <Input
-            label="CMS Amount Deposited (₹)"
-            type="number"
-            value={form.total_deposited}
-            onChange={(e) => setForm((f) => ({ ...f, total_deposited: e.target.value }))}
-            placeholder="Enter manual CMS deposit amount…"
-          />
+          {/* Separate Editable Inputs for Cash and Online Submission */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Cash Submitted to CMS (₹)"
+              type="number"
+              value={form.cash_submitted}
+              onChange={(e) => setForm((f) => ({ ...f, cash_submitted: e.target.value }))}
+              placeholder="0"
+            />
+            <Input
+              label="Online Submitted to CMS (₹)"
+              type="number"
+              value={form.online_submitted}
+              onChange={(e) => setForm((f) => ({ ...f, online_submitted: e.target.value }))}
+              placeholder="0"
+            />
+          </div>
 
           <Input
             label="Reference Number / Bank Slip (optional)"
@@ -1398,7 +1453,9 @@ function DetailDrawer({
               <EmptyState icon={<Landmark className="h-8 w-8" />} title="No deposit transactions" message="No deposit transactions found." />
             ) : (
               filteredDeposits.map((d) => {
-                const amt = getDepositAmount(d);
+                const totalAmt = getDepositAmount(d);
+                const cashAmt = getCashSubmittedAmount(d);
+                const onlineAmt = getOnlineSubmittedAmount(d);
                 const cDate = d.collection_date || d.deposit_date;
 
                 return (
@@ -1411,10 +1468,12 @@ function DetailDrawer({
                         </div>
                         <p className="text-xs text-neutral-500 mt-0.5">Collection Date: <strong>{formatDate(cDate)}</strong></p>
                       </div>
-                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatINR(amt)}</span>
+                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatINR(totalAmt)}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-50 dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-neutral-50 dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                      <div><p className="text-neutral-500">Cash Submitted:</p><p className="font-bold text-emerald-600">{formatINR(cashAmt)}</p></div>
+                      <div><p className="text-neutral-500">Online Submitted:</p><p className="font-bold text-blue-600">{formatINR(onlineAmt)}</p></div>
                       <div><p className="text-neutral-500">Reference:</p><p className="font-mono font-medium">{d.reference_number || '—'}</p></div>
                       <div><p className="text-neutral-500">Bank/CMS:</p><p className="font-medium">{d.bank_name || '—'}</p></div>
                     </div>
@@ -1459,14 +1518,18 @@ function DetailDrawer({
                     <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatDate(r.date)}</span>
                     <span className="text-neutral-500">{r.hubName}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
                     <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 p-2">
-                      <p className="text-neutral-500">Total Expected CMS</p>
+                      <p className="text-neutral-500">Expected CMS</p>
                       <p className="font-bold tabular-nums">{formatINR(r.totalExpectedCms)}</p>
                     </div>
                     <div className="rounded-lg bg-emerald-500/10 p-2">
-                      <p className="text-emerald-500">Total Deposited</p>
-                      <p className="font-bold text-emerald-500 tabular-nums">{formatINR(r.totalDeposited)}</p>
+                      <p className="text-emerald-500">Cash Submitted</p>
+                      <p className="font-bold text-emerald-600 tabular-nums">{formatINR(r.cashSubmitted)}</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-500/10 p-2">
+                      <p className="text-blue-500">Online Submitted</p>
+                      <p className="font-bold text-blue-600 tabular-nums">{formatINR(r.onlineSubmitted)}</p>
                     </div>
                     <div className="rounded-lg bg-red-500/10 p-2">
                       <p className="text-red-500">CMS Pending</p>
