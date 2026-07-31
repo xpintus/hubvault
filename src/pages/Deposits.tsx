@@ -35,7 +35,6 @@ export function getDepositAmount(deposit: CmsDeposit): number {
   return safeAmount(
     deposit.total_deposited ??
     (deposit as any).deposited_amount ??
-    (deposit as any).amount_submitted ??
     deposit.cash_deposited ??
     (deposit as any).amount
   );
@@ -433,12 +432,19 @@ export default function DepositsPage() {
 
   const openEditDeposit = (d: CmsDeposit) => {
     setEditing(d);
+    const cashSub = safeAmount(d.cash_submitted) > 0
+      ? String(d.cash_submitted)
+      : String(safeAmount(d.cash_deposited ?? d.total_deposited));
+    const onlineSub = safeAmount(d.online_submitted) > 0
+      ? String(d.online_submitted)
+      : String(safeAmount((d as any).online_amount));
+
     setForm({
       collection_date: d.collection_date || d.deposit_date,
       deposit_date: d.deposit_date,
       hub_id: d.hub_id,
-      cash_submitted: String(getCashSubmittedAmount(d)),
-      online_submitted: String(getOnlineSubmittedAmount(d)),
+      cash_submitted: cashSub,
+      online_submitted: onlineSub,
       reference_number: d.reference_number ?? '',
       bank_name: d.bank_name ?? '',
       remarks: d.remarks ?? '',
@@ -487,6 +493,8 @@ export default function DepositsPage() {
   }, [form.collection_date, form.cash_submitted, form.online_submitted, entries, deposits, editing]);
 
   const handleSaveGeneralDeposit = async () => {
+    if (saving) return;
+
     const hubId = form.hub_id || activeHubId;
     if (!hubId) { toast.error('Please select a hub first'); return; }
     if (!form.collection_date) { toast.error('Select a collection date'); return; }
@@ -494,47 +502,69 @@ export default function DepositsPage() {
 
     const cashSubmitted = safeAmount(form.cash_submitted);
     const onlineSubmitted = safeAmount(form.online_submitted);
-    const submittedNow = cashSubmitted + onlineSubmitted;
+    const totalDeposited = cashSubmitted + onlineSubmitted;
 
-    if (submittedNow <= 0) {
+    if (totalDeposited <= 0) {
       toast.error('At least one submitted amount (Cash or Online) must be greater than ₹0');
       return;
     }
 
     setSaving(true);
     try {
+      const expectedCod = safeAmount(depositPreview?.expectedCod);
+
       const payload = {
         deposit_date: form.deposit_date,
-        collection_date: form.collection_date,
+        collection_date: form.collection_date || form.deposit_date,
         hub_id: hubId,
-        total_cash_collected: depositPreview?.expectedCod ?? submittedNow,
+        total_cash_collected: expectedCod,
         cash_deposited: cashSubmitted,
         online_amount: onlineSubmitted,
-        total_expected_cms: depositPreview?.expectedCod ?? submittedNow,
-        total_deposited: submittedNow,
+        total_expected_cms: expectedCod,
+        total_deposited: totalDeposited,
         cash_submitted: cashSubmitted,
         online_submitted: onlineSubmitted,
-        total_submitted: submittedNow,
-        short_amount: Math.max(0, (depositPreview?.expectedCod ?? submittedNow) - submittedNow),
+        short_amount: Math.max(0, expectedCod - totalDeposited),
         reference_number: form.reference_number.trim() || null,
         bank_name: form.bank_name.trim() || null,
         remarks: form.remarks.trim() || null,
+        status:
+          totalDeposited < expectedCod
+            ? 'partially_submitted'
+            : totalDeposited === expectedCod
+              ? 'fully_submitted'
+              : 'over_submitted',
       };
 
       if (editing) {
         const { error } = await supabase.from('cms_deposits').update(payload).eq('id', editing.id);
-        if (error) throw error;
+        if (error) {
+          console.error('Save deposit error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          });
+          throw error;
+        }
         toast.success('Deposit transaction updated successfully');
       } else {
         const { error } = await supabase.from('cms_deposits').insert({ ...payload, created_by: profile?.id ?? null });
-        if (error) throw error;
-        await logAudit('cms_deposit_create', profile?.id ?? null, `Recorded CMS deposit of ${formatINR(submittedNow)} (Cash: ${formatINR(cashSubmitted)}, Online: ${formatINR(onlineSubmitted)}) for collection date ${formatDate(form.collection_date)}`, null, hubId);
+        if (error) {
+          console.error('Save deposit error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          });
+          throw error;
+        }
+        await logAudit('cms_deposit_create', profile?.id ?? null, `Recorded CMS deposit of ${formatINR(totalDeposited)} (Cash: ${formatINR(cashSubmitted)}, Online: ${formatINR(onlineSubmitted)}) for collection date ${formatDate(form.collection_date)}`, null, hubId);
         toast.success('CMS deposit recorded successfully');
       }
       setModalOpen(false);
       load();
     } catch (err) {
-      console.error('Save deposit error:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to save deposit transaction');
     } finally {
       setSaving(false);
@@ -1141,7 +1171,7 @@ export default function DepositsPage() {
         footer={
           <>
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving} className="min-h-[44px]">Cancel</Button>
-            <Button onClick={handleSaveGeneralDeposit} loading={saving} className="min-h-[44px]">{editing ? 'Update Deposit' : 'Record Deposit'}</Button>
+            <Button onClick={handleSaveGeneralDeposit} loading={saving} disabled={saving} className="min-h-[44px]">{editing ? 'Update Deposit' : 'Record Deposit'}</Button>
           </>
         }
       >
