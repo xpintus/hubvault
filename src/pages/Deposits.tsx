@@ -26,35 +26,32 @@ const safeAmount = (val: any): number => {
   return isNaN(num) ? 0 : num;
 };
 
-// Shared helper to normalize total deposited amounts across legacy and new deposit records
-export function getDepositAmount(deposit: CmsDeposit): number {
-  const splitTotal = safeAmount(deposit.cash_submitted) + safeAmount(deposit.online_submitted);
-  if (splitTotal > 0) {
-    return splitTotal;
-  }
-  return safeAmount(
-    deposit.total_deposited ??
-    (deposit as any).deposited_amount ??
-    deposit.cash_deposited ??
-    (deposit as any).amount
-  );
+// Helper for date key normalization (every deposit belongs to EXACTLY ONE date)
+export function getDepositDate(d: CmsDeposit): string {
+  return d.collection_date || d.deposit_date;
+}
+
+// Authoritative deposit amount helper
+export function getDepositAmount(d: CmsDeposit): number {
+  const total = safeAmount(d.total_deposited);
+  const split = safeAmount(d.cash_submitted) + safeAmount(d.online_submitted);
+  if (total > 0) return total;
+  if (split > 0) return split;
+  return safeAmount(d.cash_deposited);
 }
 
 // Helpers for Cash and Online submitted amounts
-export function getCashSubmittedAmount(deposit: CmsDeposit): number {
-  if (deposit.cash_submitted !== undefined && deposit.cash_submitted !== null && deposit.cash_submitted > 0) {
-    return safeAmount(deposit.cash_submitted);
-  }
-  const total = getDepositAmount(deposit);
-  const online = safeAmount(deposit.online_submitted ?? (deposit as any).online_amount);
-  return Math.max(0, total - online);
+export function getCashSubmittedAmount(d: CmsDeposit): number {
+  const total = getDepositAmount(d);
+  const cash = safeAmount(d.cash_submitted);
+  const online = safeAmount(d.online_submitted);
+  if (cash > 0) return cash;
+  if (online > 0) return Math.max(0, total - online);
+  return total;
 }
 
-export function getOnlineSubmittedAmount(deposit: CmsDeposit): number {
-  if (deposit.online_submitted !== undefined && deposit.online_submitted !== null) {
-    return safeAmount(deposit.online_submitted);
-  }
-  return safeAmount((deposit as any).online_amount);
+export function getOnlineSubmittedAmount(d: CmsDeposit): number {
+  return safeAmount(d.online_submitted);
 }
 
 const SHORTAGE_REASONS = [
@@ -213,7 +210,20 @@ export default function DepositsPage() {
       if (effectiveHubId) depQ = depQ.eq('hub_id', effectiveHubId);
       const { data: depData, error: depErr } = await depQ;
       if (depErr) throw depErr;
-      setDeposits((depData ?? []) as CmsDeposit[]);
+      const fetchedDeposits = (depData ?? []) as CmsDeposit[];
+      setDeposits(fetchedDeposits);
+
+      // Temporary debug log in development
+      if (import.meta.env.DEV) {
+        console.table(fetchedDeposits.map(d => ({
+          id: d.id,
+          relatedDate: getDepositDate(d),
+          cashSubmitted: d.cash_submitted,
+          onlineSubmitted: d.online_submitted,
+          totalDeposited: d.total_deposited,
+          normalizedAmount: getDepositAmount(d)
+        })));
+      }
 
       // 3. Fetch Collection Entries
       let entQ = supabase
@@ -281,7 +291,7 @@ export default function DepositsPage() {
     };
   }, [entries]);
 
-  // Daily Normalized Rows Aggregation (CMS is Hub/Date level)
+  // Daily Normalized Rows Aggregation (CMS is Hub/Date level, each deposit attached to EXACTLY ONE date)
   const dailyRows = useMemo<DailyCmsRow[]>(() => {
     const map = new Map<string, { date: string; hubId: string; hubName: string }>();
 
@@ -293,7 +303,7 @@ export default function DepositsPage() {
     });
 
     deposits.forEach((d) => {
-      const cDate = d.collection_date || d.deposit_date;
+      const cDate = getDepositDate(d);
       const key = `${cDate}_${d.hub_id}`;
       if (!map.has(key)) {
         map.set(key, { date: cDate, hubId: d.hub_id, hubName: d.hub?.name ?? '—' });
@@ -304,7 +314,8 @@ export default function DepositsPage() {
 
     map.forEach(({ date, hubId, hubName }) => {
       const dateEntries = entries.filter((e) => e.collection_date === date && e.hub_id === hubId);
-      const dateDeposits = deposits.filter((d) => (d.collection_date === date || d.deposit_date === date) && d.hub_id === hubId);
+      // Strictly filter deposits where getDepositDate(d) === date so each deposit belongs to EXACTLY ONE date row
+      const dateDeposits = deposits.filter((d) => getDepositDate(d) === date && d.hub_id === hubId);
 
       const expectedCod = dateEntries.reduce((s, e) => s + safeAmount(e.expected_cod), 0);
       const cashCollected = dateEntries.reduce((s, e) => s + safeAmount(e.cash_amount), 0);
@@ -382,7 +393,7 @@ export default function DepositsPage() {
     const q = search.trim().toLowerCase();
     if (!q) return deposits;
     return deposits.filter((d) => {
-      const dateStr = (d.collection_date || d.deposit_date).toLowerCase();
+      const dateStr = getDepositDate(d).toLowerCase();
       const hub = (d.hub?.name ?? '').toLowerCase();
       const ref = (d.reference_number ?? '').toLowerCase();
       const bank = (d.bank_name ?? '').toLowerCase();
@@ -397,9 +408,9 @@ export default function DepositsPage() {
     const totalExpectedCms = filteredDailyRows.reduce((s, r) => s + r.totalExpectedCms, 0);
     // Total Deposited card = sum of all valid deposit transaction amounts
     const totalDeposited = depositTransactions.reduce((s, d) => s + getDepositAmount(d), 0);
-    // CMS Pending Deposit card = sum of max(expectedCod - totalDeposited, 0)
+    // CMS Pending Deposit card = sum of max(expectedCod - totalDeposited, 0) across dates
     const cmsPending = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalExpectedCms - r.totalDeposited), 0);
-    // CMS Excess card = sum of max(totalDeposited - expectedCod, 0)
+    // CMS Excess card = sum of max(totalDeposited - expectedCod, 0) across dates
     const cmsExcess = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalDeposited - r.totalExpectedCms), 0);
 
     return {
@@ -465,7 +476,7 @@ export default function DepositsPage() {
     const totalExpectedCms = expectedCod;
 
     // Sum prior deposits excluding current editing record to avoid double counting
-    const priorDeposits = deposits.filter(d => (d.collection_date === cDate || d.deposit_date === cDate) && (!editing || d.id !== editing.id));
+    const priorDeposits = deposits.filter(d => getDepositDate(d) === cDate && (!editing || d.id !== editing.id));
     const alreadySubmitted = priorDeposits.reduce((s, d) => s + getDepositAmount(d), 0);
 
     const newCashSubmitted = safeAmount(form.cash_submitted);
@@ -474,7 +485,7 @@ export default function DepositsPage() {
 
     const totalAfterDeposit = alreadySubmitted + submittedNow;
     const remainingPending = Math.max(0, totalExpectedCms - totalAfterDeposit);
-    const isOverDeposit = totalAfterDeposit > totalExpectedCms;
+    const remainingExcess = Math.max(0, totalAfterDeposit - totalExpectedCms);
 
     return {
       expectedCod,
@@ -488,7 +499,8 @@ export default function DepositsPage() {
       submittedNow,
       totalAfterDeposit,
       remainingPending,
-      isOverDeposit,
+      remainingExcess,
+      isOverDeposit: totalAfterDeposit > totalExpectedCms,
     };
   }, [form.collection_date, form.cash_submitted, form.online_submitted, entries, deposits, editing]);
 
@@ -1003,31 +1015,54 @@ export default function DepositsPage() {
               <p className="mt-1 text-xs text-neutral-400">Total bank/CMS deposits</p>
             </Card>
 
-            {/* CMS Pending Deposit */}
+            {/* CMS Pending & Excess Dynamic Card */}
             <Card
               hover
               role="button"
               tabIndex={0}
               onClick={() => handleCardClick('pending')}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick('pending')}
-              className={clsx('p-4 cursor-pointer min-w-0 border-red-500/20 transition-transform active:scale-[0.98]', cmsSummaryStats.cmsPending > 0 && 'bg-red-500/5')}
-              aria-label="View CMS Pending Audit"
+              className={clsx(
+                'p-4 cursor-pointer min-w-0 transition-transform active:scale-[0.98]',
+                cmsSummaryStats.cmsPending > 0 ? 'border-red-500/20 bg-red-500/5' : 'border-blue-500/20 bg-blue-500/5'
+              )}
+              aria-label="View CMS Pending and Excess Audit"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center font-bold">
-                    <AlertCircle className="h-5 w-5" />
+                  <div className={clsx(
+                    'h-9 w-9 rounded-xl flex items-center justify-center font-bold',
+                    cmsSummaryStats.cmsPending > 0 ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
+                  )}>
+                    {cmsSummaryStats.cmsPending > 0 ? <AlertCircle className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}
                   </div>
-                  <p className="text-xs font-semibold text-red-500 truncate">CMS Pending Deposit</p>
+                  <p className={clsx('text-xs font-semibold truncate', cmsSummaryStats.cmsPending > 0 ? 'text-red-500' : 'text-blue-500')}>
+                    {cmsSummaryStats.cmsPending > 0 && cmsSummaryStats.cmsExcess > 0 ? 'CMS Pending & Excess' : cmsSummaryStats.cmsPending > 0 ? 'CMS Pending Deposit' : 'CMS Excess Deposit'}
+                  </p>
                 </div>
                 {cmsSummaryStats.cmsPending > 0 && (
                   <span className="text-[10px] font-extrabold text-red-500 bg-red-500/10 px-2 py-0.5 rounded uppercase">PENDING</span>
                 )}
               </div>
-              <p className={clsx('mt-2 text-xl sm:text-2xl font-bold tabular-nums truncate', cmsSummaryStats.cmsPending > 0 ? 'text-red-500 dark:text-red-400' : 'text-emerald-500')}>
-                {formatINR(cmsSummaryStats.cmsPending)}
-              </p>
-              <p className="mt-1 text-xs text-neutral-400">Total Expected CMS − Deposited</p>
+
+              {cmsSummaryStats.cmsPending > 0 && cmsSummaryStats.cmsExcess > 0 ? (
+                <div className="mt-2 space-y-0.5">
+                  <div className="flex justify-between items-baseline text-sm font-bold">
+                    <span className="text-xs text-red-500">Pending:</span>
+                    <span className="text-red-500 font-bold tabular-nums">{formatINR(cmsSummaryStats.cmsPending)}</span>
+                  </div>
+                  <div className="flex justify-between items-baseline text-sm font-bold">
+                    <span className="text-xs text-blue-500">Excess:</span>
+                    <span className="text-blue-500 font-bold tabular-nums">{formatINR(cmsSummaryStats.cmsExcess)}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className={clsx('mt-2 text-xl sm:text-2xl font-bold tabular-nums truncate', cmsSummaryStats.cmsPending > 0 ? 'text-red-500 dark:text-red-400' : 'text-blue-600 dark:text-blue-400')}>
+                  {cmsSummaryStats.cmsPending > 0 ? formatINR(cmsSummaryStats.cmsPending) : formatINR(cmsSummaryStats.cmsExcess)}
+                </p>
+              )}
+
+              <p className="mt-1 text-xs text-neutral-400">Total Expected CMS vs Deposited</p>
             </Card>
 
             {/* Deposit Count */}
@@ -1395,7 +1430,7 @@ function DetailDrawer({
   const titles: Record<string, string> = {
     expected: 'Total Expected CMS Details',
     deposited: 'Total Deposited Transactions',
-    pending: 'CMS Pending / Excess Audit',
+    pending: 'CMS Pending & Excess Audit',
     count: 'Deposit Transactions Log',
   };
 
@@ -1422,7 +1457,7 @@ function DetailDrawer({
   const filteredDeposits = useMemo(() => {
     return deposits.filter((d) => {
       if (!q) return true;
-      const dateStr = (d.collection_date || d.deposit_date).toLowerCase();
+      const dateStr = getDepositDate(d).toLowerCase();
       const hub = (d.hub?.name ?? '').toLowerCase();
       const ref = (d.reference_number ?? '').toLowerCase();
       const bank = (d.bank_name ?? '').toLowerCase();
@@ -1486,7 +1521,7 @@ function DetailDrawer({
                 const totalAmt = getDepositAmount(d);
                 const cashAmt = getCashSubmittedAmount(d);
                 const onlineAmt = getOnlineSubmittedAmount(d);
-                const cDate = d.collection_date || d.deposit_date;
+                const cDate = getDepositDate(d);
 
                 return (
                   <Card key={d.id} className="p-4 space-y-3">
@@ -1562,8 +1597,10 @@ function DetailDrawer({
                       <p className="font-bold text-blue-600 tabular-nums">{formatINR(r.onlineSubmitted)}</p>
                     </div>
                     <div className="rounded-lg bg-red-500/10 p-2">
-                      <p className="text-red-500">CMS Pending</p>
-                      <p className="font-bold text-red-500 tabular-nums">{formatINR(r.cmsPending)}</p>
+                      <p className="text-red-500">{r.cmsExcess > 0 ? 'CMS Excess' : 'CMS Pending'}</p>
+                      <p className={clsx('font-bold tabular-nums', r.cmsExcess > 0 ? 'text-blue-600' : 'text-red-500')}>
+                        {r.cmsExcess > 0 ? formatINR(r.cmsExcess) : formatINR(r.cmsPending)}
+                      </p>
                     </div>
                   </div>
                   {r.references.length > 0 && <p className="text-xs text-neutral-500 font-mono">Ref: {r.references.join(', ')}</p>}
