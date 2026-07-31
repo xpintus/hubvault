@@ -36,6 +36,14 @@ const safeAmount = (val: any): number => {
   return isNaN(num) ? 0 : num;
 };
 
+const normalizeRecoveryMode = (mode: string | null | undefined): 'cash' | 'online' | 'other' => {
+  if (!mode) return 'other';
+  const m = mode.toLowerCase().trim();
+  if (m === 'cash') return 'cash';
+  if (m === 'online' || m === 'upi' || m === 'bank_transfer' || m === 'net_banking' || m === 'qr') return 'online';
+  return 'other';
+};
+
 export default function Dashboard() {
   const { profile } = useAuth();
   const hubCtx = useHub();
@@ -205,6 +213,28 @@ export default function Dashboard() {
     return recoveries.filter((r) => r.recovery_date === dateStr);
   }, [recoveries, dateStr]);
 
+  const cashRecoveryToday = useMemo(() => {
+    return recoveriesToday
+      .filter((r) => normalizeRecoveryMode(r.payment_mode) === 'cash')
+      .reduce((s, r) => s + safeAmount(r.amount), 0);
+  }, [recoveriesToday]);
+
+  const onlineRecoveryToday = useMemo(() => {
+    return recoveriesToday
+      .filter((r) => normalizeRecoveryMode(r.payment_mode) === 'online')
+      .reduce((s, r) => s + safeAmount(r.amount), 0);
+  }, [recoveriesToday]);
+
+  const otherRecoveryToday = useMemo(() => {
+    return recoveriesToday
+      .filter((r) => normalizeRecoveryMode(r.payment_mode) === 'other')
+      .reduce((s, r) => s + safeAmount(r.amount), 0);
+  }, [recoveriesToday]);
+
+  const availableCash = useMemo(() => summary.cash + cashRecoveryToday, [summary.cash, cashRecoveryToday]);
+  const availableOnline = useMemo(() => summary.online + onlineRecoveryToday, [summary.online, onlineRecoveryToday]);
+  const totalAvailable = useMemo(() => availableCash + availableOnline + otherRecoveryToday, [availableCash, availableOnline, otherRecoveryToday]);
+
   const recoveryToday = useMemo(() => {
     return recoveriesToday.reduce((s, r) => s + safeAmount(r.amount), 0);
   }, [recoveriesToday]);
@@ -368,6 +398,30 @@ export default function Dashboard() {
         const breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.total_collection), sub: e.collector?.employee_id }));
         breakdown.sort((a, b) => b.amount - a.amount);
         setKpiDetail({ title: 'Total Collection', label: 'Total Collection Breakdown', icon: Wallet, accent: 'brand', value: summary.total, breakdown });
+      }
+    },
+    {
+      title: 'Available Collection',
+      value: totalAvailable,
+      formatted: formatINR(totalAvailable),
+      icon: Scale,
+      accent: 'emerald',
+      sub: `Cash: ${formatINR(availableCash)} · Online: ${formatINR(availableOnline)}`,
+      openModal: () => {
+        setKpiDetail({
+          title: 'Available Collection',
+          label: 'Available Collection Breakdown',
+          icon: Scale,
+          accent: 'emerald',
+          value: totalAvailable,
+          breakdown: [
+            { label: 'Cash Collected', amount: summary.cash, sub: 'Direct cash collection today' },
+            { label: 'Cash Recovery Today', amount: cashRecoveryToday, sub: 'Cash recovered against dues today' },
+            { label: 'Online Collected', amount: summary.online, sub: 'Direct online collection today' },
+            { label: 'Online Recovery Today', amount: onlineRecoveryToday, sub: 'Online recovered against dues today' },
+            ...(otherRecoveryToday > 0 ? [{ label: 'Other Recovery Today', amount: otherRecoveryToday, sub: 'Other recovery modes today' }] : []),
+          ],
+        });
       }
     },
     {
@@ -546,7 +600,7 @@ export default function Dashboard() {
                 Daily Summary & Collections
               </h2>
             </div>
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
               {topSummaryCards.map((c) => {
                 const a = accentMap[c.accent];
                 return (
