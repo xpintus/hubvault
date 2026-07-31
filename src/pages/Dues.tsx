@@ -632,7 +632,39 @@ export default function Dues() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            {/* Mobile Date-wise Cards (< md) */}
+            <div className="md:hidden space-y-2.5">
+              {selectedEmployeeGroup.dueRecords.map((d) => (
+                <div key={d.id} className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[var(--card-bg)] space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-neutral-800 dark:text-neutral-200 text-sm">
+                      {formatDate(d.due_date)}
+                    </span>
+                    <span className={clsx('inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset', statusConfig[d.status]?.badge)}>
+                      <span className={clsx('h-1.5 w-1.5 rounded-full', statusConfig[d.status]?.dot)} />
+                      {DUE_STATUS_LABELS[d.status]}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-neutral-100 dark:border-neutral-800/60 font-mono">
+                    <div>
+                      <span className="text-neutral-500 text-[10px] block">Original</span>
+                      <span className="text-neutral-700 dark:text-neutral-300 font-semibold">{formatINR(d.original_amount)}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-500 text-[10px] block">Recovered</span>
+                      <span className="text-brand-600 font-semibold">{formatINR(d.recovered_amount)}</span>
+                    </div>
+                    <div>
+                      <span className="text-red-500 text-[10px] font-bold block">Outstanding</span>
+                      <span className="text-red-500 font-bold">{formatINR(d.remaining_amount)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Date-wise Table (>= md) */}
+            <div className="hidden md:block rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
@@ -683,7 +715,9 @@ export default function Dues() {
             </div>
           </div>
         ) : (
+          /* MAIN EMPLOYEE-WISE SUMMARY VIEW */
           <div className="space-y-4">
+            {/* Search Filter */}
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <input
@@ -702,69 +736,133 @@ export default function Dues() {
                 message={modalSearch ? 'No employee matches your search query.' : 'There are currently no active employee outstanding dues.'}
               />
             ) : (
-              <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
-                      <tr>
-                        <th className="text-left px-4 py-3 font-semibold">Employee</th>
-                        <th className="text-left px-3 py-3 font-semibold">Emp ID</th>
-                        <th className="text-left px-3 py-3 font-semibold">Phone</th>
-                        <th className="text-right px-3 py-3 font-semibold">Entries</th>
-                        <th className="text-right px-3 py-3 font-semibold">Original</th>
-                        <th className="text-right px-3 py-3 font-semibold">Recovered</th>
-                        <th className="text-right px-4 py-3 font-semibold">Outstanding</th>
-                        <th className="text-center px-4 py-3 font-semibold">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                      {filteredEmployeeSummary.map((emp) => (
-                        <tr
-                          key={emp.collectorId}
-                          onClick={() => setSelectedEmployeeId(emp.collectorId)}
-                          className="group hover:bg-neutral-50 dark:hover:bg-neutral-900/60 transition cursor-pointer"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 text-red-600 flex items-center justify-center font-bold text-xs shrink-0">
-                                {emp.collectorName.charAt(0).toUpperCase()}
-                              </div>
-                              <span className="font-semibold text-neutral-800 dark:text-neutral-200 group-hover:text-red-500 transition-colors">
-                                {emp.collectorName}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 font-mono text-xs text-neutral-500">{emp.employeeId}</td>
-                          <td className="px-3 py-3 font-mono text-xs text-neutral-500">{emp.phone}</td>
-                          <td className="px-3 py-3 text-right font-medium tabular-nums text-neutral-700 dark:text-neutral-300">
-                            {emp.entriesCount}
-                          </td>
-                          <td className="px-3 py-3 text-right tabular-nums text-neutral-600 dark:text-neutral-400 font-mono">
+              <>
+                {/* Mobile Employee Cards (< md) */}
+                <div className="md:hidden space-y-3">
+                  {filteredEmployeeSummary.map((emp) => (
+                    <div
+                      key={emp.collectorId}
+                      onClick={() => setSelectedEmployeeId(emp.collectorId)}
+                      className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[var(--card-bg)] hover:border-red-500/40 dark:hover:border-red-500/40 transition cursor-pointer space-y-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-100 to-red-200 text-red-600 flex items-center justify-center font-bold text-sm shrink-0">
+                            {emp.collectorName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-neutral-900 dark:text-neutral-100 text-base truncate">
+                              {emp.collectorName}
+                            </h3>
+                            <p className="text-xs text-neutral-500 font-mono truncate">
+                              ID: {emp.employeeId} · Phone: {emp.phone}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                          {emp.entriesCount} {emp.entriesCount === 1 ? 'Entry' : 'Entries'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 text-xs">
+                        <div>
+                          <span className="text-neutral-500 block text-[11px]">Original Due</span>
+                          <span className="font-semibold text-neutral-700 dark:text-neutral-300 font-mono">
                             {formatINR(emp.totalOriginal)}
-                          </td>
-                          <td className="px-3 py-3 text-right tabular-nums text-brand-600 font-mono">
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-500 block text-[11px]">Recovered</span>
+                          <span className="font-semibold text-brand-600 font-mono">
                             {formatINR(emp.totalRecovered)}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-bold text-red-500 font-mono">
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-red-500 font-bold block text-[11px]">Outstanding</span>
+                          <span className="font-bold text-red-500 text-sm font-mono block">
                             {formatINR(emp.totalRemaining)}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEmployeeId(emp.collectorId);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition active:scale-95"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-neutral-500" /> View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedEmployeeId(emp.collectorId);
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition active:scale-98"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-neutral-500" /> View Details
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              </div>
+
+                {/* Desktop Employee Summary Table (>= md) */}
+                <div className="hidden md:block rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
+                        <tr>
+                          <th className="text-left px-4 py-3 font-semibold">Employee</th>
+                          <th className="text-left px-3 py-3 font-semibold">Emp ID</th>
+                          <th className="text-left px-3 py-3 font-semibold">Phone</th>
+                          <th className="text-right px-3 py-3 font-semibold">Entries</th>
+                          <th className="text-right px-3 py-3 font-semibold">Original</th>
+                          <th className="text-right px-3 py-3 font-semibold">Recovered</th>
+                          <th className="text-right px-4 py-3 font-semibold">Outstanding</th>
+                          <th className="text-center px-4 py-3 font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                        {filteredEmployeeSummary.map((emp) => (
+                          <tr
+                            key={emp.collectorId}
+                            onClick={() => setSelectedEmployeeId(emp.collectorId)}
+                            className="group hover:bg-neutral-50 dark:hover:bg-neutral-900/60 transition cursor-pointer"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 text-red-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                  {emp.collectorName.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-semibold text-neutral-800 dark:text-neutral-200 group-hover:text-red-500 transition-colors">
+                                  {emp.collectorName}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 font-mono text-xs text-neutral-500">{emp.employeeId}</td>
+                            <td className="px-3 py-3 font-mono text-xs text-neutral-500">{emp.phone}</td>
+                            <td className="px-3 py-3 text-right font-medium tabular-nums text-neutral-700 dark:text-neutral-300">
+                              {emp.entriesCount}
+                            </td>
+                            <td className="px-3 py-3 text-right tabular-nums text-neutral-600 dark:text-neutral-400 font-mono">
+                              {formatINR(emp.totalOriginal)}
+                            </td>
+                            <td className="px-3 py-3 text-right tabular-nums text-brand-600 font-mono">
+                              {formatINR(emp.totalRecovered)}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums font-bold text-red-500 font-mono">
+                              {formatINR(emp.totalRemaining)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedEmployeeId(emp.collectorId);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition active:scale-95"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-neutral-500" /> View Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-red-500">
