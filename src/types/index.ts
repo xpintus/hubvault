@@ -303,28 +303,47 @@ export const EMPTY_DENOMINATIONS: DenominationInput = {
 export interface CmsDeposit {
   id: string;
   deposit_date: string;
+  collection_date?: string | null;
+  collector_id?: string | null;
   hub_id: string;
   total_cash_collected: number;
   cash_deposited: number;
   online_amount: number;
   total_expected_cms: number;
   total_deposited: number;
+  cash_submitted?: number;
+  online_submitted?: number;
+  total_submitted?: number;
   short_amount: number;
   reference_number: string | null;
+  cash_reference?: string | null;
+  online_reference?: string | null;
+  bank_name?: string | null;
   remarks: string | null;
+  status?: string;
   created_by: string | null;
   created_at: string;
   updated_at: string;
   hub?: Hub | null;
+  collector?: Collector | null;
 }
 
 export interface CmsDepositInput {
   deposit_date: string;
+  collection_date?: string;
+  collector_id?: string | null;
   hub_id: string;
   total_cash_collected: number;
   cash_deposited: number;
   online_amount: number;
+  cash_submitted?: number;
+  online_submitted?: number;
+  total_submitted?: number;
   short_amount: number;
-  reference_number: string | null;
-  remarks: string | null;
+  reference_number?: string | null;
+  cash_reference?: string | null;
+  online_reference?: string | null;
+  bank_name?: string | null;
+  remarks?: string | null;
 }
+
