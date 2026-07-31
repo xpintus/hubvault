@@ -293,6 +293,18 @@ export default function Dues() {
     return result;
   }, [dues]);
 
+  // Filtered Outstanding Employee Summary for Modal Search
+  const filteredEmployeeSummary = useMemo(() => {
+    const q = modalSearch.trim().toLowerCase();
+    if (!q) return employeeOutstandingSummary;
+    return employeeOutstandingSummary.filter((group) => {
+      const name = group.collectorName.toLowerCase();
+      const empId = group.employeeId.toLowerCase();
+      const phone = group.phone.toLowerCase();
+      return name.includes(q) || empId.includes(q) || phone.includes(q);
+    });
+  }, [employeeOutstandingSummary, modalSearch]);
+
   const openAddManualDue = () => {
     const presetHub = activeHubId || (hubCtx.accessibleHubs[0]?.id ?? '');
     setEditingManualDue(null);
