@@ -959,7 +959,7 @@ export default function Dues() {
             <UsersIcon className="h-4 w-4 text-brand-600" />
             Employee Dues Summary ({employeeSummaryRows.length} Employees)
           </h2>
-          <span className="text-xs text-neutral-500">Click Ledger button for itemized employee timeline</span>
+          <span className="text-xs text-neutral-500 hidden sm:inline">Click Ledger button for itemized employee timeline</span>
         </div>
 
         {loading ? (
@@ -969,77 +969,156 @@ export default function Dues() {
             <EmptyState icon={<UsersIcon className="h-8 w-8" />} title="No employee summary records" message="No matching employee dues found." />
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50 dark:bg-neutral-950/80 text-neutral-500 text-xs uppercase tracking-wide">
-                  <tr>
-                    <th className="text-left px-5 py-3 font-semibold">Employee</th>
-                    <th className="text-right px-4 py-3 font-semibold">Entries</th>
-                    <th className="text-right px-4 py-3 font-semibold">Total Original</th>
-                    <th className="text-right px-4 py-3 font-semibold text-emerald-600">Total Recovered</th>
-                    <th className="text-right px-4 py-3 font-semibold text-red-500">Outstanding</th>
-                    <th className="text-center px-4 py-3 font-semibold">Recovery %</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">Oldest Due</th>
-                    <th className="text-center px-4 py-3 font-semibold">Status</th>
-                    <th className="text-right px-5 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {employeeSummaryRows.map((emp) => (
-                    <tr key={emp.collectorId} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <p className="font-bold text-neutral-900 dark:text-neutral-100">{emp.collectorName}</p>
-                        <p className="text-xs text-neutral-400 font-mono">{emp.employeeId} · {emp.phone}</p>
-                      </td>
-                      <td className="px-4 py-3.5 text-right font-medium tabular-nums">{emp.dueEntryCount}</td>
-                      <td className="px-4 py-3.5 text-right font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(emp.totalOriginalDue)}</td>
-                      <td className="px-4 py-3.5 text-right font-medium text-emerald-600 tabular-nums">{formatINR(emp.totalRecovered)}</td>
-                      <td className={clsx('px-4 py-3.5 text-right font-bold tabular-nums', emp.currentOutstanding > 0 ? 'text-red-500' : 'text-neutral-400')}>
-                        {formatINR(emp.currentOutstanding)}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <div className="inline-flex items-center gap-1">
-                          <div className="w-12 bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-brand-600 h-1.5 rounded-full" style={{ width: `${Math.min(100, emp.recoveryPercentage)}%` }} />
-                          </div>
-                          <span className="text-xs font-bold tabular-nums">{emp.recoveryPercentage}%</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 text-neutral-500 text-xs hidden lg:table-cell">{formatDate(emp.oldestDueDate)}</td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span className={clsx(
-                          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold',
-                          emp.status === 'Fully Recovered' ? 'bg-brand-500/10 text-brand-600 ring-brand-500/30' :
-                          emp.status === 'Partially Recovered' ? 'bg-amber-500/10 text-amber-500 ring-amber-500/30' :
-                          'bg-red-500/10 text-red-500 ring-red-500/30'
-                        )}>
-                          {emp.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {canManage && emp.currentOutstanding > 0 && emp.dueRecords[0] && (
-                            <Button size="sm" onClick={() => setRecoveryForDue(emp.dueRecords[0])} className="min-h-[36px] px-2.5 text-xs font-semibold">
-                              + Recover
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline" onClick={() => setSearch(emp.employeeId)} className="min-h-[36px] px-2.5 text-xs" title="Filter individual dues for this employee">
-                            View Dues
-                          </Button>
-                          {emp.collector && (
-                            <Button size="sm" variant="outline" icon={<BookOpen className="h-3.5 w-3.5 text-brand-600" />} onClick={() => setSelectedLedgerCollector(emp.collector)} className="min-h-[36px] px-2.5 text-xs font-semibold border-brand-500/30 text-brand-600 hover:bg-brand-500/10" title="Open employee ledger timeline">
-                              Ledger
-                            </Button>
-                          )}
-                        </div>
-                      </td>
+          <>
+            {/* Desktop View: Table (visible on screens >= 768px / md breakpoint) */}
+            <Card className="hidden md:block overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-50 dark:bg-neutral-950/80 text-neutral-500 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left px-5 py-3 font-semibold">Employee</th>
+                      <th className="text-right px-4 py-3 font-semibold">Entries</th>
+                      <th className="text-right px-4 py-3 font-semibold">Total Original</th>
+                      <th className="text-right px-4 py-3 font-semibold text-emerald-600">Total Recovered</th>
+                      <th className="text-right px-4 py-3 font-semibold text-red-500">Outstanding</th>
+                      <th className="text-center px-4 py-3 font-semibold">Recovery %</th>
+                      <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">Oldest Due</th>
+                      <th className="text-center px-4 py-3 font-semibold">Status</th>
+                      <th className="text-right px-5 py-3 font-semibold">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                    {employeeSummaryRows.map((emp) => (
+                      <tr key={emp.collectorId} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <p className="font-bold text-neutral-900 dark:text-neutral-100">{emp.collectorName}</p>
+                          <p className="text-xs text-neutral-400 font-mono">{emp.employeeId} · {emp.phone}</p>
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-medium tabular-nums">{emp.dueEntryCount}</td>
+                        <td className="px-4 py-3.5 text-right font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(emp.totalOriginalDue)}</td>
+                        <td className="px-4 py-3.5 text-right font-medium text-emerald-600 tabular-nums">{formatINR(emp.totalRecovered)}</td>
+                        <td className={clsx('px-4 py-3.5 text-right font-bold tabular-nums', emp.currentOutstanding > 0 ? 'text-red-500' : 'text-neutral-400')}>
+                          {formatINR(emp.currentOutstanding)}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <div className="inline-flex items-center gap-1">
+                            <div className="w-12 bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                              <div className="bg-brand-600 h-1.5 rounded-full" style={{ width: `${Math.min(100, emp.recoveryPercentage)}%` }} />
+                            </div>
+                            <span className="text-xs font-bold tabular-nums">{emp.recoveryPercentage}%</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-neutral-500 text-xs hidden lg:table-cell">{formatDate(emp.oldestDueDate)}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={clsx(
+                            'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold',
+                            emp.status === 'Fully Recovered' ? 'bg-brand-500/10 text-brand-600 ring-brand-500/30' :
+                            emp.status === 'Partially Recovered' ? 'bg-amber-500/10 text-amber-500 ring-amber-500/30' :
+                            'bg-red-500/10 text-red-500 ring-red-500/30'
+                          )}>
+                            {emp.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {canManage && emp.currentOutstanding > 0 && emp.dueRecords[0] && (
+                              <Button size="sm" onClick={() => setRecoveryForDue(emp.dueRecords[0])} className="min-h-[36px] px-2.5 text-xs font-semibold">
+                                + Recover
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => setSearch(emp.employeeId)} className="min-h-[36px] px-2.5 text-xs" title="Filter individual dues for this employee">
+                              View Dues
+                            </Button>
+                            {emp.collector && (
+                              <Button size="sm" variant="outline" icon={<BookOpen className="h-3.5 w-3.5 text-brand-600" />} onClick={() => setSelectedLedgerCollector(emp.collector)} className="min-h-[36px] px-2.5 text-xs font-semibold border-brand-500/30 text-brand-600 hover:bg-brand-500/10" title="Open employee ledger timeline">
+                                Ledger
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Mobile View: Cards (Strictly visible on screens < 768px / md:hidden) */}
+            <div className="grid grid-cols-1 gap-3 md:hidden w-full max-w-full">
+              {employeeSummaryRows.map((emp) => (
+                <Card key={emp.collectorId} className="p-4 space-y-3 border border-neutral-200 dark:border-neutral-800 w-full min-w-0 shadow-sm">
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
+                    <div className="min-w-0">
+                      <p className="font-bold text-base text-neutral-900 dark:text-neutral-100 truncate">{emp.collectorName}</p>
+                      <p className="text-xs text-neutral-400 font-mono mt-0.5">{emp.employeeId}</p>
+                      <p className="text-xs text-neutral-500 font-mono mt-0.5">Phone: {emp.phone}</p>
+                    </div>
+                    <span className={clsx(
+                      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold shrink-0',
+                      emp.status === 'Fully Recovered' ? 'bg-brand-500/10 text-brand-600 ring-1 ring-brand-500/30' :
+                      emp.status === 'Partially Recovered' ? 'bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/30' :
+                      'bg-red-500/10 text-red-500 ring-1 ring-red-500/30'
+                    )}>
+                      {emp.status}
+                    </span>
+                  </div>
+
+                  {/* Summary Metric Grid */}
+                  <div className="grid grid-cols-3 gap-1.5 p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center text-xs border border-neutral-200/60 dark:border-neutral-800/60">
+                    <div>
+                      <p className="text-neutral-500 text-[11px]">Original</p>
+                      <p className="font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(emp.totalOriginalDue)}</p>
+                    </div>
+                    <div>
+                      <p className="text-emerald-600 text-[11px]">Recovered</p>
+                      <p className="font-bold text-emerald-600 tabular-nums">{formatINR(emp.totalRecovered)}</p>
+                    </div>
+                    <div>
+                      <p className="text-red-500 text-[11px]">Outstanding</p>
+                      <p className={clsx('font-bold tabular-nums', emp.currentOutstanding > 0 ? 'text-red-500' : 'text-neutral-400')}>
+                        {formatINR(emp.currentOutstanding)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Secondary Details */}
+                  <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 px-1">
+                    <div>
+                      <span>Entries: </span>
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{emp.dueEntryCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span>Recovery: </span>
+                      <div className="w-10 bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden inline-block align-middle">
+                        <div className="bg-brand-600 h-1.5 rounded-full" style={{ width: `${Math.min(100, emp.recoveryPercentage)}%` }} />
+                      </div>
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{emp.recoveryPercentage}%</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                    <Button size="sm" variant="outline" onClick={() => setSearch(emp.employeeId)} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial">
+                      View Dues
+                    </Button>
+
+                    {canManage && emp.currentOutstanding > 0 && emp.dueRecords[0] && (
+                      <Button size="sm" onClick={() => setRecoveryForDue(emp.dueRecords[0])} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial">
+                        + Recover
+                      </Button>
+                    )}
+
+                    {emp.collector && (
+                      <Button size="sm" variant="outline" icon={<BookOpen className="h-3.5 w-3.5 text-brand-600" />} onClick={() => setSelectedLedgerCollector(emp.collector)} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial border-brand-500/30 text-brand-600 hover:bg-brand-500/10">
+                        Ledger
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              ))}
             </div>
-          </Card>
+          </>
         )}
       </div>
 
