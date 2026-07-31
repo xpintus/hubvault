@@ -53,8 +53,6 @@ export default function Dashboard() {
   const [canManage, setCanManage] = useState(false);
   const [dues, setDues] = useState<Due[]>([]);
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
-  const [showTotalOnlineModal, setShowTotalOnlineModal] = useState(false);
-  const [totalOnlineSearch, setTotalOnlineSearch] = useState('');
 
   const dateStr = toISODate(date);
 
@@ -96,8 +94,7 @@ export default function Dashboard() {
           if (effectiveHubId) recData = recData.filter(r => r.hub_id === effectiveHubId);
           const hydratedRecs = await Promise.all(recData.map(async (r) => {
               const collector = await db.collectors.get(r.collector_id);
-              const due = r.due_id ? await db.dues.get(r.due_id) : null;
-              return { ...r, collector, due };
+              return { ...r, collector };
           }));
           setRecoveries(hydratedRecs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()) as any[]);
 
@@ -145,14 +142,14 @@ export default function Dashboard() {
 
         let recQuery = supabase
           .from('recoveries')
-          .select('*, collector: collectors(*), due: dues(*)')
+          .select('*, collector: collectors(*)')
           .eq('recovery_date', dateStr);
         if (effectiveHubId) recQuery = recQuery.eq('hub_id', effectiveHubId);
         const { data: recData } = await recQuery.order('created_at', { ascending: false });
         setRecoveries(recData ?? []);
 
         const pureRecs = (recData ?? []).map(r => {
-            const { collector, due, ...rest } = r as any;
+            const { collector, ...rest } = r as any;
             return rest;
         });
         await db.recoveries.bulkPut(pureRecs);
@@ -195,47 +192,6 @@ export default function Dashboard() {
       return s;
     }, 0);
   }, [dues]);
-
-  const onlineDuesRecoveryToday = useMemo(() => {
-    return recoveries
-      .filter((r) => (r.payment_mode || '').toLowerCase() !== 'cash')
-      .reduce((s, r) => s + Number(r.amount || 0), 0);
-  }, [recoveries]);
-
-  const totalOnlineCollection = useMemo(() => {
-    return summary.online + onlineDuesRecoveryToday;
-  }, [summary.online, onlineDuesRecoveryToday]);
-
-  const onlineCollectionsList = useMemo(() => {
-    const q = totalOnlineSearch.trim().toLowerCase();
-    return entries.filter((e) => {
-      if (Number(e.online_amount || 0) <= 0) return false;
-      if (!q) return true;
-      const name = e.collector?.name?.toLowerCase() ?? '';
-      const empId = e.collector?.employee_id?.toLowerCase() ?? '';
-      return name.includes(q) || empId.includes(q);
-    });
-  }, [entries, totalOnlineSearch]);
-
-  const onlineRecoveriesList = useMemo(() => {
-    const q = totalOnlineSearch.trim().toLowerCase();
-    return recoveries.filter((r) => {
-      if ((r.payment_mode || '').toLowerCase() === 'cash') return false;
-      if (Number(r.amount || 0) <= 0) return false;
-      if (!q) return true;
-      const name = r.collector?.name?.toLowerCase() ?? '';
-      const empId = r.collector?.employee_id?.toLowerCase() ?? '';
-      return name.includes(q) || empId.includes(q);
-    });
-  }, [recoveries, totalOnlineSearch]);
-
-  const totalOnlineCollectionEntriesSum = useMemo(() => {
-    return onlineCollectionsList.reduce((s, e) => s + Number(e.online_amount || 0), 0);
-  }, [onlineCollectionsList]);
-
-  const totalOnlineRecoverySum = useMemo(() => {
-    return onlineRecoveriesList.reduce((s, r) => s + Number(r.amount || 0), 0);
-  }, [onlineRecoveriesList]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -384,14 +340,14 @@ export default function Dashboard() {
           ],
     },
   ];
+
   const duesKpiCards = [
-    { label: 'Total Online Collection', value: totalOnlineCollection, icon: Smartphone, accent: 'blue',
-      sub: `Collection: ${formatINR(summary.online)} • Recovery: ${formatINR(onlineDuesRecoveryToday)}`,
-      desc: 'Combined total of today\'s regular online collections and online dues recovery transactions.',
+    { label: 'Pending Today', value: summary.totalPending, icon: AlertCircle, accent: 'amber', sub: 'unpaid from today',
+      desc: 'Amount still unpaid from today\'s collection entries. These are the gaps between expected and actual collection for the selected date.',
       points: [
-        'Includes digital payments from regular collection entries',
-        'Includes online/UPI recovery payments from past dues',
-        'Excludes physical cash collections and cash recoveries',
+        'Calculated as the shortfall for each entry on the selected date',
+        'Represents unpaid amounts that still need to be collected',
+        'Tracked per collector for targeted follow-up',
       ],
     },
     { label: 'Outstanding Dues', value: outstandingDues, icon: TrendingDown, accent: 'red', sub: 'total across all dates',
@@ -553,13 +509,10 @@ export default function Dashboard() {
           {duesKpiCards.map((c) => {
             const a = accentMap[c.accent];
             const openDetail = () => {
-              if (c.label === 'Total Online Collection') {
-                setTotalOnlineSearch('');
-                setShowTotalOnlineModal(true);
-                return;
-              }
               let breakdown: { label: string; amount: number; sub?: string }[] = [];
-              if (c.label === 'Outstanding Dues') {
+              if (c.label === 'Pending Today') {
+                breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: computePendingAmount(Number(e.expected_cod), Number(e.total_collection)), sub: e.collector?.employee_id })).filter(b => b.amount > 0);
+              } else if (c.label === 'Outstanding Dues') {
                 breakdown = dues.map(d => ({ label: d.collector?.name ?? '—', amount: Number(d.remaining_amount), sub: formatDate(d.due_date) }));
               } else if (c.label === 'Recovery Today') {
                 breakdown = recoveries.map(r => ({ label: r.collector?.name ?? '—', amount: Number(r.amount), sub: r.collector?.employee_id }));
@@ -588,7 +541,7 @@ export default function Dashboard() {
                   <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(c.value)}</p>
                   <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">{c.sub}</p>
                   <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 opacity-0 -translate-y-1 transition-all duration-300 group-hover/dues:opacity-100 group-hover/dues:translate-y-0">
-                    Click to view details
+                    Click for details
                     <ArrowRight className="h-3 w-3" />
                   </span>
                 </div>
@@ -980,251 +933,6 @@ export default function Dashboard() {
           </div>
         </Modal>
       )}
-
-      {/* Total Online Collection Breakdown Modal */}
-      <Modal
-        open={showTotalOnlineModal}
-        onClose={() => setShowTotalOnlineModal(false)}
-        title="Total Online Collection — Breakdown"
-        subtitle={`Regular Online Collection & Online Dues Recovery for ${formatDate(dateStr)}`}
-        size="xl"
-      >
-        <div className="space-y-6">
-          {/* Search Filter */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-            <input
-              type="text"
-              value={totalOnlineSearch}
-              onChange={(e) => setTotalOnlineSearch(e.target.value)}
-              placeholder="Search by employee name or ID…"
-              className="input-base pl-10"
-            />
-          </div>
-
-          {/* SECTION 1: TODAY'S ONLINE COLLECTION ENTRIES */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                <Smartphone className="w-4 h-4 text-brand-600" />
-                Today's Online Collection Entries
-                <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-mono font-normal">
-                  {onlineCollectionsList.length}
-                </span>
-              </h3>
-              <span className="text-xs font-semibold text-neutral-500">
-                Subtotal: <strong className="text-brand-600 font-mono">{formatINR(totalOnlineCollectionEntriesSum)}</strong>
-              </span>
-            </div>
-
-            {onlineCollectionsList.length === 0 ? (
-              <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 text-center text-xs text-neutral-500">
-                {totalOnlineSearch ? 'No online collection entry matches your search query.' : 'No regular online collections recorded for today.'}
-              </div>
-            ) : (
-              <>
-                {/* Mobile Cards (< md) */}
-                <div className="md:hidden space-y-2.5">
-                  {onlineCollectionsList.map((e) => (
-                    <div key={e.id} className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[var(--card-bg)] space-y-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
-                            {e.collector?.name?.charAt(0).toUpperCase() ?? '?'}
-                          </div>
-                          <div className="min-w-0">
-                            <span className="font-bold text-neutral-800 dark:text-neutral-200 text-sm block truncate">
-                              {e.collector?.name ?? '—'}
-                            </span>
-                            <span className="text-neutral-500 font-mono text-[11px]">ID: {e.collector?.employee_id ?? 'N/A'}</span>
-                          </div>
-                        </div>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
-                          {e.online_payment_mode ? PAYMENT_MODE_LABELS[e.online_payment_mode] : 'Online'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/60">
-                        <span className="text-neutral-500 text-[11px] font-mono">{formatDate(e.created_at)}</span>
-                        <div className="text-right">
-                          <span className="text-[10px] text-neutral-500 block">Amount</span>
-                          <span className="font-bold text-blue-400 font-mono text-sm">{formatINR(e.online_amount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop Table (>= md) */}
-                <div className="hidden md:block rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
-                      <tr>
-                        <th className="text-left px-4 py-2.5 font-semibold">Employee Name</th>
-                        <th className="text-left px-3 py-2.5 font-semibold">Employee ID</th>
-                        <th className="text-left px-3 py-2.5 font-semibold">Collection Time</th>
-                        <th className="text-right px-4 py-2.5 font-semibold">Amount</th>
-                        <th className="text-center px-3 py-2.5 font-semibold">Payment Mode</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                      {onlineCollectionsList.map((e) => (
-                        <tr key={e.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition">
-                          <td className="px-4 py-2.5 font-semibold text-neutral-800 dark:text-neutral-200">
-                            {e.collector?.name ?? '—'}
-                          </td>
-                          <td className="px-3 py-2.5 font-mono text-xs text-neutral-500">{e.collector?.employee_id ?? 'N/A'}</td>
-                          <td className="px-3 py-2.5 text-xs text-neutral-500">{formatDate(e.created_at)}</td>
-                          <td className="px-4 py-2.5 text-right font-bold text-blue-400 font-mono tabular-nums">{formatINR(e.online_amount)}</td>
-                          <td className="px-3 py-2.5 text-center">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                              {e.online_payment_mode ? PAYMENT_MODE_LABELS[e.online_payment_mode] : 'Online'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            <div className="p-3 bg-neutral-100 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-              <span>Total Online Collection:</span>
-              <span className="font-mono text-sm font-bold text-brand-600">{formatINR(totalOnlineCollectionEntriesSum)}</span>
-            </div>
-          </div>
-
-          {/* SECTION 2: TODAY'S ONLINE DUES RECOVERY */}
-          <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-blue-400" />
-                Today's Online Dues Recovery
-                <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-mono font-normal">
-                  {onlineRecoveriesList.length}
-                </span>
-              </h3>
-              <span className="text-xs font-semibold text-neutral-500">
-                Subtotal: <strong className="text-blue-400 font-mono">{formatINR(totalOnlineRecoverySum)}</strong>
-              </span>
-            </div>
-
-            {onlineRecoveriesList.length === 0 ? (
-              <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 text-center text-xs text-neutral-500">
-                {totalOnlineSearch ? 'No online recovery matches your search query.' : 'No online dues recovery transactions recorded for today.'}
-              </div>
-            ) : (
-              <>
-                {/* Mobile Cards (< md) */}
-                <div className="md:hidden space-y-2.5">
-                  {onlineRecoveriesList.map((r) => (
-                    <div key={r.id} className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[var(--card-bg)] space-y-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
-                            {r.collector?.name?.charAt(0).toUpperCase() ?? '?'}
-                          </div>
-                          <div className="min-w-0">
-                            <span className="font-bold text-neutral-800 dark:text-neutral-200 text-sm block truncate">
-                              {r.collector?.name ?? '—'}
-                            </span>
-                            <span className="text-neutral-500 font-mono text-[11px]">ID: {r.collector?.employee_id ?? 'N/A'}</span>
-                          </div>
-                        </div>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase shrink-0">
-                          {r.payment_mode || 'ONLINE'}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/60 font-mono text-[11px]">
-                        <div>
-                          <span className="text-neutral-500 text-[10px] block font-sans">Original Due</span>
-                          <span className="text-neutral-700 dark:text-neutral-300 font-semibold">{r.due ? formatINR(r.due.original_amount) : '—'}</span>
-                        </div>
-                        <div>
-                          <span className="text-blue-400 text-[10px] font-bold block font-sans">Recovery Amount</span>
-                          <span className="text-blue-400 font-bold">{formatINR(r.amount)}</span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-500 text-[10px] block font-sans">Remaining Amount</span>
-                          <span className="text-neutral-700 dark:text-neutral-300 font-semibold">{r.due ? formatINR(r.due.remaining_amount) : '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop Table (>= md) */}
-                <div className="hidden md:block rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs uppercase tracking-wide">
-                      <tr>
-                        <th className="text-left px-4 py-2.5 font-semibold">Employee Name</th>
-                        <th className="text-left px-3 py-2.5 font-semibold">Employee ID</th>
-                        <th className="text-left px-3 py-2.5 font-semibold">Recovery Time</th>
-                        <th className="text-right px-3 py-2.5 font-semibold">Original Due</th>
-                        <th className="text-right px-4 py-2.5 font-semibold">Recovery Amount</th>
-                        <th className="text-right px-3 py-2.5 font-semibold">Remaining Amount</th>
-                        <th className="text-center px-3 py-2.5 font-semibold">Payment Mode</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                      {onlineRecoveriesList.map((r) => (
-                        <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition">
-                          <td className="px-4 py-2.5 font-semibold text-neutral-800 dark:text-neutral-200">
-                            {r.collector?.name ?? '—'}
-                          </td>
-                          <td className="px-3 py-2.5 font-mono text-xs text-neutral-500">{r.collector?.employee_id ?? 'N/A'}</td>
-                          <td className="px-3 py-2.5 text-xs text-neutral-500">{formatDate(r.created_at || r.recovery_date)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-xs text-neutral-600 dark:text-neutral-400">
-                            {r.due ? formatINR(r.due.original_amount) : '—'}
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-bold text-blue-400 font-mono tabular-nums">{formatINR(r.amount)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-xs text-neutral-600 dark:text-neutral-400">
-                            {r.due ? formatINR(r.due.remaining_amount) : '—'}
-                          </td>
-                          <td className="px-3 py-2.5 text-center">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
-                              {r.payment_mode || 'ONLINE'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            <div className="p-3 bg-neutral-100 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-              <span>Total Online Recovery:</span>
-              <span className="font-mono text-sm font-bold text-blue-400">{formatINR(totalOnlineRecoverySum)}</span>
-            </div>
-          </div>
-
-          {/* FINAL GRAND TOTAL SUMMARY BAR */}
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2 text-neutral-900 dark:text-neutral-100">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
-              <div className="space-y-1">
-                <p className="font-semibold text-neutral-800 dark:text-neutral-200">
-                  Regular Online Collection (<span className="font-mono text-brand-600">{formatINR(totalOnlineCollectionEntriesSum)}</span>) + Online Dues Recovery (<span className="font-mono text-blue-400">{formatINR(totalOnlineRecoverySum)}</span>)
-                </p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                  Matches KPI Card Total for {formatDate(dateStr)}
-                </p>
-              </div>
-              <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-blue-500/20">
-                <p className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-bold">
-                  Grand Total Online Collection
-                </p>
-                <p className="text-xl font-bold font-mono text-blue-400 tabular-nums">
-                  {formatINR(modalGrandTotalOnlineCollection)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
