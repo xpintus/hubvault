@@ -174,9 +174,9 @@ export default function AppLayout() {
                   )}
                   <div className="text-left">
                     <p className="text-[10px] text-brand-600/80 leading-none uppercase tracking-wider font-bold">
-                      {isSuperAdmin ? 'View' : 'Hub / Branch'}
+                      {isSuperAdmin ? 'View' : 'Hub'}
                     </p>
-                    <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-tight mt-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-tight mt-0.5 max-w-[90px] sm:max-w-[160px] truncate">
                       {hub.isAllHubs ? 'All Hubs' : hub.selectedHub?.name ?? 'Select Hub'}
                     </p>
                   </div>
@@ -268,8 +268,8 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 w-full min-w-0 max-w-full overflow-x-hidden">
+          <div className="max-w-7xl mx-auto w-full min-w-0">
             {/* License activation banner for pending hub_admins */}
             {isHubAdminPending && (
               <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">

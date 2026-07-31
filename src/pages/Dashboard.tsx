@@ -3,14 +3,13 @@ import {
   Wallet, Banknote, Smartphone, TrendingDown, TrendingUp, Scale, Target,
   ChevronLeft, ChevronRight, Calendar, Plus, Download, Upload, Search, Eye,
   Pencil, Trash2, Inbox, Copy, CheckCircle2, Building2, Clock, MapPin,
-  AlertCircle, RotateCcw, Phone, BadgeCheck, Receipt,
-  ArrowRight,
+  AlertCircle, RotateCcw, Phone, BadgeCheck, Receipt, ArrowRight, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Select, Spinner, Skeleton, SkeletonCard } from '@/components/ui/primitives';
+import { Button, Card, EmptyState, Spinner, SkeletonCard } from '@/components/ui/primitives';
 import AdSlot from '@/components/ui/AdSlot';
 import StatusBadge from '@/components/StatusBadge';
 import DenominationPanel from '@/components/DenominationPanel';
@@ -19,7 +18,7 @@ import ImportModal from '@/components/ImportModal';
 import Modal from '@/components/ui/Modal';
 import { confirm } from '@/lib/confirm';
 import {
-  CollectionEntry, Collector, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS, EntryStatus, Hub, Due, Recovery,
+  CollectionEntry, Collector, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS, EntryStatus, Due, Recovery,
 } from '@/types';
 import { formatINR, formatDate, formatDateLong, toISODate } from '@/lib/format';
 import { exportEntriesToExcel } from '@/lib/excel';
@@ -30,6 +29,12 @@ import { subDays, addDays, isToday as isDateToday, parseISO } from 'date-fns';
 import { clsx } from 'clsx';
 
 type FilterStatus = 'all' | EntryStatus;
+
+const safeAmount = (val: any): number => {
+  if (val === null || val === undefined) return 0;
+  const num = typeof val === 'number' ? val : parseFloat(String(val));
+  return isNaN(num) ? 0 : num;
+};
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -47,7 +52,7 @@ export default function Dashboard() {
   const [viewing, setViewing] = useState<CollectionEntry | null>(null);
   const [kpiDetail, setKpiDetail] = useState<{
     title: string; label: string; icon: React.ElementType; accent: string;
-    value: number; isGap: boolean;
+    value: number; isGap?: boolean;
     breakdown: { label: string; amount: number; sub?: string }[];
   } | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -55,48 +60,62 @@ export default function Dashboard() {
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
 
   const dateStr = toISODate(date);
+  const todayStr = toISODate(new Date());
+  const isNextDisabled = dateStr >= todayStr;
+
+  // Selected date's month start and end dates (YYYY-MM-01 to YYYY-MM-lastday)
+  const monthStartStr = useMemo(() => {
+    const d = new Date(date.getFullYear(), date.getMonth(), 1);
+    return toISODate(d);
+  }, [date]);
+
+  const monthEndStr = useMemo(() => {
+    const d = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return toISODate(d);
+  }, [date]);
 
   const loadData = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
-    const superAdmin = profile.role === 'super_admin';
     setCanManage(['super_admin', 'hub_admin', 'supervisor'].includes(profile.role));
 
     const effectiveHubId = hubCtx.selectedHubId;
     try {
       if (!navigator.onLine) {
-          // Offline read
-          let cols = await db.collectors.toArray();
-          if (effectiveHubId) cols = cols.filter(c => c.hub_id === effectiveHubId);
-          setCollectors(cols as any[]);
+        // Offline read
+        let cols = await db.collectors.toArray();
+        if (effectiveHubId) cols = cols.filter(c => c.hub_id === effectiveHubId);
+        setCollectors(cols as any[]);
 
-          let ents = await db.collection_entries.where('collection_date').equals(dateStr).toArray();
-          if (effectiveHubId) ents = ents.filter(e => e.hub_id === effectiveHubId);
+        let ents = await db.collection_entries.where('collection_date').equals(dateStr).toArray();
+        if (effectiveHubId) ents = ents.filter(e => e.hub_id === effectiveHubId);
 
-          // Hydrate relations
-          const hydratedEnts = await Promise.all(ents.map(async (e) => {
-              const collector = await db.collectors.get(e.collector_id);
-              const denominations = await db.denominations.where('collection_entry_id').equals(e.id).toArray();
-              return { ...e, collector, denominations };
-          }));
+        const hydratedEnts = await Promise.all(ents.map(async (e) => {
+          const collector = await db.collectors.get(e.collector_id);
+          const denominations = await db.denominations.where('collection_entry_id').equals(e.id).toArray();
+          return { ...e, collector, denominations };
+        }));
 
-          setEntries(hydratedEnts.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as any[]);
+        setEntries(hydratedEnts.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as any[]);
 
-          let dueData = await db.dues.filter(d => d.status !== 'fully_recovered').toArray();
-          if (effectiveHubId) dueData = dueData.filter(d => d.hub_id === effectiveHubId);
-          const hydratedDues = await Promise.all(dueData.map(async (d) => {
-              const collector = await db.collectors.get(d.collector_id);
-              return { ...d, collector };
-          }));
-          setDues(hydratedDues.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()) as any[]);
+        let dueData = await db.dues.filter(d => d.status !== 'fully_recovered').toArray();
+        if (effectiveHubId) dueData = dueData.filter(d => d.hub_id === effectiveHubId);
+        const hydratedDues = await Promise.all(dueData.map(async (d) => {
+          const collector = await db.collectors.get(d.collector_id);
+          return { ...d, collector };
+        }));
+        setDues(hydratedDues.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()) as any[]);
 
-          let recData = await db.recoveries.filter(r => r.recovery_date === dateStr).toArray();
-          if (effectiveHubId) recData = recData.filter(r => r.hub_id === effectiveHubId);
-          const hydratedRecs = await Promise.all(recData.map(async (r) => {
-              const collector = await db.collectors.get(r.collector_id);
-              return { ...r, collector };
-          }));
-          setRecoveries(hydratedRecs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()) as any[]);
+        // Offline recoveries for the selected date's calendar month
+        let recData = await db.recoveries
+          .filter(r => r.recovery_date >= monthStartStr && r.recovery_date <= monthEndStr)
+          .toArray();
+        if (effectiveHubId) recData = recData.filter(r => r.hub_id === effectiveHubId);
+        const hydratedRecs = await Promise.all(recData.map(async (r) => {
+          const collector = await db.collectors.get(r.collector_id);
+          return { ...r, collector };
+        }));
+        setRecoveries(hydratedRecs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()) as any[]);
 
       } else {
         let collectorQuery = supabase.from('collectors').select('*');
@@ -105,7 +124,6 @@ export default function Dashboard() {
         if (colErr) throw colErr;
         setCollectors(cols ?? []);
 
-        // Populate offline cache
         await db.collectors.bulkPut(cols ?? []);
 
         let entryQuery = supabase
@@ -117,10 +135,9 @@ export default function Dashboard() {
         if (entErr) throw entErr;
         setEntries((ents ?? []) as CollectionEntry[]);
 
-        // Populate offline cache
         const pureEntries = (ents ?? []).map(e => {
-            const { collector, hub, denominations, ...rest } = e as any;
-            return rest;
+          const { collector, hub, denominations, ...rest } = e as any;
+          return rest;
         });
         const denoms = (ents ?? []).flatMap((e: any) => e.denominations || []);
         await db.collection_entries.bulkPut(pureEntries);
@@ -135,63 +152,75 @@ export default function Dashboard() {
         setDues(dueData ?? []);
 
         const pureDues = (dueData ?? []).map(d => {
-            const { collector, ...rest } = d as any;
-            return rest;
+          const { collector, ...rest } = d as any;
+          return rest;
         });
         await db.dues.bulkPut(pureDues);
 
+        // Fetch all recoveries whose recovery_date is in the selected date's calendar month
         let recQuery = supabase
           .from('recoveries')
           .select('*, collector: collectors(*)')
-          .eq('recovery_date', dateStr);
+          .gte('recovery_date', monthStartStr)
+          .lte('recovery_date', monthEndStr);
         if (effectiveHubId) recQuery = recQuery.eq('hub_id', effectiveHubId);
-        const { data: recData } = await recQuery.order('created_at', { ascending: false });
+        const { data: recData, error: recErr } = await recQuery.order('created_at', { ascending: false });
+        if (recErr) throw recErr;
         setRecoveries(recData ?? []);
 
         const pureRecs = (recData ?? []).map(r => {
-            const { collector, ...rest } = r as any;
-            return rest;
+          const { collector, ...rest } = r as any;
+          return rest;
         });
         await db.recoveries.bulkPut(pureRecs);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to load data';
+      const msg = err instanceof Error ? err.message : 'Failed to load dashboard data';
       toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [profile, dateStr, hubCtx.selectedHubId, toast]);
+  }, [profile, dateStr, monthStartStr, monthEndStr, hubCtx.selectedHubId, toast]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // Summary Metrics
   const summary = useMemo(() => {
-    const total = entries.reduce((s, e) => s + Number(e.total_collection), 0);
-    const cash = entries.reduce((s, e) => s + Number(e.cash_amount), 0);
-    const online = entries.reduce((s, e) => s + Number(e.online_amount), 0);
-    const expectedCod = entries.reduce((s, e) => s + Number(e.expected_cod), 0);
-    const gap = total - expectedCod;
-    const totalPending = entries.reduce((s, e) => s + computePendingAmount(Number(e.expected_cod), Number(e.total_collection)), 0);
-    return { total, cash, online, expectedCod, gap, totalPending };
+    const total = entries.reduce((s, e) => s + safeAmount(e.total_collection), 0);
+    const cash = entries.reduce((s, e) => s + safeAmount(e.cash_amount), 0);
+    const online = entries.reduce((s, e) => s + safeAmount(e.online_amount), 0);
+    const expectedCod = entries.reduce((s, e) => s + safeAmount(e.expected_cod), 0);
+    const difference = total - expectedCod;
+    return { total, cash, online, expectedCod, difference };
   }, [entries]);
 
   const outstandingDues = useMemo(() => {
-    return dues.filter((d) => d.status !== 'fully_recovered').reduce((s, d) => s + Number(d.remaining_amount), 0);
+    return dues.filter((d) => d.status !== 'fully_recovered').reduce((s, d) => s + safeAmount(d.remaining_amount), 0);
   }, [dues]);
+
+  // Recoveries on selected date
+  const recoveriesToday = useMemo(() => {
+    return recoveries.filter((r) => r.recovery_date === dateStr);
+  }, [recoveries, dateStr]);
 
   const recoveryToday = useMemo(() => {
-    return recoveries.reduce((s, r) => s + Number(r.amount), 0);
+    return recoveriesToday.reduce((s, r) => s + safeAmount(r.amount), 0);
+  }, [recoveriesToday]);
+
+  const todayRecoveryCount = useMemo(() => {
+    return recoveriesToday.length;
+  }, [recoveriesToday]);
+
+  // Recoveries this calendar month (includes today)
+  const recoveryThisMonth = useMemo(() => {
+    return recoveries.reduce((s, r) => s + safeAmount(r.amount), 0);
   }, [recoveries]);
 
-  const recoveryThisMonth = useMemo(() => {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    return dues.reduce((s, d) => {
-      if (new Date(d.updated_at) >= monthStart) return s + Number(d.recovered_amount);
-      return s;
-    }, 0);
-  }, [dues]);
+  const monthRecoveryCount = useMemo(() => {
+    return recoveries.length;
+  }, [recoveries]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -207,7 +236,9 @@ export default function Dashboard() {
 
   const counts = useMemo(() => {
     const c = { reconciled: 0, pending: 0, shortage: 0, excess: 0 };
-    entries.forEach((e) => (c[e.status] += 1));
+    entries.forEach((e) => {
+      if (e.status in c) c[e.status] += 1;
+    });
     return c;
   }, [entries]);
 
@@ -224,39 +255,39 @@ export default function Dashboard() {
     });
     if (!ok) return;
     if (!navigator.onLine) {
-        const localDues = await db.dues.where('collection_entry_id').equals(entry.id).toArray();
-        for (const due of localDues) {
-            await db.dues.delete(due.id);
-            await addToQueue(profile?.id || '', due.hub_id, 'dues', 'DELETE', { id: due.id });
-        }
-        await db.collection_entries.delete(entry.id);
-        await db.denominations.where('collection_entry_id').equals(entry.id).delete();
-        await addToQueue(profile?.id || '', entry.hub_id, 'collection_entries', 'DELETE', { id: entry.id });
-        toast.success('Entry deleted offline');
-        loadData();
+      const localDues = await db.dues.where('collection_entry_id').equals(entry.id).toArray();
+      for (const due of localDues) {
+        await db.dues.delete(due.id);
+        await addToQueue(profile?.id || '', due.hub_id, 'dues', 'DELETE', { id: due.id });
+      }
+      await db.collection_entries.delete(entry.id);
+      await db.denominations.where('collection_entry_id').equals(entry.id).delete();
+      await addToQueue(profile?.id || '', entry.hub_id, 'collection_entries', 'DELETE', { id: entry.id });
+      toast.success('Entry deleted offline');
+      loadData();
     } else {
-        const { data: linkedDues } = await supabase
-          .from('dues')
-          .select('id, recovered_amount')
-          .eq('collection_entry_id', entry.id);
+      const { data: linkedDues } = await supabase
+        .from('dues')
+        .select('id, recovered_amount')
+        .eq('collection_entry_id', entry.id);
 
-        if (linkedDues && linkedDues.length > 0) {
-          const unrecoveredDues = linkedDues.filter((d) => (d.recovered_amount || 0) === 0);
-          if (unrecoveredDues.length > 0) {
-            await supabase
-              .from('dues')
-              .delete()
-              .in('id', unrecoveredDues.map((d) => d.id));
-          }
+      if (linkedDues && linkedDues.length > 0) {
+        const unrecoveredDues = linkedDues.filter((d) => (d.recovered_amount || 0) === 0);
+        if (unrecoveredDues.length > 0) {
+          await supabase
+            .from('dues')
+            .delete()
+            .in('id', unrecoveredDues.map((d) => d.id));
         }
+      }
 
-        const { error } = await supabase.from('collection_entries').delete().eq('id', entry.id);
-        if (error) {
-          toast.error(error.message);
-        } else {
-          toast.success('Entry deleted');
-          loadData();
-        }
+      const { error } = await supabase.from('collection_entries').delete().eq('id', entry.id);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Entry deleted');
+        loadData();
+      }
     }
   };
 
@@ -270,421 +301,532 @@ export default function Dashboard() {
     toast.success(`Exported ${filtered.length} records`);
   };
 
-  const kpiCards = [
+  // Dynamic reconciliation difference logic
+  const diffInfo = useMemo(() => {
+    const diff = summary.difference;
+    if (diff < 0) {
+      return {
+        title: 'Shortage',
+        icon: TrendingDown,
+        accent: 'red',
+        value: Math.abs(diff),
+        formatted: formatINR(Math.abs(diff)),
+        sub: `Shortfall vs Expected (${formatINR(summary.expectedCod)})`,
+        stateClass: 'text-red-500 dark:text-red-400',
+        badge: 'SHORTAGE',
+        badgeClass: 'bg-red-500/10 text-red-500 dark:text-red-400',
+      };
+    } else if (diff > 0) {
+      return {
+        title: 'Excess',
+        icon: TrendingUp,
+        accent: 'emerald',
+        value: diff,
+        formatted: formatINR(diff),
+        sub: `Surplus vs Expected (${formatINR(summary.expectedCod)})`,
+        stateClass: 'text-emerald-500 dark:text-emerald-400',
+        badge: 'EXCESS',
+        badgeClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+      };
+    } else {
+      return {
+        title: 'Fully Reconciled',
+        icon: CheckCircle2,
+        accent: 'emerald',
+        value: 0,
+        formatted: '₹0',
+        sub: 'Collections match expected COD',
+        stateClass: 'text-emerald-500 dark:text-emerald-400',
+        badge: 'RECONCILED',
+        badgeClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+      };
+    }
+  }, [summary.difference, summary.expectedCod]);
+
+  const topSummaryCards = [
     {
-      label: 'Total Expected COD', value: summary.expectedCod, icon: Target,
-      accent: 'slate', sub: `${entries.length} entries`,
-      desc: 'The total Cash-on-Delivery amount your team was expected to collect on the selected date. This is the baseline against which actual collections are compared to detect shortages and excesses.',
-      points: [
-        'Sum of expected COD across all entries for the selected date',
-        'Serves as the baseline for automatic gap detection',
-        'Tracked per collector and per hub for granular accountability',
-      ],
+      title: 'Expected COD',
+      value: summary.expectedCod,
+      formatted: formatINR(summary.expectedCod),
+      icon: Target,
+      accent: 'slate',
+      sub: `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} today`,
+      openModal: () => {
+        const breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.expected_cod), sub: e.collector?.employee_id }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Expected COD', label: 'Expected COD Breakdown', icon: Target, accent: 'slate', value: summary.expectedCod, breakdown });
+      }
     },
     {
-      label: 'Total Collection', value: summary.total, icon: Wallet,
-      accent: 'brand', sub: `${entries.length} entries today`,
-      desc: 'The combined cash and online amount actually collected today. This is what your team brought in, regardless of what was expected.',
-      points: [
-        'Includes both physical cash and digital (UPI, bank transfer) payments',
-        'Compared against expected COD to calculate the reconciliation gap',
-        'Updates in real time as entries are added, edited, or deleted',
-      ],
+      title: 'Total Collection',
+      value: summary.total,
+      formatted: formatINR(summary.total),
+      icon: Wallet,
+      accent: 'brand',
+      sub: `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} collected`,
+      openModal: () => {
+        const breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.total_collection), sub: e.collector?.employee_id }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Total Collection', label: 'Total Collection Breakdown', icon: Wallet, accent: 'brand', value: summary.total, breakdown });
+      }
     },
     {
-      label: 'Cash Collected', value: summary.cash, icon: Banknote,
-      accent: 'emerald', sub: entries.length > 0 && summary.total > 0 ? `${Math.round((summary.cash / summary.total) * 100)}% of total` : '0% of total',
-      desc: 'Physical currency collected by field staff. Each cash entry is backed by a note-by-note denomination breakdown for full accountability.',
-      points: [
-        'Verified via denomination breakdown (₹500, ₹200, ₹100, and so on)',
-        'Note-level counting eliminates manual tallying errors',
-        'Typically the largest portion of total collection',
-      ],
-    },
-    {
-      label: 'Online Collected', value: summary.online, icon: Smartphone,
-      accent: 'blue', sub: entries.length > 0 && summary.total > 0 ? `${Math.round((summary.online / summary.total) * 100)}% of total` : '0% of total',
-      desc: 'Digital payments recorded separately from cash — UPI transfers, bank deposits, and other online modes. Tracking these separately keeps reconciliation clean.',
-      points: [
-        'Recorded separately from cash for accurate mixed-mode reconciliation',
-        'Includes UPI, bank transfers, and other digital payment methods',
-        'Reduces physical cash handling and associated counting errors',
-      ],
-    },
-    {
-      label: summary.gap < 0 ? 'Shortage' : summary.gap > 0 ? 'Excess' : 'On Track',
-      value: summary.gap, icon: summary.gap < 0 ? TrendingDown : summary.gap > 0 ? TrendingUp : Scale,
-      accent: summary.gap < 0 ? 'red' : summary.gap > 0 ? 'amber' : 'slate',
-      sub: `vs Expected: ${formatINR(summary.expectedCod)}`,
-      desc: summary.gap < 0
-        ? 'Your team collected less than the expected COD. The shortfall needs to be tracked and recovered from the responsible collector.'
-        : summary.gap > 0
-        ? 'Your team collected more than the expected COD. The surplus should be investigated and accounted for.'
-        : 'Your team\'s collections match the expected COD exactly. Every rupee has been reconciled.',
-      points: summary.gap < 0
-        ? [
-            'Gap = Total Collection − Expected COD (negative)',
-            'Shortfalls are automatically tracked as dues for recovery',
-            'Color-coded red so shortages are never missed',
-          ]
-        : summary.gap > 0
-        ? [
-            'Gap = Total Collection − Expected COD (positive)',
-            'Surpluses are flagged amber for investigation',
-            'Helps identify over-collection or misreported expectations',
-          ]
-        : [
-            'Gap = Total Collection − Expected COD (zero)',
-            'All entries are perfectly balanced',
-            'This is the goal for every collection day',
-          ],
-    },
+      title: diffInfo.title,
+      value: diffInfo.value,
+      formatted: diffInfo.formatted,
+      icon: diffInfo.icon,
+      accent: diffInfo.accent,
+      sub: diffInfo.sub,
+      badge: diffInfo.badge,
+      badgeClass: diffInfo.badgeClass,
+      stateClass: diffInfo.stateClass,
+      openModal: () => {
+        const breakdown = entries
+          .map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.total_collection) - safeAmount(e.expected_cod), sub: e.collector?.employee_id }))
+          .filter(b => b.amount !== 0);
+        breakdown.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+        setKpiDetail({ title: diffInfo.title, label: `${diffInfo.title} Breakdown`, icon: diffInfo.icon, accent: diffInfo.accent, value: summary.difference, isGap: true, breakdown });
+      }
+    }
   ];
 
-  const duesKpiCards = [
-    { label: 'Pending Today', value: summary.totalPending, icon: AlertCircle, accent: 'amber', sub: 'unpaid from today',
-      desc: 'Amount still unpaid from today\'s collection entries. These are the gaps between expected and actual collection for the selected date.',
-      points: [
-        'Calculated as the shortfall for each entry on the selected date',
-        'Represents unpaid amounts that still need to be collected',
-        'Tracked per collector for targeted follow-up',
-      ],
+  const collectionBreakdownCards = [
+    {
+      title: 'Cash Collected',
+      value: summary.cash,
+      formatted: formatINR(summary.cash),
+      icon: Banknote,
+      accent: 'emerald',
+      sub: summary.total > 0 ? `${Math.round((summary.cash / summary.total) * 100)}% of total` : '0% of total',
+      openModal: () => {
+        const breakdown = entries.filter(e => safeAmount(e.cash_amount) > 0).map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.cash_amount), sub: e.collector?.employee_id }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Cash Collected', label: 'Cash Collection Breakdown', icon: Banknote, accent: 'emerald', value: summary.cash, breakdown });
+      }
     },
-    { label: 'Outstanding Dues', value: outstandingDues, icon: TrendingDown, accent: 'red', sub: 'total across all dates',
-      desc: 'The total amount pending across all dates — not just today. This is your cumulative recovery backlog across the selected hub(s).',
-      points: [
-        'Sum of remaining amounts across all open dues',
-        'Includes dues from previous days, weeks, and months',
-        'Each due is tracked until it is fully recovered',
-      ],
+    {
+      title: 'Online Collected',
+      value: summary.online,
+      formatted: formatINR(summary.online),
+      icon: Smartphone,
+      accent: 'blue',
+      sub: summary.total > 0 ? `${Math.round((summary.online / summary.total) * 100)}% of total` : '0% of total',
+      openModal: () => {
+        const breakdown = entries.filter(e => safeAmount(e.online_amount) > 0).map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.online_amount), sub: e.collector?.employee_id }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Online Collected', label: 'Online Collection Breakdown', icon: Smartphone, accent: 'blue', value: summary.online, breakdown });
+      }
+    }
+  ];
+
+  const duesAndRecoveryCards = [
+    {
+      title: 'Outstanding Dues',
+      value: outstandingDues,
+      formatted: formatINR(outstandingDues),
+      icon: TrendingDown,
+      accent: 'red',
+      sub: 'Across all unpaid dues',
+      openModal: () => {
+        const breakdown = dues.map(d => ({ label: d.collector?.name ?? '—', amount: safeAmount(d.remaining_amount), sub: `Due Date: ${formatDate(d.due_date)}` }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Outstanding Dues', label: 'Outstanding Dues Breakdown', icon: TrendingDown, accent: 'red', value: outstandingDues, breakdown });
+      }
     },
-    { label: 'Recovery Today', value: recoveryToday, icon: RotateCcw, accent: 'blue', sub: `${recoveries.length} transactions`,
-      desc: 'Amount recovered today from previously outstanding dues. This shows how much of your backlog was cleared on the selected date.',
-      points: [
-        'Sum of all recovery transactions recorded on the selected date',
-        'Each recovery is linked to a specific collector and due',
-        'Directly reduces the outstanding dues balance',
-      ],
+    {
+      title: 'Recovery Today',
+      value: recoveryToday,
+      formatted: formatINR(recoveryToday),
+      icon: RotateCcw,
+      accent: 'blue',
+      sub: `${todayRecoveryCount} ${todayRecoveryCount === 1 ? 'recovery' : 'recoveries'} today`,
+      openModal: () => {
+        const breakdown = recoveriesToday.map(r => ({ label: r.collector?.name ?? '—', amount: safeAmount(r.amount), sub: `Mode: ${r.payment_mode}` }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Recovery Today', label: "Today's Recovery Transactions", icon: RotateCcw, accent: 'blue', value: recoveryToday, breakdown });
+      }
     },
-    { label: 'Recovery This Month', value: recoveryThisMonth, icon: CheckCircle2, accent: 'brand', sub: 'total recovered',
-      desc: 'Total amount recovered in the current calendar month. This gives you a broader view of recovery momentum beyond just the selected date.',
-      points: [
-        'Sum of all recoveries since the first of the current month',
-        'Includes recoveries across all collectors and hubs',
-        'A key metric for assessing recovery team performance',
-      ],
-    },
+    {
+      title: 'Recovery This Month',
+      value: recoveryThisMonth,
+      formatted: formatINR(recoveryThisMonth),
+      icon: CheckCircle2,
+      accent: 'brand',
+      sub: `${monthRecoveryCount} ${monthRecoveryCount === 1 ? 'recovery' : 'recoveries'} this month`,
+      openModal: () => {
+        const breakdown = recoveries.map(r => ({ label: r.collector?.name ?? '—', amount: safeAmount(r.amount), sub: `${formatDate(r.recovery_date)} · ${r.payment_mode}` }));
+        breakdown.sort((a, b) => b.amount - a.amount);
+        setKpiDetail({ title: 'Recovery This Month', label: 'Monthly Recovery Transactions', icon: CheckCircle2, accent: 'brand', value: recoveryThisMonth, breakdown });
+      }
+    }
   ];
 
   const accentMap: Record<string, { icon: string; ring: string; text: string }> = {
-    brand: { icon: 'bg-brand-600/15 text-brand-600', ring: 'ring-brand-600/30', text: 'text-brand-600' },
-    emerald: { icon: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-100', text: 'text-emerald-600' },
-    blue: { icon: 'bg-blue-500/10 text-blue-400', ring: 'ring-blue-100', text: 'text-blue-400' },
-    red: { icon: 'bg-red-500/10 text-red-400', ring: 'ring-red-100', text: 'text-red-400' },
-    amber: { icon: 'bg-amber-500/10 text-amber-400', ring: 'ring-amber-100', text: 'text-amber-400' },
-    slate: { icon: 'bg-[var(--card-bg)] text-neutral-500', ring: 'ring-neutral-200 dark:ring-neutral-800', text: 'text-neutral-500' },
+    brand: { icon: 'bg-brand-600/15 text-brand-600 dark:text-brand-400', ring: 'ring-brand-600/30', text: 'text-brand-600 dark:text-brand-400' },
+    emerald: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
+    blue: { icon: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', ring: 'ring-blue-500/20', text: 'text-blue-600 dark:text-blue-400' },
+    red: { icon: 'bg-red-500/10 text-red-600 dark:text-red-400', ring: 'ring-red-500/20', text: 'text-red-600 dark:text-red-400' },
+    amber: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', ring: 'ring-amber-500/20', text: 'text-amber-600 dark:text-amber-400' },
+    slate: { icon: 'bg-neutral-100 dark:bg-neutral-850 text-neutral-600 dark:text-neutral-400', ring: 'ring-neutral-200 dark:ring-neutral-800', text: 'text-neutral-600 dark:text-neutral-400' },
   };
 
   const filterTabs: { key: FilterStatus; label: string; count: number }[] = [
     { key: 'all', label: 'All', count: entries.length },
     { key: 'reconciled', label: 'Reconciled', count: counts.reconciled },
-    { key: 'pending', label: 'Pending', count: counts.pending },
+    ...(counts.pending > 0 ? [{ key: 'pending' as FilterStatus, label: 'Pending', count: counts.pending }] : []),
     { key: 'shortage', label: 'Shortage', count: counts.shortage },
     { key: 'excess', label: 'Excess', count: counts.excess },
   ];
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Dashboard</h1>
-          <p className="mt-1 text-sm text-neutral-500">Monitor daily collections and reconciliation status.</p>
-          <div className="mt-2 flex items-center gap-2 text-sm text-neutral-500">
-            <Calendar className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
-            {formatDateLong(date)}
+    <div className="space-y-6 max-w-full overflow-x-hidden">
+      {/* Page Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 truncate">
+            Dashboard
+          </h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 truncate">
+            Monitor daily collections and reconciliation status.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span className="font-medium text-neutral-700 dark:text-neutral-300">{formatDateLong(date)}</span>
             {hubCtx.selectedHub && (
               <>
-                <span className="text-neutral-500 dark:text-neutral-400">·</span>
-                <Building2 className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
-                <span className="font-medium text-neutral-500 dark:text-neutral-400">{hubCtx.selectedHub.name}</span>
+                <span>·</span>
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[150px] sm:max-w-[220px]">
+                  {hubCtx.selectedHub.name}
+                </span>
                 {hubCtx.selectedHub.location && (
                   <>
-                    <span className="text-neutral-600 dark:text-neutral-400">·</span>
-                    <MapPin className="h-3.5 w-3.5 text-neutral-500" />
-                    <span className="text-neutral-500">{hubCtx.selectedHub.location}</span>
+                    <span className="hidden xs:inline">·</span>
+                    <MapPin className="h-3.5 w-3.5 shrink-0 hidden xs:inline" />
+                    <span className="hidden xs:inline truncate max-w-[120px]">{hubCtx.selectedHub.location}</span>
                   </>
                 )}
               </>
             )}
             {hubCtx.isAllHubs && (
               <>
-                <span className="text-neutral-500 dark:text-neutral-400">·</span>
-                <Building2 className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
-                <span className="font-medium text-neutral-500 dark:text-neutral-400">All Hubs</span>
+                <span>·</span>
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="font-semibold text-neutral-800 dark:text-neutral-200">All Hubs</span>
               </>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Primary Header Action */}
+        <div className="flex items-center gap-2 shrink-0">
           {canManage && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => { setEditing(null); setEntryModalOpen(true); }} className="shadow-glow">
+            <Button
+              icon={<Plus className="h-4 w-4" />}
+              onClick={() => { setEditing(null); setEntryModalOpen(true); }}
+              className="w-full sm:w-auto min-h-[44px] shadow-glow px-4 py-2.5 font-semibold text-sm"
+            >
               Add Entry
             </Button>
           )}
         </div>
       </div>
 
-      {/* KPI cards */}
+      {/* Loading Skeletons */}
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {kpiCards.map((c) => {
-            const a = accentMap[c.accent];
-            const isGap = c.label === 'Shortage' || c.label === 'Excess' || c.label === 'On Track';
-            const openDetail = () => {
-              let breakdown: { label: string; amount: number; sub?: string }[] = [];
-              if (c.label === 'Total Expected COD') {
-                breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: Number(e.expected_cod), sub: e.collector?.employee_id }));
-              } else if (c.label === 'Total Collection') {
-                breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: Number(e.total_collection), sub: e.collector?.employee_id }));
-              } else if (c.label === 'Cash Collected') {
-                breakdown = entries.filter(e => Number(e.cash_amount) > 0).map(e => ({ label: e.collector?.name ?? '—', amount: Number(e.cash_amount), sub: e.collector?.employee_id }));
-              } else if (c.label === 'Online Collected') {
-                breakdown = entries.filter(e => Number(e.online_amount) > 0).map(e => ({ label: e.collector?.name ?? '—', amount: Number(e.online_amount), sub: e.collector?.employee_id }));
-              } else {
-                breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: Number(e.total_collection) - Number(e.expected_cod), sub: e.collector?.employee_id })).filter(b => b.amount !== 0);
-              }
-              breakdown.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-              setKpiDetail({ title: c.label, label: c.label, icon: c.icon, accent: c.accent, value: c.value, isGap, breakdown });
-            };
-            return (
-              <Card
-                key={c.label}
-                hover
-                className="p-5 animate-fade-in group/kpi cursor-pointer transition-all duration-300 hover:-translate-y-0.5"
-                role="button"
-                tabIndex={0}
-                onClick={openDetail}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className={clsx('flex h-11 w-11 items-center justify-center rounded-xl ring-1', a.icon, a.ring)}>
-                    <c.icon className="h-5 w-5" />
-                  </div>
-                  {isGap && c.value !== 0 && (
-                    <span className={clsx(
-                      'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold',
-                      c.value < 0 ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'
-                    )}>
-                      {c.value < 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-                      {c.value < 0 ? 'SHORT' : 'OVER'}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-neutral-500">{c.label}</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums">
-                    {isGap && c.value < 0 ? '-' : isGap && c.value > 0 ? '+' : ''}
-                    {formatINR(Math.abs(c.value))}
-                  </p>
-                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">{c.sub}</p>
-                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 opacity-0 -translate-y-1 transition-all duration-300 group-hover/kpi:opacity-100 group-hover/kpi:translate-y-0">
-                    Click for details
-                    <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </Card>
-            );
-          })}
+        <div className="space-y-6">
+          {/* SECTION 1: Top Summary & Collection Breakdown */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                Daily Summary & Collections
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+              {topSummaryCards.map((c) => {
+                const a = accentMap[c.accent];
+                return (
+                  <Card
+                    key={c.title}
+                    hover
+                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-300 hover:-translate-y-0.5 w-full min-w-0"
+                    role="button"
+                    tabIndex={0}
+                    onClick={c.openModal}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.openModal(); } }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ring-1 shrink-0', a.icon, a.ring)}>
+                        <c.icon className="h-5 w-5" />
+                      </div>
+                      {c.badge && (
+                        <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase', c.badgeClass)}>
+                          {c.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 sm:mt-4 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
+                      <p className={clsx('mt-1 text-xl sm:text-2xl font-bold tracking-tight tabular-nums truncate', c.stateClass || 'text-neutral-900 dark:text-neutral-100')}>
+                        {c.formatted}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
+                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 opacity-0 -translate-y-1 transition-all duration-300 group-hover/kpi:opacity-100 group-hover/kpi:translate-y-0">
+                        Click for details <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Collection Breakdown: Cash & Online */}
+            <div className="grid grid-cols-2 gap-3.5">
+              {collectionBreakdownCards.map((c) => {
+                const a = accentMap[c.accent];
+                return (
+                  <Card
+                    key={c.title}
+                    hover
+                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-300 hover:-translate-y-0.5 w-full min-w-0"
+                    role="button"
+                    tabIndex={0}
+                    onClick={c.openModal}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.openModal(); } }}
+                  >
+                    <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ring-1 shrink-0', a.icon, a.ring)}>
+                      <c.icon className="h-5 w-5" />
+                    </div>
+                    <div className="mt-3 sm:mt-4 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
+                      <p className="mt-1 text-lg sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
+                        {c.formatted}
+                      </p>
+                      <p className="mt-1 text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SECTION 2: Dues & Recovery Overview */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                Dues & Recovery Overview
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+              {duesAndRecoveryCards.map((c) => {
+                const a = accentMap[c.accent];
+                return (
+                  <Card
+                    key={c.title}
+                    hover
+                    className="p-4 sm:p-5 group/dues cursor-pointer transition-all duration-300 hover:-translate-y-0.5 w-full min-w-0"
+                    role="button"
+                    tabIndex={0}
+                    onClick={c.openModal}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.openModal(); } }}
+                  >
+                    <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ring-1 shrink-0', a.icon, a.ring)}>
+                      <c.icon className="h-5 w-5" />
+                    </div>
+                    <div className="mt-3 sm:mt-4 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
+                      <p className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
+                        {c.formatted}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
+                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 opacity-0 -translate-y-1 transition-all duration-300 group-hover/dues:opacity-100 group-hover/dues:translate-y-0">
+                        Click for details <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Dues & Recovery KPI cards */}
-      {!loading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {duesKpiCards.map((c) => {
-            const a = accentMap[c.accent];
-            const openDetail = () => {
-              let breakdown: { label: string; amount: number; sub?: string }[] = [];
-              if (c.label === 'Pending Today') {
-                breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: computePendingAmount(Number(e.expected_cod), Number(e.total_collection)), sub: e.collector?.employee_id })).filter(b => b.amount > 0);
-              } else if (c.label === 'Outstanding Dues') {
-                breakdown = dues.map(d => ({ label: d.collector?.name ?? '—', amount: Number(d.remaining_amount), sub: formatDate(d.due_date) }));
-              } else if (c.label === 'Recovery Today') {
-                breakdown = recoveries.map(r => ({ label: r.collector?.name ?? '—', amount: Number(r.amount), sub: r.collector?.employee_id }));
-              } else if (c.label === 'Recovery This Month') {
-                const ms = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-                breakdown = dues.filter(d => new Date(d.updated_at) >= ms && Number(d.recovered_amount) > 0).map(d => ({ label: d.collector?.name ?? '—', amount: Number(d.recovered_amount), sub: formatDate(d.due_date) }));
-              }
-              breakdown.sort((a, b) => b.amount - a.amount);
-              setKpiDetail({ title: c.label, label: c.label, icon: c.icon, accent: c.accent, value: c.value, isGap: false, breakdown });
-            };
-            return (
-              <Card
-                key={c.label}
-                hover
-                className="p-5 animate-fade-in group/dues cursor-pointer transition-all duration-300 hover:-translate-y-0.5"
-                role="button"
-                tabIndex={0}
-                onClick={openDetail}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } }}
-              >
-                <div className={clsx('flex h-11 w-11 items-center justify-center rounded-xl ring-1', a.icon, a.ring)}>
-                  <c.icon className="h-5 w-5" />
-                </div>
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-neutral-500">{c.label}</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(c.value)}</p>
-                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">{c.sub}</p>
-                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 opacity-0 -translate-y-1 transition-all duration-300 group-hover/dues:opacity-100 group-hover/dues:translate-y-0">
-                    Click for details
-                    <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Reconciliation progress + date toolbar */}
+      {/* SECTION 3: Performance & Date Toolbar */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Reconciliation rate */}
-        <Card className="p-5 lg:col-span-1">
+        {/* Reconciliation Rate Card */}
+        <Card className="p-4 sm:p-5 lg:col-span-1 min-w-0">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Reconciliation Rate</h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{counts.reconciled} of {entries.length} reconciled</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                {counts.reconciled} of {entries.length} {entries.length === 1 ? 'entry' : 'entries'} reconciled
+              </p>
             </div>
-            <span className={clsx('text-2xl font-bold tabular-nums', reconciledRate === 100 ? 'text-brand-600' : reconciledRate >= 80 ? 'text-neutral-700 dark:text-neutral-300' : 'text-amber-400')}>
+            <span className={clsx(
+              'text-2xl sm:text-3xl font-bold tabular-nums',
+              reconciledRate === 100 ? 'text-brand-600 dark:text-brand-400' : reconciledRate >= 80 ? 'text-neutral-700 dark:text-neutral-300' : 'text-amber-500'
+            )}>
               {reconciledRate}%
             </span>
           </div>
-          <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-900">
+
+          <div className="mt-3.5 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
             <div
               className={clsx('h-full rounded-full transition-all duration-700 ease-out', reconciledRate === 100 ? 'bg-brand-500' : 'bg-brand-400')}
               style={{ width: `${reconciledRate}%` }}
             />
           </div>
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            {([
-              { label: 'Reconciled', count: counts.reconciled, color: 'text-brand-600', dot: 'bg-brand-500' },
-              { label: 'Pending', count: counts.pending, color: 'text-neutral-500', dot: 'bg-slate-400' },
-              { label: 'Shortage', count: counts.shortage, color: 'text-red-400', dot: 'bg-red-500' },
-              { label: 'Excess', count: counts.excess, color: 'text-amber-400', dot: 'bg-amber-500' },
-            ]).map((s) => (
-              <div key={s.label} className="text-center">
+
+          {/* Breakdown counts: compact grid for mobile */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              { label: 'Reconciled', count: counts.reconciled, color: 'text-brand-600 dark:text-brand-400', dot: 'bg-brand-500' },
+              ...(counts.pending > 0 ? [{ label: 'Pending', count: counts.pending, color: 'text-neutral-500', dot: 'bg-neutral-400' }] : []),
+              { label: 'Shortage', count: counts.shortage, color: 'text-red-500 dark:text-red-400', dot: 'bg-red-500' },
+              { label: 'Excess', count: counts.excess, color: 'text-amber-500 dark:text-amber-400', dot: 'bg-amber-500' },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl bg-neutral-50 dark:bg-neutral-900/60 p-2 text-center">
                 <div className="flex items-center justify-center gap-1">
-                  <span className={clsx('h-1.5 w-1.5 rounded-full', s.dot)} />
-                  <span className={clsx('text-base font-bold tabular-nums', s.color)}>{s.count}</span>
+                  <span className={clsx('h-1.5 w-1.5 rounded-full shrink-0', s.dot)} />
+                  <span className={clsx('text-sm sm:text-base font-bold tabular-nums', s.color)}>{s.count}</span>
                 </div>
-                <p className="mt-0.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">{s.label}</p>
+                <p className="mt-0.5 text-[10px] sm:text-[11px] font-medium text-neutral-500 dark:text-neutral-400 truncate">{s.label}</p>
               </div>
             ))}
           </div>
         </Card>
 
-        {/* Date toolbar */}
-        <Card className="p-5 lg:col-span-2">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Date Navigation</h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">View and manage collections for any date</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 p-1">
-                <button
-                  onClick={() => setDate(subDays(date, 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-neutral-700 dark:hover:text-neutral-300 transition active:scale-90"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={dateStr}
-                    onChange={(e) => { const d = parseISO(e.target.value); if (d) setDate(d); }}
-                    className="border-0 bg-transparent px-2 py-1.5 text-sm font-semibold text-neutral-700 dark:text-neutral-300 outline-none focus:ring-0 [color-scheme:light] tabular-nums"
-                  />
-                </div>
-                <button
-                  onClick={() => setDate(addDays(date, 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-neutral-700 dark:hover:text-neutral-300 transition active:scale-90"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+        {/* Date Navigation Toolbar Card */}
+        <Card className="p-4 sm:p-5 lg:col-span-2 min-w-0 flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Date Navigation</h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Select date to inspect daily collection activity
+                </p>
               </div>
-              <Button
-                variant={isDateToday(date) ? 'primary' : 'outline'}
-                size="md"
-                onClick={() => setDate(new Date())}
-                className="shrink-0"
-              >
-                Today
-              </Button>
+              
+              {/* Controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 p-1">
+                  <button
+                    onClick={() => setDate(subDays(date, 1))}
+                    aria-label="Previous day"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition active:scale-95 min-h-[44px] min-w-[44px]"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="relative px-1">
+                    <input
+                      type="date"
+                      value={dateStr}
+                      max={todayStr}
+                      onChange={(e) => { const d = parseISO(e.target.value); if (d && !isNaN(d.getTime())) setDate(d); }}
+                      className="border-0 bg-transparent px-2 py-1 text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-0 [color-scheme:light] dark:[color-scheme:dark] tabular-nums"
+                    />
+                  </div>
+                  <button
+                    onClick={() => !isNextDisabled && setDate(addDays(date, 1))}
+                    disabled={isNextDisabled}
+                    aria-label="Next day"
+                    className={clsx(
+                      'flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 dark:text-neutral-400 transition active:scale-95 min-h-[44px] min-w-[44px]',
+                      isNextDisabled
+                        ? 'opacity-30 cursor-not-allowed'
+                        : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                    )}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <Button
+                  variant={isDateToday(date) ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setDate(new Date())}
+                  className="shrink-0 min-h-[44px] px-3.5 font-semibold text-xs sm:text-sm"
+                >
+                  Today
+                </Button>
+              </div>
             </div>
           </div>
+
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-200 dark:border-neutral-800 pt-4">
-            <Button variant="outline" size="sm" icon={<Download className="h-4 w-4" />} onClick={handleExport}>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Download className="h-4 w-4" />}
+              onClick={handleExport}
+              className="min-h-[44px] px-3 text-xs sm:text-sm"
+            >
               Export Excel
             </Button>
             {canManage && (
-              <Button variant="outline" size="sm" icon={<Upload className="h-4 w-4" />} onClick={() => setImportModalOpen(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<Upload className="h-4 w-4" />}
+                onClick={() => setImportModalOpen(true)}
+                className="min-h-[44px] px-3 text-xs sm:text-sm"
+              >
                 Import Excel
               </Button>
             )}
             <div className="ml-auto flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-              <Clock className="h-3.5 w-3.5" />
-              <span>{filtered.length} of {entries.length} records shown</span>
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <span>{filtered.length} of {entries.length} shown</span>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Search and filter */}
+      {/* SECTION 4: Search & Filter Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by employee name, employee ID, or phone…"
-            className="input-base pl-10"
+            className="input-base pl-10 min-h-[44px] text-sm"
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
           {filterTabs.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={clsx(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-95',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium transition-all active:scale-95 min-h-[44px]',
                 filter === f.key
-                  ? 'text-[var(--neutral-200)] shadow-soft'
-                  : 'bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700 hover:text-neutral-800 dark:hover:text-neutral-200'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-soft font-semibold'
+                  : 'bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700'
               )}
             >
               {f.label}
               <span className={clsx(
                 'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
-                filter === f.key ? 'bg-neutral-900/20 text-white' : 'bg-neutral-200 dark:bg-neutral-900 text-neutral-500'
-              )}>{f.count}</span>
+                filter === f.key ? 'bg-white/20 dark:bg-neutral-900/20 text-current' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+              )}>
+                {f.count}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Staff activity table + denomination panel */}
+      {/* SECTION 5: Staff Activity Table & Denomination Summary */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2 min-w-0">
           <Card className="overflow-hidden">
-            <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800/70 flex items-center justify-between">
+            <div className="px-4 sm:px-5 py-4 border-b border-neutral-200 dark:border-neutral-800/70 flex items-center justify-between">
               <div>
-                <h2 className="font-bold text-neutral-900 dark:text-neutral-100">Staff Activity</h2>
+                <h2 className="font-bold text-neutral-900 dark:text-neutral-100 text-sm sm:text-base">Staff Activity</h2>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Collection records for {formatDate(date)}</p>
               </div>
             </div>
@@ -698,7 +840,7 @@ export default function Dashboard() {
               />
             ) : (
               <>
-                {/* Desktop table */}
+                {/* Desktop Table View */}
                 <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-sm">
                     <thead className="bg-neutral-50 dark:bg-neutral-950/80 text-neutral-500 text-xs uppercase tracking-wide sticky top-0">
@@ -736,28 +878,28 @@ export default function Dashboard() {
                           <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400 hidden sm:table-cell">{formatINR(e.online_amount)}</td>
                           <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-800 dark:text-neutral-200">{formatINR(e.total_collection)}</td>
                           {(() => {
-                            const pending = computePendingAmount(Number(e.expected_cod), Number(e.total_collection));
-                            const excess = computeExcessAmount(Number(e.expected_cod), Number(e.total_collection));
+                            const pending = computePendingAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
+                            const excess = computeExcessAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
                             return (
                               <>
-                                <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold', pending > 0 ? 'text-amber-400' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(pending)}</td>
+                                <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold', pending > 0 ? 'text-amber-500' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(pending)}</td>
                                 <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold hidden xl:table-cell', excess > 0 ? 'text-brand-600' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(excess)}</td>
                               </>
                             );
                           })()}
                           <td className="px-4 py-3.5 text-center"><StatusBadge status={e.status} size="sm" /></td>
                           <td className="px-5 py-3.5">
-                            <div className="flex items-center justify-end gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setViewing(e)} title="View" className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-400 hover:bg-blue-500/10 transition active:scale-90">
+                            <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => setViewing(e)} title="View" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-500 hover:bg-blue-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
                                 <Eye className="h-4 w-4" />
                               </button>
                               {canManage && (
-                                <button onClick={() => { setEditing(e); setEntryModalOpen(true); }} title="Edit" className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-90">
+                                <button onClick={() => { setEditing(e); setEntryModalOpen(true); }} title="Edit" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
                                   <Pencil className="h-4 w-4" />
                                 </button>
                               )}
                               {canManage && (
-                                <button onClick={() => handleDelete(e)} title="Delete" className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition active:scale-90">
+                                <button onClick={() => handleDelete(e)} title="Delete" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-500 hover:bg-red-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               )}
@@ -769,7 +911,7 @@ export default function Dashboard() {
                   </table>
                 </div>
 
-                {/* Mobile card list */}
+                {/* Mobile Card List */}
                 <div className="divide-y divide-neutral-200 dark:divide-neutral-800 md:hidden">
                   {filtered.map((e) => (
                     <div key={e.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
@@ -779,46 +921,57 @@ export default function Dashboard() {
                             {e.collector?.name?.charAt(0).toUpperCase() ?? '?'}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">{e.collector?.name ?? '—'}</p>
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">{e.collector?.employee_id}</p>
+                            <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate text-sm">{e.collector?.name ?? '—'}</p>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono truncate">{e.collector?.employee_id}</p>
                           </div>
                         </div>
                         <StatusBadge status={e.status} size="sm" />
                       </div>
+
                       <RowHoverPopup entry={e} mobile onView={() => setViewing(e)} />
-                      <div className="mt-3 grid grid-cols-4 gap-2">
-                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-950 px-2 py-2">
-                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Cash</p>
-                          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 tabular-nums">{formatINR(e.cash_amount)}</p>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 px-2.5 py-2 text-center">
+                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Cash</p>
+                          <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatINR(e.cash_amount)}</p>
                         </div>
-                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-950 px-2 py-2">
-                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Online</p>
-                          <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 tabular-nums">{formatINR(e.online_amount)}</p>
+                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 px-2.5 py-2 text-center">
+                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Online</p>
+                          <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatINR(e.online_amount)}</p>
                         </div>
-                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-950 px-2 py-2">
-                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Total</p>
-                          <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatINR(e.total_collection)}</p>
-                        </div>
-                        <div className="rounded-lg bg-amber-500/10 px-2 py-2">
-                          <p className="text-[11px] text-amber-500">Pending</p>
-                          <p className="text-sm font-semibold text-amber-400 tabular-nums">{formatINR(computePendingAmount(Number(e.expected_cod), Number(e.total_collection)))}</p>
+                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 px-2.5 py-2 text-center">
+                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Total</p>
+                          <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(e.total_collection)}</p>
                         </div>
                       </div>
+
                       <div className="mt-3 flex items-center justify-between">
-                        <span className={clsx('text-sm font-semibold tabular-nums', e.gap < 0 ? 'text-red-400' : e.gap > 0 ? 'text-amber-400' : 'text-brand-600')}>
-                          {e.gap < 0 ? '-' : e.gap > 0 ? '+' : ''}{formatINR(Math.abs(Number(e.gap)))}
+                        <span className={clsx(
+                          'text-xs font-semibold tabular-nums',
+                          e.gap < 0 ? 'text-red-500 dark:text-red-400' : e.gap > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-brand-600 dark:text-brand-400'
+                        )}>
+                          Gap: {e.gap < 0 ? '-' : e.gap > 0 ? '+' : ''}{formatINR(Math.abs(Number(e.gap)))}
                         </span>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => setViewing(e)} className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-400 hover:bg-blue-500/10 transition active:scale-90">
+                          <button
+                            onClick={() => setViewing(e)}
+                            className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-500 hover:bg-blue-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
                           {canManage && (
-                            <button onClick={() => { setEditing(e); setEntryModalOpen(true); }} className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-90">
+                            <button
+                              onClick={() => { setEditing(e); setEntryModalOpen(true); }}
+                              className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            >
                               <Pencil className="h-4 w-4" />
                             </button>
                           )}
                           {canManage && (
-                            <button onClick={() => handleDelete(e)} className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition active:scale-90">
+                            <button
+                              onClick={() => handleDelete(e)}
+                              className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-500 hover:bg-red-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           )}
@@ -832,13 +985,13 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Denomination panel */}
-        <div>
-          <Card className="p-5">
+        {/* Denomination Summary */}
+        <div className="min-w-0">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-2 mb-1">
               <div>
-                <h3 className="font-bold text-neutral-900 dark:text-neutral-100">Denomination Summary</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Aggregated note counts for {formatDate(date)}</p>
+                <h3 className="font-bold text-neutral-900 dark:text-neutral-100 text-sm sm:text-base">Denomination Summary</h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Aggregated notes for {formatDate(date)}</p>
               </div>
               <CopyDenominationButton entries={filtered} />
             </div>
@@ -849,7 +1002,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Subtle in-content ad — hidden for super_admin */}
+      {/* Subtle Ad Slot */}
       {profile?.role !== 'super_admin' && (
         <div className="mt-6">
           <AdSlot slot="9999999999" className="rounded-xl overflow-hidden opacity-90" />
@@ -890,30 +1043,30 @@ export default function Dashboard() {
           size="md"
         >
           <div className="flex items-center gap-4">
-            <div className={clsx('flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1', accentMap[kpiDetail.accent].icon, accentMap[kpiDetail.accent].ring)}>
-              <kpiDetail.icon className="h-7 w-7" />
+            <div className={clsx('flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl ring-1', accentMap[kpiDetail.accent].icon, accentMap[kpiDetail.accent].ring)}>
+              <kpiDetail.icon className="h-6 w-6 sm:h-7 sm:w-7" />
             </div>
-            <div>
-              <p className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums">
+            <div className="min-w-0">
+              <p className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
                 {kpiDetail.isGap && kpiDetail.value < 0 ? '-' : kpiDetail.isGap && kpiDetail.value > 0 ? '+' : ''}
                 {formatINR(Math.abs(kpiDetail.value))}
               </p>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">{kpiDetail.label}</p>
+              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium truncate">{kpiDetail.label}</p>
             </div>
           </div>
           <div className="mt-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Amount Breakdown</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Amount Breakdown</p>
             <div className="max-h-80 overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-neutral-50 dark:bg-neutral-950 text-neutral-500 text-xs uppercase tracking-wide">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-semibold">Name</th>
+                    <th className="text-left px-4 py-2.5 font-semibold">Name / Detail</th>
                     <th className="text-right px-4 py-2.5 font-semibold">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800/70">
                   {kpiDetail.breakdown.length === 0 ? (
-                    <tr><td colSpan={2} className="px-4 py-8 text-center text-neutral-500">No data available</td></tr>
+                    <tr><td colSpan={2} className="px-4 py-8 text-center text-neutral-500">No records available</td></tr>
                   ) : (
                     kpiDetail.breakdown.map((b, i) => (
                       <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-950/50 transition-colors">
@@ -921,7 +1074,7 @@ export default function Dashboard() {
                           <div className="font-medium text-neutral-800 dark:text-neutral-200">{b.label}</div>
                           {b.sub && <div className="text-xs text-neutral-500">{b.sub}</div>}
                         </td>
-                        <td className={clsx('px-4 py-2.5 text-right font-bold tabular-nums', kpiDetail.isGap && b.amount < 0 ? 'text-red-400' : kpiDetail.isGap && b.amount > 0 ? 'text-amber-400' : 'text-neutral-800 dark:text-neutral-200')}>
+                        <td className={clsx('px-4 py-2.5 text-right font-bold tabular-nums', kpiDetail.isGap && b.amount < 0 ? 'text-red-500' : kpiDetail.isGap && b.amount > 0 ? 'text-amber-500' : 'text-neutral-800 dark:text-neutral-200')}>
                           {kpiDetail.isGap && b.amount < 0 ? '-' : kpiDetail.isGap && b.amount > 0 ? '+' : ''}{formatINR(Math.abs(b.amount))}
                         </td>
                       </tr>
@@ -967,15 +1120,15 @@ function aggregateDenominations(entries: CollectionEntry[]): DenominationInput {
   entries.forEach((e) => {
     const d = Array.isArray(e.denominations) ? e.denominations[0] : e.denominations;
     if (d) {
-      agg.note_500 += d.note_500;
-      agg.note_200 += d.note_200;
-      agg.note_100 += d.note_100;
-      agg.note_50 += d.note_50;
-      agg.note_20 += d.note_20;
-      agg.note_10 += d.note_10;
-      agg.note_5 += d.note_5;
-      agg.note_2 += d.note_2;
-      agg.note_1 += d.note_1;
+      agg.note_500 += d.note_500 || 0;
+      agg.note_200 += d.note_200 || 0;
+      agg.note_100 += d.note_100 || 0;
+      agg.note_50 += d.note_50 || 0;
+      agg.note_20 += d.note_20 || 0;
+      agg.note_10 += d.note_10 || 0;
+      agg.note_5 += d.note_5 || 0;
+      agg.note_2 += d.note_2 || 0;
+      agg.note_1 += d.note_1 || 0;
     }
   });
   return agg;
@@ -1007,10 +1160,10 @@ function CopyDenominationButton({ entries }: { entries: CollectionEntry[] }) {
     <button
       onClick={handleCopy}
       className={clsx(
-        'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 shrink-0',
+        'inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all active:scale-95 shrink-0 min-h-[44px]',
         copied
           ? 'border-brand-600/30 bg-brand-50 dark:bg-brand-600/15 text-brand-600'
-          : 'border-neutral-200 dark:border-neutral-800 bg-[var(--card-bg)] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-950 hover:text-neutral-700 dark:hover:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-700'
+          : 'border-neutral-200 dark:border-neutral-800 bg-[var(--card-bg)] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-neutral-700 dark:hover:text-neutral-300'
       )}
     >
       {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -1024,12 +1177,12 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
     const d = Array.isArray(entry.denominations) ? entry.denominations[0] : entry.denominations;
     if (!d) return { ...EMPTY_DENOMINATIONS };
     return {
-      note_500: d.note_500, note_200: d.note_200, note_100: d.note_100, note_50: d.note_50,
-      note_20: d.note_20, note_10: d.note_10, note_5: d.note_5, note_2: d.note_2, note_1: d.note_1,
+      note_500: d.note_500 || 0, note_200: d.note_200 || 0, note_100: d.note_100 || 0, note_50: d.note_50 || 0,
+      note_20: d.note_20 || 0, note_10: d.note_10 || 0, note_5: d.note_5 || 0, note_2: d.note_2 || 0, note_1: d.note_1 || 0,
     };
   })();
-  const pending = computePendingAmount(Number(entry.expected_cod), Number(entry.total_collection));
-  const excess = computeExcessAmount(Number(entry.expected_cod), Number(entry.total_collection));
+  const pending = computePendingAmount(safeAmount(entry.expected_cod), safeAmount(entry.total_collection));
+  const excess = computeExcessAmount(safeAmount(entry.expected_cod), safeAmount(entry.total_collection));
   const hasDenoms = (Object.values(denom) as number[]).some((v) => v > 0);
 
   return (
@@ -1046,7 +1199,6 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
         onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onView(); } }}
         className="rounded-xl border border-neutral-300 dark:border-neutral-700 bg-[var(--card-bg)] shadow-2xl shadow-black/50 p-4 text-left cursor-pointer hover:border-brand-600/50 transition-colors"
       >
-        {/* Employee info */}
         <div className="flex items-center gap-3 pb-3 border-b border-neutral-200 dark:border-neutral-800">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-600/20 to-brand-600/10 text-brand-600 flex items-center justify-center font-bold text-sm shrink-0">
             {entry.collector?.name?.charAt(0).toUpperCase() ?? '?'}
@@ -1068,7 +1220,6 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
           </div>
         </div>
 
-        {/* Amounts grid */}
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="rounded-lg bg-neutral-100 dark:bg-neutral-950 px-3 py-2">
             <p className="text-[11px] text-neutral-500">Expected COD</p>
@@ -1080,26 +1231,25 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
           </div>
           <div className="rounded-lg bg-emerald-500/5 px-3 py-2">
             <p className="text-[11px] text-neutral-500">Cash</p>
-            <p className="text-sm font-bold text-emerald-400 tabular-nums">{formatINR(entry.cash_amount)}</p>
+            <p className="text-sm font-bold text-emerald-500 tabular-nums">{formatINR(entry.cash_amount)}</p>
           </div>
           <div className="rounded-lg bg-blue-500/5 px-3 py-2">
             <p className="text-[11px] text-neutral-500">Online</p>
-            <p className="text-sm font-bold text-blue-400 tabular-nums">{formatINR(entry.online_amount)}</p>
+            <p className="text-sm font-bold text-blue-500 tabular-nums">{formatINR(entry.online_amount)}</p>
           </div>
         </div>
 
-        {/* Gap / Pending / Excess */}
         <div className="flex items-center gap-2 mt-2">
           <div className="flex-1 rounded-lg bg-neutral-100 dark:bg-neutral-950 px-3 py-2 text-center">
             <p className="text-[11px] text-neutral-500">Gap</p>
-            <p className={clsx('text-sm font-bold tabular-nums', entry.gap < 0 ? 'text-red-400' : entry.gap > 0 ? 'text-amber-400' : 'text-brand-600')}>
+            <p className={clsx('text-sm font-bold tabular-nums', entry.gap < 0 ? 'text-red-500' : entry.gap > 0 ? 'text-amber-500' : 'text-brand-600')}>
               {entry.gap < 0 ? '-' : entry.gap > 0 ? '+' : ''}{formatINR(Math.abs(Number(entry.gap)))}
             </p>
           </div>
           {pending > 0 && (
             <div className="flex-1 rounded-lg bg-amber-500/5 px-3 py-2 text-center">
               <p className="text-[11px] text-neutral-500">Pending</p>
-              <p className="text-sm font-bold text-amber-400 tabular-nums">{formatINR(pending)}</p>
+              <p className="text-sm font-bold text-amber-500 tabular-nums">{formatINR(pending)}</p>
             </div>
           )}
           {excess > 0 && (
@@ -1110,7 +1260,6 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
           )}
         </div>
 
-        {/* Denomination breakdown */}
         {hasDenoms && (
           <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <p className="flex items-center gap-1.5 text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-2">
@@ -1120,7 +1269,7 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
             <div className="grid grid-cols-3 gap-1.5">
               {DENOMINATIONS.map((d) => {
                 const qty = denom[d.key];
-                if (qty === 0) return null;
+                if (!qty) return null;
                 return (
                   <div key={d.key} className="rounded-lg bg-neutral-100 dark:bg-neutral-950 px-2 py-1.5 text-center">
                     <p className="text-[10px] text-neutral-500">{d.label}</p>
@@ -1132,16 +1281,14 @@ function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEnt
           </div>
         )}
 
-        {/* Remarks */}
         {entry.remarks && (
           <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-            <p className="text-xs font-bold text-amber-400 mb-1">Remarks</p>
+            <p className="text-xs font-bold text-amber-500 mb-1">Remarks</p>
             <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">{entry.remarks}</p>
           </div>
         )}
 
-        {/* Click to view full details */}
-        <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-center gap-1.5 text-xs font-bold text-brand-600 group-hover/popup:gap-2 transition-all">
+        <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-center gap-1.5 text-xs font-bold text-brand-600 transition-all">
           <Eye className="h-3.5 w-3.5" />
           Click to view full details
         </div>
@@ -1155,8 +1302,8 @@ function ViewEntryModal({ entry, onClose }: { entry: CollectionEntry | null; onC
     const d = entry ? (Array.isArray(entry.denominations) ? entry.denominations[0] : entry.denominations) : null;
     if (!d) return { ...EMPTY_DENOMINATIONS };
     return {
-      note_500: d.note_500, note_200: d.note_200, note_100: d.note_100, note_50: d.note_50,
-      note_20: d.note_20, note_10: d.note_10, note_5: d.note_5, note_2: d.note_2, note_1: d.note_1,
+      note_500: d.note_500 || 0, note_200: d.note_200 || 0, note_100: d.note_100 || 0, note_50: d.note_50 || 0,
+      note_20: d.note_20 || 0, note_10: d.note_10 || 0, note_5: d.note_5 || 0, note_2: d.note_2 || 0, note_1: d.note_1 || 0,
     };
   })();
 
@@ -1167,7 +1314,7 @@ function ViewEntryModal({ entry, onClose }: { entry: CollectionEntry | null; onC
       title="Collection Details"
       subtitle={entry ? `${entry.collector?.name} · ${formatDate(entry.collection_date)}` : ''}
       size="lg"
-      footer={<Button variant="outline" onClick={onClose}>Close</Button>}
+      footer={<Button variant="outline" onClick={onClose} className="min-h-[44px]">Close</Button>}
     >
       {entry && (
         <div className="space-y-5">
@@ -1187,7 +1334,7 @@ function ViewEntryModal({ entry, onClose }: { entry: CollectionEntry | null; onC
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800/70 p-3 flex items-center justify-between">
               <span className="text-sm text-neutral-500">Gap</span>
-              <span className={clsx('font-bold tabular-nums', entry.gap < 0 ? 'text-red-400' : entry.gap > 0 ? 'text-amber-400' : 'text-brand-600')}>
+              <span className={clsx('font-bold tabular-nums', entry.gap < 0 ? 'text-red-500' : entry.gap > 0 ? 'text-amber-500' : 'text-brand-600')}>
                 {entry.gap < 0 ? '-' : entry.gap > 0 ? '+' : ''}{formatINR(Math.abs(Number(entry.gap)))}
               </span>
             </div>
@@ -1200,9 +1347,9 @@ function ViewEntryModal({ entry, onClose }: { entry: CollectionEntry | null; onC
             <DenominationPanel value={denom} onChange={() => {}} />
           </div>
           {entry.remarks && (
-            <div className="rounded-xl bg-amber-500/10 border border-amber-500/30/70 p-3">
-              <p className="text-xs font-semibold text-amber-400 mb-1">Remarks</p>
-              <p className="text-sm text-amber-800">{entry.remarks}</p>
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3">
+              <p className="text-xs font-semibold text-amber-500 mb-1">Remarks</p>
+              <p className="text-sm text-neutral-800 dark:text-neutral-200">{entry.remarks}</p>
             </div>
           )}
         </div>
