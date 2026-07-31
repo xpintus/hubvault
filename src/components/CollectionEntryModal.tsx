@@ -6,6 +6,9 @@ import DenominationPanel from './DenominationPanel';
 import { useToast } from './ui/Toast';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/offline/db';
+import { addToQueue } from '@/lib/offline/syncQueue';
+import { v4 as uuidv4 } from 'uuid';
 import {
   CollectionEntry,
   CollectionEntryInput,

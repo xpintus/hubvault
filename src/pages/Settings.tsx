@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Save, Smartphone, IndianRupee, Image as ImageIcon, CheckCircle2, Loader2, Megaphone } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Smartphone, IndianRupee, Image as ImageIcon, CheckCircle2, Loader2, Megaphone, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/offline/db';
+import { confirm } from '@/lib/confirm';
 import { useAuth } from '@/lib/auth';
 import { useSettings } from '@/lib/settings';
 import { useToast } from '@/components/ui/Toast';
@@ -78,10 +80,41 @@ export default function SettingsPage() {
     );
   }
 
+  const handleClearOfflineData = async () => {
+    const ok = await confirm({
+      title: 'Clear Offline Data?',
+      message: 'This will delete all locally cached data and pending sync operations on this device. You will need to reconnect to the internet to reload your data. Unsynced changes will be permanently lost.',
+      confirmLabel: 'Clear Data',
+      danger: true,
+    });
+    if (!ok) return;
+
+    try {
+      await db.clearUserOfflineData();
+      toast.success('Offline data cleared successfully');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to clear offline data');
+    }
+  };
+
   if (profile?.role !== 'super_admin') {
     return (
-      <div className="max-w-md mx-auto py-20 text-center">
-        <p className="text-sm text-neutral-500">Only super admins can access this page.</p>
+      <div className="max-w-xl mx-auto space-y-5 p-6">
+          <Card className="p-6 border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+            <div className="flex items-center gap-2.5 mb-2">
+              <Smartphone className="h-5 w-5 text-red-600 dark:text-red-500" />
+              <h2 className="text-base font-bold text-red-900 dark:text-red-400">Offline Data</h2>
+            </div>
+            <p className="text-sm text-red-700/80 dark:text-red-400/80 mb-4 leading-relaxed">
+              If you are experiencing issues with the app, you can clear the locally cached offline data from this device.
+              <strong> Warning: Any unsynced offline changes will be lost.</strong>
+            </p>
+            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/30 dark:text-red-400" onClick={handleClearOfflineData} icon={<Trash2 className="h-4 w-4" />}>
+              Clear Offline Data
+            </Button>
+          </Card>
       </div>
     );
   }
@@ -225,6 +258,20 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+
+      <Card className="p-6 border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10 mt-6">
+        <div className="flex items-center gap-2.5 mb-2">
+          <Smartphone className="h-5 w-5 text-red-600 dark:text-red-500" />
+          <h2 className="text-base font-bold text-red-900 dark:text-red-400">Offline Data</h2>
+        </div>
+        <p className="text-sm text-red-700/80 dark:text-red-400/80 mb-4 leading-relaxed max-w-3xl">
+          If you are experiencing issues with the app, you can clear the locally cached offline data from this device.
+          <strong> Warning: Any unsynced offline changes will be lost.</strong>
+        </p>
+        <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/30 dark:text-red-400" onClick={handleClearOfflineData} icon={<Trash2 className="h-4 w-4" />}>
+          Clear Offline Data
+        </Button>
+      </Card>
     </div>
   );
 }

@@ -1,0 +1,175 @@
+import { supabase } from '../supabase';
+import { db, SyncQueueItem } from './db';
+import { getPendingQueue, markQueueStatus, removeFromQueue } from './syncQueue';
+
+export type ConflictAction = 'keep_local' | 'keep_server' | 'merge';
+
+export interface SyncConflict {
+  queueItem: SyncQueueItem;
+  serverData: any;
+  localData: any;
+}
+
+// Event listeners for SyncContext
+type SyncStatusCallback = (isSyncing: boolean) => void;
+type ConflictCallback = (conflict: SyncConflict) => void;
+
+let onSyncStatusChange: SyncStatusCallback | null = null;
+let onConflict: ConflictCallback | null = null;
+let isSyncing = false;
+
+export function setSyncStatusCallback(cb: SyncStatusCallback) {
+  onSyncStatusChange = cb;
+}
+
+export function setConflictCallback(cb: ConflictCallback) {
+  onConflict = cb;
+}
+
+function notifySyncStatus(status: boolean) {
+  isSyncing = status;
+  if (onSyncStatusChange) {
+    onSyncStatusChange(status);
+  }
+}
+
+export async function processSyncQueue(force = false) {
+  if (isSyncing) return;
+  if (!navigator.onLine && !force) return;
+
+  const queue = await getPendingQueue();
+  if (queue.length === 0) return;
+
+  notifySyncStatus(true);
+
+  for (const item of queue) {
+    // Basic backoff based on retry count
+    if (item.retry_count > 0 && !force) {
+        const backoffMs = Math.min(1000 * Math.pow(2, item.retry_count), 60000);
+        const elapsed = Date.now() - new Date(item.created_at).getTime();
+        if (elapsed < backoffMs) {
+            continue; // Skip this item for now
+        }
+    }
+
+    try {
+      await markQueueStatus(item.id, 'syncing');
+
+      // 1. Conflict Detection for UPDATEs
+      if (item.operation === 'UPDATE' && item.payload.id) {
+        const { data: serverData, error: fetchError } = await supabase
+          .from(item.table_name)
+          .select('*')
+          .eq('id', item.payload.id)
+          .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          throw new Error(`Failed to fetch server data for conflict check: ${fetchError.message}`);
+        }
+
+        if (serverData && serverData.updated_at) {
+          const serverDate = new Date(serverData.updated_at).getTime();
+          const localDate = item.payload.updated_at ? new Date(item.payload.updated_at).getTime() : 0;
+
+          // If server is newer and we have a local timestamp (meaning we aren't explicitly overriding without one)
+          if (localDate > 0 && serverDate > localDate) {
+            // Conflict found!
+            await markQueueStatus(item.id, 'conflict', 'Server data is newer');
+            if (onConflict) {
+              onConflict({ queueItem: item, serverData, localData: item.payload });
+            }
+            // Stop syncing this item, proceed to next
+            continue;
+          }
+        }
+      }
+
+      // 2. Perform Operation
+      let error = null;
+
+      if (item.operation === 'INSERT') {
+        const { error: insertError } = await supabase
+          .from(item.table_name)
+          .insert(item.payload);
+        error = insertError;
+      } else if (item.operation === 'UPDATE') {
+        const { error: updateError } = await supabase
+          .from(item.table_name)
+          .update(item.payload)
+          .eq('id', item.payload.id);
+        error = updateError;
+      } else if (item.operation === 'DELETE') {
+        const { error: deleteError } = await supabase
+          .from(item.table_name)
+          .delete()
+          .eq('id', item.payload.id);
+        error = deleteError;
+      }
+
+      // 3. Handle Result
+      if (error) {
+        // If it's a unique constraint violation on insert (e.g. already synced but client crashed),
+        // we might consider it a success or a conflict. For now, mark failed.
+        if (error.code === '23505' && item.operation === 'INSERT') {
+           // Duplicate ID, assume it was synced successfully before
+           await removeFromQueue(item.id);
+        } else {
+           throw new Error(error.message);
+        }
+      } else {
+        await removeFromQueue(item.id);
+      }
+
+    } catch (err: any) {
+      console.error(`Sync error for item ${item.id}:`, err);
+      await markQueueStatus(item.id, 'failed', err.message);
+    }
+  }
+
+  notifySyncStatus(false);
+}
+
+export async function resolveConflict(conflict: SyncConflict, action: ConflictAction, mergedPayload?: any) {
+  const { queueItem } = conflict;
+
+  if (action === 'keep_server') {
+    // Discard local change
+    await removeFromQueue(queueItem.id);
+
+    // Also need to update local Dexie DB with server data
+    const dexieTable = (db as any)[queueItem.table_name];
+    if (dexieTable && conflict.serverData) {
+        await dexieTable.put(conflict.serverData);
+    }
+
+  } else if (action === 'keep_local' || action === 'merge') {
+    // Update the payload and force sync
+    const newPayload = action === 'keep_local' ? queueItem.payload : mergedPayload;
+
+    // Update local updated_at to ensure it overrides server on next try
+    newPayload.updated_at = new Date().toISOString();
+
+    await db.sync_queue.update(queueItem.id, {
+        payload: newPayload,
+        status: 'pending',
+        retry_count: 0
+    });
+
+    // Update local Dexie DB
+    const dexieTable = (db as any)[queueItem.table_name];
+    if (dexieTable) {
+        await dexieTable.put(newPayload);
+    }
+
+    // Retry sync
+    processSyncQueue(true);
+  }
+}
+
+// Network Listeners
+export function setupNetworkListeners() {
+  window.addEventListener('online', () => {
+    console.log('[Offline] Back online. Processing sync queue...');
+    processSyncQueue(true);
+  });
+}

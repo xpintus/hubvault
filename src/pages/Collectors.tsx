@@ -9,6 +9,9 @@ import Modal from '@/components/ui/Modal';
 import { confirm } from '@/lib/confirm';
 import { Collector, CollectorStatus, Hub, Due, Recovery } from '@/types';
 import { formatINR, formatDate, toISODate } from '@/lib/format';
+import { db } from '@/lib/offline/db';
+import { addToQueue } from '@/lib/offline/syncQueue';
+import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 
 export default function Collectors() {
@@ -48,18 +51,42 @@ export default function Collectors() {
       } else {
         setHubs(hubCtx.accessibleHubs);
       }
-      let q = supabase.from('collectors').select('*, hub: hubs(*)').order('name');
-      if (hubCtx.selectedHubId) q = q.eq('hub_id', hubCtx.selectedHubId);
-      else if (!isSuperAdmin && profile.hub_id) q = q.eq('hub_id', profile.hub_id);
-      const { data, error } = await q;
-      if (error) throw error;
-      setCollectors(data ?? []);
+
+      if (!navigator.onLine) {
+        let cols = await db.collectors.toArray();
+        if (hubCtx.selectedHubId) cols = cols.filter(c => c.hub_id === hubCtx.selectedHubId);
+        else if (!isSuperAdmin && profile.hub_id) cols = cols.filter(c => c.hub_id === profile.hub_id);
+
+        // Mock the hub relation for offline list
+        const hydrated = cols.map(c => ({
+            ...c,
+            hub: hubs.find(h => h.id === c.hub_id) || { id: c.hub_id, name: 'Offline Hub', code: '' }
+        }));
+
+        setCollectors(hydrated.sort((a, b) => a.name.localeCompare(b.name)) as any[]);
+      } else {
+        let q = supabase.from('collectors').select('*, hub: hubs(*)').order('name');
+        if (hubCtx.selectedHubId) q = q.eq('hub_id', hubCtx.selectedHubId);
+        else if (!isSuperAdmin && profile.hub_id) q = q.eq('hub_id', profile.hub_id);
+        const { data, error } = await q;
+        if (error) throw error;
+        setCollectors(data ?? []);
+
+        // Cache for offline
+        if (data) {
+           const pureCols = data.map(c => {
+               const { hub, ...rest } = c as any;
+               return rest;
+           });
+           await db.collectors.bulkPut(pureCols);
+        }
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load employees');
     } finally {
       setLoading(false);
     }
-  }, [profile, isSuperAdmin, hubCtx.selectedHubId, hubCtx.accessibleHubs, toast]);
+  }, [profile, isSuperAdmin, hubCtx.selectedHubId, hubCtx.accessibleHubs, hubs, toast]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -107,15 +134,37 @@ export default function Collectors() {
         hub_id: form.hub_id,
         status: form.status,
       };
-      if (editing) {
-        const { error } = await supabase.from('collectors').update(payload).eq('id', editing.id);
-        if (error) throw error;
-        toast.success('Employee updated');
+
+      if (!navigator.onLine) {
+         if (editing) {
+             const updatePayload = { ...payload, id: editing.id, client_id: profile?.id };
+             await db.collectors.update(editing.id, updatePayload);
+             await addToQueue(profile?.id || '', form.hub_id, 'collectors', 'UPDATE', updatePayload);
+             toast.success('Employee updated offline');
+         } else {
+             const insertPayload = {
+                 ...payload,
+                 id: uuidv4(),
+                 created_at: new Date().toISOString(),
+                 client_id: profile?.id,
+                 created_offline: true
+             };
+             await db.collectors.add(insertPayload as any);
+             await addToQueue(profile?.id || '', form.hub_id, 'collectors', 'INSERT', insertPayload);
+             toast.success('Employee added offline');
+         }
       } else {
-        const { error } = await supabase.from('collectors').insert(payload);
-        if (error) throw error;
-        toast.success('Employee added');
+          if (editing) {
+            const { error } = await supabase.from('collectors').update(payload).eq('id', editing.id);
+            if (error) throw error;
+            toast.success('Employee updated');
+          } else {
+            const { error } = await supabase.from('collectors').insert(payload);
+            if (error) throw error;
+            toast.success('Employee added');
+          }
       }
+
       setModalOpen(false);
       load();
     } catch (err) {
@@ -127,9 +176,17 @@ export default function Collectors() {
 
   const toggleStatus = async (c: Collector) => {
     const next: CollectorStatus = c.status === 'active' ? 'inactive' : 'active';
-    const { error } = await supabase.from('collectors').update({ status: next }).eq('id', c.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`${c.name} ${next === 'active' ? 'enabled' : 'disabled'}`);
+
+    if (!navigator.onLine) {
+        const updatePayload = { id: c.id, status: next, client_id: profile?.id };
+        await db.collectors.update(c.id, updatePayload);
+        await addToQueue(profile?.id || '', c.hub_id, 'collectors', 'UPDATE', updatePayload);
+        toast.success(`${c.name} ${next === 'active' ? 'enabled' : 'disabled'} offline`);
+    } else {
+        const { error } = await supabase.from('collectors').update({ status: next }).eq('id', c.id);
+        if (error) { toast.error(error.message); return; }
+        toast.success(`${c.name} ${next === 'active' ? 'enabled' : 'disabled'}`);
+    }
     load();
   };
 
