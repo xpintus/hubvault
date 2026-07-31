@@ -183,7 +183,7 @@ export const DENOMINATIONS: { key: keyof DenominationInput; value: number; label
   { key: 'note_1', value: 1, label: '₹1' },
 ];
 
-export type DueStatus = 'outstanding' | 'partially_recovered' | 'fully_recovered';
+export type DueStatus = 'outstanding' | 'partially_recovered' | 'fully_recovered' | 'cancelled';
 
 export type RecoveryPaymentMode = 'cash' | 'online' | 'other';
 
@@ -198,6 +198,9 @@ export interface Due {
   due_date: string;
   status: DueStatus;
   notes: string | null;
+  source?: 'collection_shortage' | 'manual_old_due' | 'penalty' | 'adjustment' | string | null;
+  due_reason?: string | null;
+  reference_number?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -229,6 +232,9 @@ export interface DueInput {
   collection_entry_id: string | null;
   original_amount: number;
   due_date: string;
+  source?: string | null;
+  due_reason?: string | null;
+  reference_number?: string | null;
   notes?: string | null;
 }
 

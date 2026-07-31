@@ -197,7 +197,7 @@ export default function Dashboard() {
   }, [entries]);
 
   const outstandingDues = useMemo(() => {
-    return dues.filter((d) => d.status !== 'fully_recovered').reduce((s, d) => s + safeAmount(d.remaining_amount), 0);
+    return dues.filter((d) => d.status !== 'fully_recovered' && d.status !== 'cancelled').reduce((s, d) => s + safeAmount(d.remaining_amount), 0);
   }, [dues]);
 
   // Recoveries on selected date
