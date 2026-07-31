@@ -18,18 +18,7 @@ import { subDays } from 'date-fns';
 import { clsx } from 'clsx';
 import { logAudit } from '@/lib/audit';
 
-type DetailType =
-  | 'total_expected_cod'
-  | 'total_collection'
-  | 'cash_collected'
-  | 'online_collected'
-  | 'collection_shortage'
-  | 'total_expected_cms'
-  | 'total_deposited'
-  | 'cms_pending_deposit'
-  | 'cms_excess'
-  | 'deposit_count'
-  | null;
+type DetailType = 'expected' | 'deposited' | 'pending' | 'count' | null;
 
 const safeAmount = (val: any): number => {
   if (val === null || val === undefined) return 0;
@@ -169,12 +158,9 @@ export default function DepositsPage() {
   });
   const [recoverySaving, setRecoverySaving] = useState(false);
 
-  // Card Drill-Down Drawer state
+  // Card Detail Modal state
   const [activeDetail, setActiveDetail] = useState<DetailType>(null);
   const [detailSearch, setDetailSearch] = useState('');
-  const [detailFilterReason, setDetailFilterReason] = useState('all');
-  const [detailFilterRecovery, setDetailFilterRecovery] = useState('all');
-  const [detailFilterEmployee, setDetailFilterEmployee] = useState('all');
 
   const canManage = ['super_admin', 'hub_admin', 'supervisor'].includes(profile?.role ?? '');
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -240,6 +226,7 @@ export default function DepositsPage() {
       setRecoveries(recData ?? []);
 
     } catch (err) {
+      console.error('Failed to load deposition data:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to load deposition data');
     } finally {
       setLoading(false);
@@ -362,12 +349,26 @@ export default function DepositsPage() {
     });
   }, [dailyRows, search]);
 
+  // Individual Deposit Transactions (filtered)
+  const depositTransactions = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return deposits;
+    return deposits.filter((d) => {
+      const dateStr = (d.collection_date || d.deposit_date).toLowerCase();
+      const hub = (d.hub?.name ?? '').toLowerCase();
+      const ref = (d.reference_number ?? '').toLowerCase();
+      const bank = (d.bank_name ?? '').toLowerCase();
+      const rem = (d.remarks ?? '').toLowerCase();
+      return dateStr.includes(q) || hub.includes(q) || ref.includes(q) || bank.includes(q) || rem.includes(q);
+    });
+  }, [deposits, search]);
+
   // Section 2: CMS Summary Cards (strictly derived from visible normalized date rows)
   const cmsSummaryStats = useMemo(() => {
     // Total Expected CMS card = sum of expectedCod once per visible collection date
     const totalExpectedCms = filteredDailyRows.reduce((s, r) => s + r.totalExpectedCms, 0);
-    // Total Deposited card = sum of all valid deposit amounts
-    const totalDeposited = filteredDailyRows.reduce((s, r) => s + r.totalDeposited, 0);
+    // Total Deposited card = sum of all valid deposit transaction amounts
+    const totalDeposited = depositTransactions.reduce((s, d) => s + getDepositAmount(d), 0);
     // CMS Pending Deposit card = sum of max(expectedCod - totalDeposited, 0)
     const cmsPending = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalExpectedCms - r.totalDeposited), 0);
     // CMS Excess card = sum of max(totalDeposited - expectedCod, 0)
@@ -378,9 +379,9 @@ export default function DepositsPage() {
       totalDeposited,
       cmsPending,
       cmsExcess,
-      depositCount: deposits.length,
+      depositCount: depositTransactions.length,
     };
-  }, [filteredDailyRows, deposits.length]);
+  }, [filteredDailyRows, depositTransactions]);
 
   // Record CMS Deposit Form Modal Actions
   const openAddDeposit = (prefillRow?: DailyCmsRow) => {
@@ -482,37 +483,44 @@ export default function DepositsPage() {
       if (editing) {
         const { error } = await supabase.from('cms_deposits').update(payload).eq('id', editing.id);
         if (error) throw error;
-        toast.success('Deposit record updated');
+        toast.success('Deposit transaction updated successfully');
       } else {
         const { error } = await supabase.from('cms_deposits').insert({ ...payload, created_by: profile?.id ?? null });
         if (error) throw error;
         await logAudit('cms_deposit_create', profile?.id ?? null, `Recorded CMS deposit of ${formatINR(submitted)} for collection date ${formatDate(form.collection_date)}`, null, hubId);
-        toast.success('CMS deposit recorded');
+        toast.success('CMS deposit recorded successfully');
       }
       setModalOpen(false);
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save deposit');
+      console.error('Save deposit error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save deposit transaction');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteDeposit = async (d: CmsDeposit) => {
+    const amountStr = formatINR(getDepositAmount(d));
+    const dateStr = formatDate(d.deposit_date);
+    const refStr = d.reference_number ? ` (Ref: ${d.reference_number})` : '';
+
     const ok = await confirm({
-      title: 'Delete this deposit record?',
-      message: `This will remove the CMS deposit of ${formatINR(getDepositAmount(d))} dated ${formatDate(d.deposit_date)}.`,
-      confirmLabel: 'Delete',
+      title: 'Delete deposit transaction?',
+      message: `This deposit transaction of ${amountStr} dated ${dateStr}${refStr} will be permanently deleted and CMS totals will be recalculated.`,
+      confirmLabel: 'Delete Transaction',
       danger: true,
     });
     if (!ok) return;
+
     try {
       const { error } = await supabase.from('cms_deposits').delete().eq('id', d.id);
       if (error) throw error;
-      toast.success('Deposit record deleted');
+      toast.success('Deposit transaction deleted');
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete deposit');
+      console.error('Delete deposit error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to delete deposit transaction');
     }
   };
 
@@ -720,7 +728,7 @@ export default function DepositsPage() {
     }
   };
 
-  // Card Drill-Down Handlers
+  // Card Click Handler
   const handleCardClick = (type: DetailType) => {
     setActiveDetail(type);
   };
@@ -815,7 +823,7 @@ export default function DepositsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-            <Card hover onClick={() => handleCardClick('total_expected_cod')} className="p-4 cursor-pointer min-w-0">
+            <Card className="p-4 min-w-0">
               <p className="text-xs text-neutral-500 truncate">Total Expected COD</p>
               <p className="mt-1 text-lg sm:text-xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
                 {formatINR(collectionStats.totalExpectedCod)}
@@ -823,7 +831,7 @@ export default function DepositsPage() {
               <p className="mt-1 text-[11px] text-neutral-500">{collectionStats.entryCount} entries</p>
             </Card>
 
-            <Card hover onClick={() => handleCardClick('total_collection')} className="p-4 cursor-pointer min-w-0">
+            <Card className="p-4 min-w-0">
               <p className="text-xs text-neutral-500 truncate">Total Collection</p>
               <p className="mt-1 text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums truncate">
                 {formatINR(collectionStats.totalCollection)}
@@ -831,7 +839,7 @@ export default function DepositsPage() {
               <p className="mt-1 text-[11px] text-blue-500/80">{collectionStats.entryCount} entries</p>
             </Card>
 
-            <Card hover onClick={() => handleCardClick('cash_collected')} className="p-4 cursor-pointer min-w-0">
+            <Card className="p-4 min-w-0">
               <p className="text-xs text-neutral-500 truncate">Cash Collected</p>
               <p className="mt-1 text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums truncate">
                 {formatINR(collectionStats.totalCash)}
@@ -839,7 +847,7 @@ export default function DepositsPage() {
               <p className="mt-1 text-[11px] text-neutral-500">Physical cash</p>
             </Card>
 
-            <Card hover onClick={() => handleCardClick('online_collected')} className="p-4 cursor-pointer min-w-0">
+            <Card className="p-4 min-w-0">
               <p className="text-xs text-neutral-500 truncate">Online Collected</p>
               <p className="mt-1 text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums truncate">
                 {formatINR(collectionStats.totalOnline)}
@@ -847,7 +855,7 @@ export default function DepositsPage() {
               <p className="mt-1 text-[11px] text-neutral-500">Digital payments</p>
             </Card>
 
-            <Card hover onClick={() => handleCardClick('collection_shortage')} className="p-4 cursor-pointer col-span-2 sm:col-span-1 min-w-0 border-red-500/20">
+            <Card className="p-4 col-span-2 sm:col-span-1 min-w-0 border-red-500/20">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-neutral-500 truncate">Collection Shortage</p>
                 {collectionStats.collectionShortage > 0 && (
@@ -863,13 +871,13 @@ export default function DepositsPage() {
         )}
       </div>
 
-      {/* SECTION 2: CMS Summary (Hub/Date-Level Deposition) */}
+      {/* SECTION 2: CMS Summary (Hub/Date-Level Deposition) - Genuine Clickable Cards */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
             CMS Summary (Bank Deposition)
           </p>
-          <span className="text-[11px] text-neutral-500">Click cards for itemized date details</span>
+          <span className="text-[11px] text-neutral-500">Click cards for itemized data details</span>
         </div>
 
         {loading ? (
@@ -879,7 +887,15 @@ export default function DepositsPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
             {/* Total Expected CMS (strictly equals Total Expected COD) */}
-            <Card hover onClick={() => handleCardClick('total_expected_cms')} className="p-4 cursor-pointer min-w-0">
+            <Card
+              hover
+              role="button"
+              tabIndex={0}
+              onClick={() => handleCardClick('expected')}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick('expected')}
+              className="p-4 cursor-pointer min-w-0 transition-transform active:scale-[0.98]"
+              aria-label="View Total Expected CMS Details"
+            >
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center font-bold">
                   <Banknote className="h-5 w-5" />
@@ -893,7 +909,15 @@ export default function DepositsPage() {
             </Card>
 
             {/* Total Deposited */}
-            <Card hover onClick={() => handleCardClick('total_deposited')} className="p-4 cursor-pointer min-w-0">
+            <Card
+              hover
+              role="button"
+              tabIndex={0}
+              onClick={() => handleCardClick('deposited')}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick('deposited')}
+              className="p-4 cursor-pointer min-w-0 transition-transform active:scale-[0.98]"
+              aria-label="View Total Deposited Transactions"
+            >
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
                   <Landmark className="h-5 w-5" />
@@ -907,7 +931,15 @@ export default function DepositsPage() {
             </Card>
 
             {/* CMS Pending Deposit */}
-            <Card hover onClick={() => handleCardClick('cms_pending_deposit')} className={clsx('p-4 cursor-pointer min-w-0 border-red-500/20', cmsSummaryStats.cmsPending > 0 && 'bg-red-500/5')}>
+            <Card
+              hover
+              role="button"
+              tabIndex={0}
+              onClick={() => handleCardClick('pending')}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick('pending')}
+              className={clsx('p-4 cursor-pointer min-w-0 border-red-500/20 transition-transform active:scale-[0.98]', cmsSummaryStats.cmsPending > 0 && 'bg-red-500/5')}
+              aria-label="View CMS Pending Audit"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-9 w-9 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center font-bold">
@@ -926,7 +958,15 @@ export default function DepositsPage() {
             </Card>
 
             {/* Deposit Count */}
-            <Card hover onClick={() => handleCardClick('deposit_count')} className="p-4 cursor-pointer min-w-0">
+            <Card
+              hover
+              role="button"
+              tabIndex={0}
+              onClick={() => handleCardClick('count')}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick('count')}
+              className="p-4 cursor-pointer min-w-0 transition-transform active:scale-[0.98]"
+              aria-label="View Deposit Transactions Log"
+            >
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
                   <FileBarChart className="h-5 w-5" />
@@ -1223,35 +1263,22 @@ export default function DepositsPage() {
         </Modal>
       )}
 
-      {/* Card Drill-Down Drawer */}
+      {/* Card Detail Modal */}
       {activeDetail && (
         <DetailDrawer
           type={activeDetail}
           onClose={() => setActiveDetail(null)}
-          entries={entries}
-          deposits={deposits}
-          dues={dues}
-          recoveries={recoveries}
-          collectors={collectors}
+          deposits={depositTransactions}
           dailyRows={filteredDailyRows}
           from={from}
           to={to}
           selectedHubName={hubCtx.selectedHub?.name}
           detailSearch={detailSearch}
           setDetailSearch={setDetailSearch}
-          detailFilterReason={detailFilterReason}
-          setDetailFilterReason={setDetailFilterReason}
-          detailFilterRecovery={detailFilterRecovery}
-          setDetailFilterRecovery={setDetailFilterRecovery}
-          detailFilterEmployee={detailFilterEmployee}
-          setDetailFilterEmployee={setDetailFilterEmployee}
-          expandedHistoryId={expandedHistoryId}
-          setExpandedHistoryId={setExpandedHistoryId}
           onExport={handleExportRows}
-          openAddShortage={openAddShortage}
-          openRecoveryModal={openRecoveryModal}
-          onMarkWrittenOff={handleMarkWrittenOff}
           openAddDeposit={openAddDeposit}
+          openEditDeposit={openEditDeposit}
+          handleDeleteDeposit={handleDeleteDeposit}
           canManage={canManage}
         />
       )}
@@ -1259,126 +1286,77 @@ export default function DepositsPage() {
   );
 }
 
-// Drawer Component for Interactive Card Drill-Downs
+// Detail Drawer/Modal Component for Clickable CMS Summary Cards
 function DetailDrawer({
-  type, onClose, entries, deposits, dues, recoveries, collectors, dailyRows,
+  type, onClose, deposits, dailyRows,
   from, to, selectedHubName, detailSearch, setDetailSearch,
-  detailFilterReason, setDetailFilterReason,
-  detailFilterRecovery, setDetailFilterRecovery, detailFilterEmployee, setDetailFilterEmployee,
-  expandedHistoryId, setExpandedHistoryId, onExport, openAddShortage, openRecoveryModal,
-  onMarkWrittenOff, openAddDeposit, canManage
+  onExport, openAddDeposit, openEditDeposit, handleDeleteDeposit, canManage
 }: {
   type: DetailType;
   onClose: () => void;
-  entries: CollectionEntry[];
   deposits: CmsDeposit[];
-  dues: Due[];
-  recoveries: Recovery[];
-  collectors: Collector[];
   dailyRows: DailyCmsRow[];
   from: string;
   to: string;
   selectedHubName?: string;
   detailSearch: string;
   setDetailSearch: (s: string) => void;
-  detailFilterReason: string;
-  setDetailFilterReason: (s: string) => void;
-  detailFilterRecovery: string;
-  setDetailFilterRecovery: (s: string) => void;
-  detailFilterEmployee: string;
-  setDetailFilterEmployee: (s: string) => void;
-  expandedHistoryId: string | null;
-  setExpandedHistoryId: (id: string | null) => void;
   onExport: () => void;
-  openAddShortage: () => void;
-  openRecoveryModal: (due: Due) => void;
-  onMarkWrittenOff: (due: Due) => void;
   openAddDeposit: (row?: DailyCmsRow) => void;
+  openEditDeposit: (d: CmsDeposit) => void;
+  handleDeleteDeposit: (d: CmsDeposit) => void;
   canManage: boolean;
 }) {
   const titles: Record<string, string> = {
-    total_expected_cod: 'Total Expected COD Transactions',
-    total_collection: 'Total Collection Transactions',
-    cash_collected: 'Cash Collection Entries',
-    online_collected: 'Online Collection Entries',
-    collection_shortage: 'Collection Shortage Investigation',
-    total_expected_cms: 'Total Expected CMS Details',
-    total_deposited: 'Total CMS Deposited Transactions',
-    cms_pending_deposit: 'CMS Pending Deposition Audit',
-    cms_excess: 'CMS Over-Deposited Audit',
-    deposit_count: 'Deposit Transaction Log',
+    expected: 'Total Expected CMS Details',
+    deposited: 'Total Deposited Transactions',
+    pending: 'CMS Pending / Excess Audit',
+    count: 'Deposit Transactions Log',
   };
 
   const icons: Record<string, any> = {
-    total_expected_cod: Wallet,
-    total_collection: Landmark,
-    cash_collected: Banknote,
-    online_collected: Smartphone,
-    collection_shortage: TrendingDown,
-    total_expected_cms: Banknote,
-    total_deposited: Landmark,
-    cms_pending_deposit: AlertCircle,
-    cms_excess: TrendingUp,
-    deposit_count: FileBarChart,
+    expected: Banknote,
+    deposited: Landmark,
+    pending: AlertCircle,
+    count: FileBarChart,
   };
 
   const IconComp = icons[type ?? ''] || FileText;
   const q = detailSearch.trim().toLowerCase();
 
-  const filteredEntries = useMemo(() => {
-    return entries.filter((e) => {
-      if (detailFilterEmployee !== 'all' && e.collector_id !== detailFilterEmployee) return false;
-      if (type === 'cash_collected' && safeAmount(e.cash_amount) <= 0) return false;
-      if (type === 'online_collected' && safeAmount(e.online_amount) <= 0) return false;
-      if (!q) return true;
-      const name = e.collector?.name?.toLowerCase() ?? '';
-      const empId = e.collector?.employee_id?.toLowerCase() ?? '';
-      const rem = e.remarks?.toLowerCase() ?? '';
-      return name.includes(q) || empId.includes(q) || rem.includes(q);
-    });
-  }, [entries, type, detailFilterEmployee, q]);
-
-  const shortageRecords = useMemo(() => {
-    const shortageEnts = entries.filter((e) => safeAmount(e.total_collection) < safeAmount(e.expected_cod));
-    return shortageEnts.filter((e) => {
-      if (detailFilterEmployee !== 'all' && e.collector_id !== detailFilterEmployee) return false;
-      const linkedDue = dues.find(d => d.collection_entry_id === e.id || (d.collector_id === e.collector_id && d.due_date === e.collection_date));
-      if (detailFilterRecovery !== 'all' && linkedDue?.status !== detailFilterRecovery) return false;
-      if (detailFilterReason !== 'all' && !(e.remarks ?? '').includes(detailFilterReason)) return false;
-      if (!q) return true;
-      const name = e.collector?.name?.toLowerCase() ?? '';
-      const empId = e.collector?.employee_id?.toLowerCase() ?? '';
-      const rem = e.remarks?.toLowerCase() ?? '';
-      return name.includes(q) || empId.includes(q) || rem.includes(q);
-    });
-  }, [entries, dues, detailFilterEmployee, detailFilterRecovery, detailFilterReason, q]);
-
+  // Date-level rows for 'expected' and 'pending'
   const filteredDaily = useMemo(() => {
     return dailyRows.filter((r) => {
-      if (type === 'cms_pending_deposit' && r.cmsPending <= 0) return false;
-      if (type === 'cms_excess' && r.cmsExcess <= 0) return false;
-      if (type === 'total_deposited' && r.totalDeposited <= 0) return false;
+      if (type === 'pending' && r.cmsPending <= 0 && r.cmsExcess <= 0) return false;
       if (!q) return true;
       return r.date.toLowerCase().includes(q) || r.hubName.toLowerCase().includes(q) || r.references.join(' ').toLowerCase().includes(q);
     });
   }, [dailyRows, type, q]);
 
+  // Individual deposit records for 'deposited' and 'count'
+  const filteredDeposits = useMemo(() => {
+    return deposits.filter((d) => {
+      if (!q) return true;
+      const dateStr = (d.collection_date || d.deposit_date).toLowerCase();
+      const hub = (d.hub?.name ?? '').toLowerCase();
+      const ref = (d.reference_number ?? '').toLowerCase();
+      const bank = (d.bank_name ?? '').toLowerCase();
+      const rem = (d.remarks ?? '').toLowerCase();
+      return dateStr.includes(q) || hub.includes(q) || ref.includes(q) || bank.includes(q) || rem.includes(q);
+    });
+  }, [deposits, q]);
+
   const drawerTotalAmount = useMemo(() => {
-    if (type === 'total_expected_cod') return filteredEntries.reduce((s, e) => s + safeAmount(e.expected_cod), 0);
-    if (type === 'total_collection') return filteredEntries.reduce((s, e) => s + safeAmount(e.total_collection), 0);
-    if (type === 'cash_collected') return filteredEntries.reduce((s, e) => s + safeAmount(e.cash_amount), 0);
-    if (type === 'online_collected') return filteredEntries.reduce((s, e) => s + safeAmount(e.online_amount), 0);
-    if (type === 'collection_shortage') return shortageRecords.reduce((s, e) => s + (safeAmount(e.expected_cod) - safeAmount(e.total_collection)), 0);
-    if (type === 'total_expected_cms') return filteredDaily.reduce((s, r) => s + r.totalExpectedCms, 0);
-    if (type === 'total_deposited') return filteredDaily.reduce((s, r) => s + r.totalDeposited, 0);
-    if (type === 'cms_pending_deposit') return filteredDaily.reduce((s, r) => s + r.cmsPending, 0);
-    if (type === 'cms_excess') return filteredDaily.reduce((s, r) => s + r.cmsExcess, 0);
-    return deposits.length;
-  }, [type, filteredEntries, shortageRecords, filteredDaily, deposits]);
+    if (type === 'expected') return filteredDaily.reduce((s, r) => s + r.totalExpectedCms, 0);
+    if (type === 'deposited') return filteredDeposits.reduce((s, d) => s + getDepositAmount(d), 0);
+    if (type === 'pending') return filteredDaily.reduce((s, r) => s + r.cmsPending, 0);
+    return filteredDeposits.length;
+  }, [type, filteredDaily, filteredDeposits]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end">
       <div className="w-full max-w-4xl bg-[var(--card-bg)] shadow-2xl h-full flex flex-col min-w-0 border-l border-neutral-200 dark:border-neutral-800 animate-slide-in">
+        {/* Header */}
         <div className="p-4 sm:p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0 bg-neutral-50 dark:bg-neutral-950">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-600/15 text-brand-600 ring-1 ring-brand-600/30 shrink-0">
@@ -1395,99 +1373,119 @@ function DetailDrawer({
           </div>
         </div>
 
+        {/* Total Amount Banner */}
         <div className="p-4 bg-brand-50/50 dark:bg-brand-600/10 border-b border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div>
             <p className="text-xs font-semibold text-neutral-500 uppercase">Filtered Total Amount</p>
-            <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{type === 'deposit_count' ? drawerTotalAmount : formatINR(drawerTotalAmount)}</p>
+            <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">
+              {type === 'count' ? drawerTotalAmount : formatINR(drawerTotalAmount)}
+            </p>
           </div>
-          {type === 'collection_shortage' && canManage && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={openAddShortage} className="min-h-[44px] px-3.5 text-xs font-semibold shadow-glow">+ Add Shortage Entry</Button>
-          )}
         </div>
 
+        {/* Search Bar */}
         <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 space-y-3 shrink-0">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-            <input value={detailSearch} onChange={(e) => setDetailSearch(e.target.value)} placeholder="Search date, hub, reference..." className="input-base pl-9 py-2 text-sm min-h-[44px]" />
+            <input value={detailSearch} onChange={(e) => setDetailSearch(e.target.value)} placeholder="Search date, hub, reference, bank..." className="input-base pl-9 py-2 text-sm min-h-[44px]" />
           </div>
         </div>
 
+        {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {type === 'collection_shortage' ? (
-            shortageRecords.map((e) => {
-              const shortageAmt = safeAmount(e.expected_cod) - safeAmount(e.total_collection);
-              const linkedDue = dues.find(d => d.collection_entry_id === e.id || (d.collector_id === e.collector_id && d.due_date === e.collection_date));
+          {type === 'deposited' || type === 'count' ? (
+            filteredDeposits.length === 0 ? (
+              <EmptyState icon={<Landmark className="h-8 w-8" />} title="No deposit transactions" message="No deposit transactions found." />
+            ) : (
+              filteredDeposits.map((d) => {
+                const amt = getDepositAmount(d);
+                const cDate = d.collection_date || d.deposit_date;
 
-              return (
-                <Card key={e.id} className="p-4 space-y-3 border-red-500/20">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-bold text-neutral-900 dark:text-neutral-100">{e.collector?.name ?? '—'}</p>
-                      <p className="text-xs text-neutral-500 font-mono">Emp ID: {e.collector?.employee_id} · Date: {formatDate(e.collection_date)}</p>
+                return (
+                  <Card key={d.id} className="p-4 space-y-3">
+                    <div className="flex flex-wrap justify-between items-start gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatDate(d.deposit_date)}</span>
+                          {d.hub?.name && <span className="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">{d.hub.name}</span>}
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-0.5">Collection Date: <strong>{formatDate(cDate)}</strong></p>
+                      </div>
+                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatINR(amt)}</span>
                     </div>
-                    <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded">{linkedDue ? DUE_STATUS_LABELS[linkedDue.status] : 'Outstanding'}</span>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-50 dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                      <div><p className="text-neutral-500">Reference:</p><p className="font-mono font-medium">{d.reference_number || '—'}</p></div>
+                      <div><p className="text-neutral-500">Bank/CMS:</p><p className="font-medium">{d.bank_name || '—'}</p></div>
+                    </div>
+
+                    {d.remarks && <p className="text-xs text-neutral-600 dark:text-neutral-400 italic">Remarks: {d.remarks}</p>}
+
+                    {canManage && (
+                      <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          icon={<Edit3 className="h-3.5 w-3.5 text-blue-500" />}
+                          onClick={() => { onClose(); openEditDeposit(d); }}
+                          className="min-h-[44px] text-xs font-semibold px-3"
+                          title="Edit this deposit record"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          icon={<Trash2 className="h-3.5 w-3.5 text-red-500" />}
+                          onClick={() => handleDeleteDeposit(d)}
+                          className="min-h-[44px] text-xs font-semibold px-3 text-red-500 border-red-500/20 hover:bg-red-500/10"
+                          title="Delete this deposit record"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })
+            )
+          ) : (
+            filteredDaily.length === 0 ? (
+              <EmptyState icon={<Landmark className="h-8 w-8" />} title="No daily rows" message="No matching date rows." />
+            ) : (
+              filteredDaily.map((r) => (
+                <Card key={`${r.date}_${r.hubId}`} className="p-4 space-y-3">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatDate(r.date)}</span>
+                    <span className="text-neutral-500">{r.hubName}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 p-2"><p className="text-neutral-500">Expected COD</p><p className="font-bold tabular-nums">{formatINR(e.expected_cod)}</p></div>
-                    <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 p-2"><p className="text-neutral-500">Total Collected</p><p className="font-bold tabular-nums">{formatINR(e.total_collection)}</p></div>
-                    <div className="rounded-lg bg-red-500/10 p-2"><p className="text-red-500">Shortage</p><p className="font-bold text-red-500 tabular-nums">{formatINR(shortageAmt)}</p></div>
+                    <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 p-2">
+                      <p className="text-neutral-500">Total Expected CMS</p>
+                      <p className="font-bold tabular-nums">{formatINR(r.totalExpectedCms)}</p>
+                    </div>
+                    <div className="rounded-lg bg-emerald-500/10 p-2">
+                      <p className="text-emerald-500">Total Deposited</p>
+                      <p className="font-bold text-emerald-500 tabular-nums">{formatINR(r.totalDeposited)}</p>
+                    </div>
+                    <div className="rounded-lg bg-red-500/10 p-2">
+                      <p className="text-red-500">CMS Pending</p>
+                      <p className="font-bold text-red-500 tabular-nums">{formatINR(r.cmsPending)}</p>
+                    </div>
                   </div>
-                  {e.remarks && <p className="text-xs text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-950 p-2.5 rounded-lg border">Notes: {e.remarks}</p>}
-                  {canManage && linkedDue && linkedDue.status !== 'fully_recovered' && (
-                    <div className="flex justify-end gap-2 pt-2 border-t">
-                      <Button size="sm" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => openRecoveryModal(linkedDue)} className="min-h-[44px] text-xs">Record Recovery</Button>
-                      <Button size="sm" variant="outline" onClick={() => onMarkWrittenOff(linkedDue)} className="min-h-[44px] text-xs text-red-500">Mark Written Off</Button>
+                  {r.references.length > 0 && <p className="text-xs text-neutral-500 font-mono">Ref: {r.references.join(', ')}</p>}
+                  {canManage && r.cmsPending > 0 && (
+                    <div className="flex justify-end pt-1">
+                      <Button size="sm" onClick={() => { onClose(); openAddDeposit(r); }} className="min-h-[44px] text-xs px-3">+ Record Deposit</Button>
                     </div>
                   )}
                 </Card>
-              );
-            })
-          ) : type === 'total_expected_cms' || type === 'total_deposited' || type === 'cms_pending_deposit' || type === 'cms_excess' ? (
-            filteredDaily.map((r) => (
-              <Card key={`${r.date}_${r.hubId}`} className="p-4 space-y-3">
-                <div className="flex justify-between items-center text-xs font-semibold">
-                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatDate(r.date)}</span>
-                  <span className="text-neutral-500">{r.hubName}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 p-2">
-                    <p className="text-neutral-500">Total Expected CMS</p>
-                    <p className="font-bold tabular-nums">{formatINR(r.totalExpectedCms)}</p>
-                  </div>
-                  <div className="rounded-lg bg-emerald-500/10 p-2">
-                    <p className="text-emerald-500">Total Deposited</p>
-                    <p className="font-bold text-emerald-500 tabular-nums">{formatINR(r.totalDeposited)}</p>
-                  </div>
-                  <div className="rounded-lg bg-red-500/10 p-2">
-                    <p className="text-red-500">CMS Pending</p>
-                    <p className="font-bold text-red-500 tabular-nums">{formatINR(r.cmsPending)}</p>
-                  </div>
-                </div>
-                {r.references.length > 0 && <p className="text-xs text-neutral-500 font-mono">Ref: {r.references.join(', ')}</p>}
-                {canManage && r.cmsPending > 0 && (
-                  <div className="flex justify-end pt-1">
-                    <Button size="sm" onClick={() => openAddDeposit(r)} className="min-h-[44px] text-xs px-3">+ Deposit</Button>
-                  </div>
-                )}
-              </Card>
-            ))
-          ) : (
-            filteredEntries.map((e) => (
-              <Card key={e.id} className="p-4 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold">{e.collector?.name ?? '—'}</span>
-                  <span>{formatDate(e.collection_date)}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 p-2"><p className="text-neutral-500">Expected COD</p><p className="font-bold tabular-nums">{formatINR(e.expected_cod)}</p></div>
-                  <div className="rounded-lg bg-emerald-500/10 p-2"><p className="text-emerald-500">Cash</p><p className="font-bold text-emerald-500 tabular-nums">{formatINR(e.cash_amount)}</p></div>
-                  <div className="rounded-lg bg-blue-500/10 p-2"><p className="text-blue-500">Online</p><p className="font-bold text-blue-500 tabular-nums">{formatINR(e.online_amount)}</p></div>
-                </div>
-              </Card>
-            ))
+              ))
+            )
           )}
         </div>
 
+        {/* Footer */}
         <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 flex justify-end shrink-0">
           <Button variant="outline" onClick={onClose} className="min-h-[44px] px-5 font-semibold">Close</Button>
         </div>
