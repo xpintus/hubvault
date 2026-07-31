@@ -1,8 +1,10 @@
-const CACHE_NAME = 'hubvault-cache-v3'; // Bumped version
+const CACHE_NAME = 'hubvault-cache-v4';
 const OFFLINE_URL = '/offline.html';
 
-// Static assets to cache for offline support (excluding index.html)
+// Static assets to cache for offline support including index.html app shell
 const STATIC_ASSETS = [
+  '/',
+  '/index.html',
   '/manifest.webmanifest',
   '/offline.html',
   '/favicon.ico',
@@ -18,7 +20,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching static assets');
+      console.log('[Service Worker] Caching static assets & app shell');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => {
       // Force the waiting service worker to become the active service worker
@@ -62,12 +64,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. HTML Navigation requests - Network First, fallback to Offline page
+  // 3. HTML Navigation requests - Network First, fallback to cached React App Shell (/index.html)
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
-      })
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseCopy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseCopy));
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          const cachedShell = await caches.match('/index.html');
+          if (cachedShell) return cachedShell;
+          const cachedRoot = await caches.match('/');
+          if (cachedRoot) return cachedRoot;
+          return caches.match(OFFLINE_URL);
+        })
     );
     return;
   }

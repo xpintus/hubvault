@@ -11,6 +11,8 @@ import { formatDateLong } from '@/lib/format';
 import { FullPageSpinner } from './ui/primitives';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useToast } from './ui/Toast';
+import SyncIndicator from './offline/SyncIndicator';
+import ConflictResolver from './offline/ConflictResolver';
 import { clsx } from 'clsx';
 
 const TITLES: Record<string, string> = {
@@ -148,6 +150,8 @@ export default function AppLayout() {
           </div>
 
                 <div className="flex items-center gap-2 lg:gap-3">
+            {/* Sync status indicator */}
+            <SyncIndicator />
             {/* Theme toggle */}
             <ThemeToggle />
             {/* Hub Selector */}
@@ -323,6 +327,9 @@ export default function AppLayout() {
           onExpired={handleLicenseExpired}
         />
       )}
+
+      {/* Sync Conflict Resolver Modal */}
+      <ConflictResolver />
     </div>
   );
 }

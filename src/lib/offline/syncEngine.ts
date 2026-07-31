@@ -43,10 +43,13 @@ export async function processSyncQueue(force = false) {
   notifySyncStatus(true);
 
   for (const item of queue) {
-    // Basic backoff based on retry count
+    // Exponential backoff based on retry count
     if (item.retry_count > 0 && !force) {
         const backoffMs = Math.min(1000 * Math.pow(2, item.retry_count), 60000);
-        const elapsed = Date.now() - new Date(item.created_at).getTime();
+        const itemTime = item.payload?.updated_at
+          ? new Date(item.payload.updated_at).getTime()
+          : new Date(item.created_at).getTime();
+        const elapsed = Date.now() - itemTime;
         if (elapsed < backoffMs) {
             continue; // Skip this item for now
         }
@@ -71,14 +74,13 @@ export async function processSyncQueue(force = false) {
           const serverDate = new Date(serverData.updated_at).getTime();
           const localDate = item.payload.updated_at ? new Date(item.payload.updated_at).getTime() : 0;
 
-          // If server is newer and we have a local timestamp (meaning we aren't explicitly overriding without one)
+          // If server is newer and we have a local timestamp
           if (localDate > 0 && serverDate > localDate) {
             // Conflict found!
             await markQueueStatus(item.id, 'conflict', 'Server data is newer');
             if (onConflict) {
               onConflict({ queueItem: item, serverData, localData: item.payload });
             }
-            // Stop syncing this item, proceed to next
             continue;
           }
         }
@@ -108,10 +110,11 @@ export async function processSyncQueue(force = false) {
 
       // 3. Handle Result
       if (error) {
-        // If it's a unique constraint violation on insert (e.g. already synced but client crashed),
-        // we might consider it a success or a conflict. For now, mark failed.
         if (error.code === '23505' && item.operation === 'INSERT') {
-           // Duplicate ID, assume it was synced successfully before
+           // Duplicate ID, already synced before
+           await removeFromQueue(item.id);
+        } else if (error.code === 'PGRST116' && (item.operation === 'UPDATE' || item.operation === 'DELETE')) {
+           // Record doesn't exist on server, clear queue item
            await removeFromQueue(item.id);
         } else {
            throw new Error(error.message);

@@ -218,18 +218,38 @@ export default function Dashboard() {
   const handleDelete = async (entry: CollectionEntry) => {
     const ok = await confirm({
       title: 'Delete collection entry?',
-      message: `This will permanently remove ${entry.collector?.name ?? 'this employee'}'s collection record for ${formatDate(entry.collection_date)}. This cannot be undone.`,
+      message: `This will permanently remove ${entry.collector?.name ?? 'this employee'}'s collection record for ${formatDate(entry.collection_date)}. Any associated unrecovered due will also be deleted.`,
       confirmLabel: 'Delete',
       danger: true,
     });
     if (!ok) return;
     if (!navigator.onLine) {
+        const localDues = await db.dues.where('collection_entry_id').equals(entry.id).toArray();
+        for (const due of localDues) {
+            await db.dues.delete(due.id);
+            await addToQueue(profile?.id || '', due.hub_id, 'dues', 'DELETE', { id: due.id });
+        }
         await db.collection_entries.delete(entry.id);
         await db.denominations.where('collection_entry_id').equals(entry.id).delete();
         await addToQueue(profile?.id || '', entry.hub_id, 'collection_entries', 'DELETE', { id: entry.id });
         toast.success('Entry deleted offline');
         loadData();
     } else {
+        const { data: linkedDues } = await supabase
+          .from('dues')
+          .select('id, recovered_amount')
+          .eq('collection_entry_id', entry.id);
+
+        if (linkedDues && linkedDues.length > 0) {
+          const unrecoveredDues = linkedDues.filter((d) => (d.recovered_amount || 0) === 0);
+          if (unrecoveredDues.length > 0) {
+            await supabase
+              .from('dues')
+              .delete()
+              .in('id', unrecoveredDues.map((d) => d.id));
+          }
+        }
+
         const { error } = await supabase.from('collection_entries').delete().eq('id', entry.id);
         if (error) {
           toast.error(error.message);

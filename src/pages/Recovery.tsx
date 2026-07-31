@@ -226,14 +226,28 @@ export default function RecoveryPage() {
 
          toast.success(newStatus === 'fully_recovered' ? 'Recovery recorded offline — due fully recovered' : 'Recovery recorded offline');
       } else {
-          const { error: recErr } = await supabase.from('recoveries').insert(payload);
-          if (recErr) throw recErr;
+          const { error: rpcErr } = await supabase.rpc('record_recovery_atomic', {
+            p_collector_id: form.collector_id,
+            p_hub_id: due.hub_id,
+            p_due_id: due.id,
+            p_recovery_date: form.recovery_date,
+            p_amount: amount,
+            p_payment_mode: form.payment_mode,
+            p_reference_number: form.reference_number.trim() || null,
+            p_notes: form.notes.trim() || null,
+            p_created_by: profile?.id ?? null,
+          });
 
-          const { error: dueErr } = await supabase
-            .from('dues')
-            .update(dueUpdate)
-            .eq('id', due.id);
-          if (dueErr) throw dueErr;
+          if (rpcErr) {
+            const { error: recErr } = await supabase.from('recoveries').insert(payload);
+            if (recErr) throw recErr;
+
+            const { error: dueErr } = await supabase
+              .from('dues')
+              .update(dueUpdate)
+              .eq('id', due.id);
+            if (dueErr) throw dueErr;
+          }
 
           toast.success(newStatus === 'fully_recovered' ? 'Recovery recorded — due fully recovered' : 'Recovery recorded');
       }
