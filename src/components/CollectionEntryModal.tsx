@@ -151,86 +151,183 @@ export default function CollectionEntryModal({
 
     setSaving(true);
     try {
-      if (editing) {
-        const { error: entryErr } = await supabase
-          .from('collection_entries')
-          .update({ ...payload, created_by: profile.id })
-          .eq('id', editing.id);
-        if (entryErr) throw entryErr;
+      const pendingAmount = computePendingAmount(expectedCod, total);
 
-        const existingDenom = Array.isArray(editing.denominations) ? editing.denominations[0] : editing.denominations;
-        if (existingDenom) {
-          const { error: dErr } = await supabase
-            .from('denominations')
-            .update(denoms)
-            .eq('collection_entry_id', editing.id);
-          if (dErr) throw dErr;
+      if (!navigator.onLine) {
+        if (editing) {
+          // OFFLINE UPDATE
+          const updatePayload = { ...payload, id: editing.id, created_by: profile.id, client_id: profile.id };
+          await db.collection_entries.update(editing.id, updatePayload);
+          await addToQueue(profile.id, hubId, 'collection_entries', 'UPDATE', updatePayload);
+
+          const existingDenom = Array.isArray(editing.denominations) ? editing.denominations[0] : editing.denominations;
+          if (existingDenom) {
+             const dPayload = { ...denoms, id: existingDenom.id, collection_entry_id: editing.id, client_id: profile.id };
+             await db.denominations.update(existingDenom.id, dPayload);
+             await addToQueue(profile.id, hubId, 'denominations', 'UPDATE', dPayload);
+          } else {
+             const dId = uuidv4();
+             const dPayload = { ...denoms, id: dId, collection_entry_id: editing.id, client_id: profile.id };
+             await db.denominations.add(dPayload as any);
+             await addToQueue(profile.id, hubId, 'denominations', 'INSERT', dPayload);
+          }
+
+          let existingDue = await db.dues.where('collection_entry_id').equals(editing.id).first();
+          if (pendingAmount > 0 && !existingDue) {
+            const dueId = uuidv4();
+            const duePayload = {
+              id: dueId,
+              collector_id: form.collector_id,
+              hub_id: hubId,
+              collection_entry_id: editing.id,
+              original_amount: pendingAmount,
+              remaining_amount: pendingAmount,
+              recovered_amount: 0,
+              due_date: form.collection_date,
+              status: 'outstanding',
+              created_by: profile.id,
+              client_id: profile.id
+            };
+            await db.dues.add(duePayload as any);
+            await addToQueue(profile.id, hubId, 'dues', 'INSERT', duePayload);
+          } else if (pendingAmount === 0 && existingDue) {
+            await db.dues.delete(existingDue.id);
+            await addToQueue(profile.id, hubId, 'dues', 'DELETE', { id: existingDue.id });
+          } else if (pendingAmount > 0 && existingDue && existingDue.recovered_amount === 0) {
+            const dueUpdate = {
+              id: existingDue.id,
+              original_amount: pendingAmount,
+              remaining_amount: pendingAmount,
+            };
+            await db.dues.update(existingDue.id, dueUpdate);
+            await addToQueue(profile.id, hubId, 'dues', 'UPDATE', dueUpdate);
+          }
+
+          toast.success('Collection entry updated offline');
         } else {
+          // OFFLINE INSERT
+          const entryId = uuidv4();
+          const denomId = uuidv4();
+          const insertPayload = {
+              ...payload,
+              id: entryId,
+              created_by: profile.id,
+              created_at: new Date().toISOString(),
+              client_id: profile.id,
+              created_offline: true
+          };
+          await db.collection_entries.add(insertPayload as any);
+          await addToQueue(profile.id, hubId, 'collection_entries', 'INSERT', insertPayload);
+
+          const dPayload = {
+              ...denoms,
+              id: denomId,
+              collection_entry_id: entryId,
+              client_id: profile.id,
+              created_offline: true
+          };
+          await db.denominations.add(dPayload as any);
+          await addToQueue(profile.id, hubId, 'denominations', 'INSERT', dPayload);
+
+          if (pendingAmount > 0) {
+              const dueId = uuidv4();
+              const duePayload = {
+                  id: dueId,
+                  collector_id: form.collector_id,
+                  hub_id: hubId,
+                  collection_entry_id: entryId,
+                  original_amount: pendingAmount,
+                  remaining_amount: pendingAmount,
+                  recovered_amount: 0,
+                  due_date: form.collection_date,
+                  status: 'outstanding',
+                  created_by: profile.id,
+                  created_at: new Date().toISOString(),
+                  client_id: profile.id,
+                  created_offline: true
+              };
+              await db.dues.add(duePayload as any);
+              await addToQueue(profile.id, hubId, 'dues', 'INSERT', duePayload);
+          }
+
+          toast.success('Collection entry saved offline');
+        }
+      } else {
+        // ONLINE
+        if (editing) {
+          const { error: entryErr } = await supabase
+            .from('collection_entries')
+            .update({ ...payload, created_by: profile.id })
+            .eq('id', editing.id);
+          if (entryErr) throw entryErr;
+
+          const existingDenom = Array.isArray(editing.denominations) ? editing.denominations[0] : editing.denominations;
+          if (existingDenom) {
+            const { error: dErr } = await supabase
+              .from('denominations')
+              .update(denoms)
+              .eq('collection_entry_id', editing.id);
+            if (dErr) throw dErr;
+          } else {
+            const { error: dErr } = await supabase
+              .from('denominations')
+              .insert({ collection_entry_id: editing.id, ...denoms });
+            if (dErr) throw dErr;
+          }
+
+          const { data: existingDue } = await supabase
+            .from('dues')
+            .select('id, original_amount, recovered_amount')
+            .eq('collection_entry_id', editing.id)
+            .maybeSingle();
+          if (pendingAmount > 0 && !existingDue) {
+            await supabase.from('dues').insert({
+              collector_id: form.collector_id,
+              hub_id: hubId,
+              collection_entry_id: editing.id,
+              original_amount: pendingAmount,
+              remaining_amount: pendingAmount,
+              due_date: form.collection_date,
+              status: 'outstanding',
+              created_by: profile.id,
+            });
+          } else if (pendingAmount === 0 && existingDue) {
+            await supabase.from('dues').delete().eq('id', existingDue.id);
+          } else if (pendingAmount > 0 && existingDue && existingDue.recovered_amount === 0) {
+            await supabase.from('dues').update({
+              original_amount: pendingAmount,
+              remaining_amount: pendingAmount,
+            }).eq('id', existingDue.id);
+          }
+
+          toast.success('Collection entry updated');
+        } else {
+          const { data: entry, error: entryErr } = await supabase
+            .from('collection_entries')
+            .insert({ ...payload, created_by: profile.id })
+            .select()
+            .single();
+          if (entryErr) throw entryErr;
+
           const { error: dErr } = await supabase
             .from('denominations')
-            .insert({ collection_entry_id: editing.id, ...denoms });
+            .insert({ collection_entry_id: entry.id, ...denoms });
           if (dErr) throw dErr;
+
+          if (pendingAmount > 0) {
+            await supabase.from('dues').insert({
+              collector_id: form.collector_id,
+              hub_id: hubId,
+              collection_entry_id: entry.id,
+              original_amount: pendingAmount,
+              remaining_amount: pendingAmount,
+              due_date: form.collection_date,
+              status: 'outstanding',
+              created_by: profile.id,
+            });
+          }
+          toast.success('Collection entry saved');
         }
-
-        const pendingAmount = computePendingAmount(expectedCod, total);
-        const { data: existingDue } = await supabase
-          .from('dues')
-          .select('id, original_amount, recovered_amount')
-          .eq('collection_entry_id', editing.id)
-          .maybeSingle();
-        if (pendingAmount > 0 && !existingDue) {
-          await supabase.from('dues').insert({
-            collector_id: form.collector_id,
-            hub_id: hubId,
-            collection_entry_id: editing.id,
-            original_amount: pendingAmount,
-            remaining_amount: pendingAmount,
-            due_date: form.collection_date,
-            status: 'outstanding',
-            created_by: profile.id,
-          });
-        } else if (pendingAmount === 0 && existingDue) {
-          await supabase.from('dues').delete().eq('id', existingDue.id);
-        } else if (pendingAmount > 0 && existingDue && existingDue.recovered_amount === 0) {
-          await supabase.from('dues').update({
-            original_amount: pendingAmount,
-            remaining_amount: pendingAmount,
-          }).eq('id', existingDue.id);
-        }
-
-        toast.success('Collection entry updated');
-      } else {
-        const { data: entry, error: entryErr } = await supabase
-          .from('collection_entries')
-          .insert({ ...payload, created_by: profile.id })
-          .select()
-          .single();
-        if (entryErr) throw entryErr;
-
-        const { error: dErr } = await supabase
-          .from('denominations')
-          .insert({ collection_entry_id: entry.id, ...denoms });
-        if (dErr) throw dErr;
-
-        const pendingAmount = computePendingAmount(expectedCod, total);
-        if (pendingAmount > 0) {
-          await supabase.from('dues').insert({
-            collector_id: form.collector_id,
-            hub_id: hubId,
-            collection_entry_id: entry.id,
-            original_amount: pendingAmount,
-            remaining_amount: pendingAmount,
-            due_date: form.collection_date,
-            status: 'outstanding',
-            created_by: profile.id,
-          });
-        }
-
-        toast.success(
-          pendingAmount > 0
-            ? `Collection entry added — ${formatINR(pendingAmount)} pending due created`
-            : 'Collection entry added'
-        );
       }
       onSaved();
       onClose();
