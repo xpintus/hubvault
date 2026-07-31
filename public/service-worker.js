@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hubvault-cache-v2'; // Bumped version
+const CACHE_NAME = 'hubvault-cache-v3'; // Bumped version
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to cache for offline support (excluding index.html)

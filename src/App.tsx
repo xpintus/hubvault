@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/lib/theme';
 import { ToastProvider } from '@/components/ui/Toast';
 import { NotificationProvider } from '@/lib/notifications';
 import { SettingsProvider } from '@/lib/settings';
+import { SyncProvider } from '@/lib/offline/SyncContext';
 import { FullPageSpinner } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import AppLayout from '@/components/AppLayout';
@@ -95,6 +96,7 @@ export default function App() {
           <ToastProvider>
             <NotificationProvider>
               <SettingsProvider>
+                <SyncProvider>
                 <HashRouter>
               <Routes>
                 {/* Public routes */}
@@ -140,6 +142,7 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
                 </HashRouter>
+                </SyncProvider>
               </SettingsProvider>
             </NotificationProvider>
           </ToastProvider>

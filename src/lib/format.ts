@@ -42,3 +42,18 @@ export function parseDateSafe(s: string): Date | null {
   const d = parseISO(s);
   return isValid(d) ? d : null;
 }
+
+export function formatTimeShort(dateString: string | null | undefined): string {
+  if (!dateString) return '-';
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return new Intl.DateTimeFormat('en-IN', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    }).format(d);
+  } catch {
+    return '-';
+  }
+}

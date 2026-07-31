@@ -12,6 +12,9 @@ import Modal from '@/components/ui/Modal';
 import { confirm } from '@/lib/confirm';
 import { Due, DueStatus, DUE_STATUS_LABELS, Collector } from '@/types';
 import { formatINR, formatDate } from '@/lib/format';
+import { db } from '@/lib/offline/db';
+import { addToQueue } from '@/lib/offline/syncQueue';
+import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 
 const statusConfig: Record<DueStatus, { color: string; dot: string; badge: string }> = {
@@ -58,19 +61,41 @@ export default function Dues() {
     try {
       const effectiveHub = hubCtx.selectedHubId;
 
-      let dueQuery = supabase
-        .from('dues')
-        .select('*, collector: collectors(*), hub: hubs(*), collection_entry: collection_entries(*)')
-        .order('due_date', { ascending: false });
-      if (effectiveHub) dueQuery = dueQuery.eq('hub_id', effectiveHub);
-      const { data, error } = await dueQuery;
-      if (error) throw error;
-      setDues(data ?? []);
+      if (!navigator.onLine) {
+         let localDues = await db.dues.toArray();
+         if (effectiveHub) localDues = localDues.filter(d => d.hub_id === effectiveHub);
 
-      let colQ = supabase.from('collectors').select('*');
-      if (effectiveHub) colQ = colQ.eq('hub_id', effectiveHub);
-      const { data: cols } = await colQ.order('name');
-      setCollectors(cols ?? []);
+         const hydratedDues = await Promise.all(localDues.map(async d => {
+             const collector = await db.collectors.get(d.collector_id);
+             return { ...d, collector };
+         }));
+         setDues(hydratedDues.sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()) as any[]);
+
+         let cols = await db.collectors.toArray();
+         if (effectiveHub) cols = cols.filter(c => c.hub_id === effectiveHub);
+         setCollectors(cols as any[]);
+      } else {
+        let dueQuery = supabase
+          .from('dues')
+          .select('*, collector: collectors(*), hub: hubs(*), collection_entry: collection_entries(*)')
+          .order('due_date', { ascending: false });
+        if (effectiveHub) dueQuery = dueQuery.eq('hub_id', effectiveHub);
+        const { data, error } = await dueQuery;
+        if (error) throw error;
+        setDues(data ?? []);
+
+        // Cache
+        const pureDues = (data ?? []).map(d => {
+            const { collector, hub, collection_entry, ...rest } = d as any;
+            return rest;
+        });
+        await db.dues.bulkPut(pureDues);
+
+        let colQ = supabase.from('collectors').select('*');
+        if (effectiveHub) colQ = colQ.eq('hub_id', effectiveHub);
+        const { data: cols } = await colQ.order('name');
+        setCollectors(cols ?? []);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load dues');
     } finally {
@@ -119,7 +144,7 @@ export default function Dues() {
     }
     setSavingRecovery(true);
     try {
-      const { error: recErr } = await supabase.from('recoveries').insert({
+      const recoveryPayload = {
         collector_id: recoveryForDue.collector_id,
         hub_id: recoveryForDue.hub_id,
         due_id: recoveryForDue.id,
@@ -129,23 +154,38 @@ export default function Dues() {
         reference_number: recoveryRef.trim() || null,
         notes: recoveryNotes.trim() || null,
         created_by: profile?.id ?? null,
-      });
-      if (recErr) throw recErr;
+      };
 
       const newRecovered = Number(recoveryForDue.recovered_amount) + amount;
       const newRemaining = Number(recoveryForDue.original_amount) - newRecovered;
       const newStatus: DueStatus = newRemaining <= 0 ? 'fully_recovered' : 'partially_recovered';
 
-      const { error: dueErr } = await supabase
-        .from('dues')
-        .update({
+      const dueUpdate = {
           recovered_amount: newRecovered,
           remaining_amount: Math.max(0, newRemaining),
           status: newStatus,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', recoveryForDue.id);
-      if (dueErr) throw dueErr;
+      };
+
+      if (!navigator.onLine) {
+         const recId = uuidv4();
+         const offlineRecPayload = { ...recoveryPayload, id: recId, created_at: new Date().toISOString(), client_id: profile?.id, created_offline: true };
+         await db.recoveries.add(offlineRecPayload as any);
+         await addToQueue(profile?.id || '', recoveryForDue.hub_id, 'recoveries', 'INSERT', offlineRecPayload);
+
+         const offlineDueUpdate = { ...dueUpdate, id: recoveryForDue.id, client_id: profile?.id };
+         await db.dues.update(recoveryForDue.id, offlineDueUpdate);
+         await addToQueue(profile?.id || '', recoveryForDue.hub_id, 'dues', 'UPDATE', offlineDueUpdate);
+      } else {
+          const { error: recErr } = await supabase.from('recoveries').insert(recoveryPayload);
+          if (recErr) throw recErr;
+
+          const { error: dueErr } = await supabase
+            .from('dues')
+            .update(dueUpdate)
+            .eq('id', recoveryForDue.id);
+          if (dueErr) throw dueErr;
+      }
 
       toast.success(
         newStatus === 'fully_recovered'
@@ -172,9 +212,15 @@ export default function Dues() {
       danger: true,
     });
     if (!ok) return;
-    const { error } = await supabase.from('dues').delete().eq('id', due.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success('Due deleted');
+    if (!navigator.onLine) {
+        await db.dues.delete(due.id);
+        await addToQueue(profile?.id || '', due.hub_id, 'dues', 'DELETE', { id: due.id });
+        toast.success('Due deleted offline');
+    } else {
+        const { error } = await supabase.from('dues').delete().eq('id', due.id);
+        if (error) { toast.error(error.message); return; }
+        toast.success('Due deleted');
+    }
     load();
   };
 

@@ -23,6 +23,8 @@ import {
 } from '@/types';
 import { formatINR, formatDate, formatDateLong, toISODate } from '@/lib/format';
 import { exportEntriesToExcel } from '@/lib/excel';
+import { db } from '@/lib/offline/db';
+import { addToQueue } from '@/lib/offline/syncQueue';
 import { computePendingAmount, computeExcessAmount } from '@/lib/calc';
 import { subDays, addDays, isToday as isDateToday, parseISO } from 'date-fns';
 import { clsx } from 'clsx';
@@ -62,36 +64,96 @@ export default function Dashboard() {
 
     const effectiveHubId = hubCtx.selectedHubId;
     try {
-      let collectorQuery = supabase.from('collectors').select('*');
-      if (effectiveHubId) collectorQuery = collectorQuery.eq('hub_id', effectiveHubId);
-      const { data: cols, error: colErr } = await collectorQuery.order('name');
-      if (colErr) throw colErr;
-      setCollectors(cols ?? []);
+      if (!navigator.onLine) {
+          // Offline read
+          let cols = await db.collectors.toArray();
+          if (effectiveHubId) cols = cols.filter(c => c.hub_id === effectiveHubId);
+          setCollectors(cols as any[]);
 
-      let entryQuery = supabase
-        .from('collection_entries')
-        .select('*, collector: collectors(*), hub: hubs(*), denominations: denominations(*)')
-        .eq('collection_date', dateStr);
-      if (effectiveHubId) entryQuery = entryQuery.eq('hub_id', effectiveHubId);
-      const { data: ents, error: entErr } = await entryQuery.order('created_at', { ascending: false });
-      if (entErr) throw entErr;
-      setEntries((ents ?? []) as CollectionEntry[]);
+          let ents = await db.collection_entries.where('collection_date').equals(dateStr).toArray();
+          if (effectiveHubId) ents = ents.filter(e => e.hub_id === effectiveHubId);
 
-      let dueQuery = supabase
-        .from('dues')
-        .select('*, collector: collectors(*)')
-        .neq('status', 'fully_recovered');
-      if (effectiveHubId) dueQuery = dueQuery.eq('hub_id', effectiveHubId);
-      const { data: dueData } = await dueQuery.order('due_date', { ascending: false });
-      setDues(dueData ?? []);
+          // Hydrate relations
+          const hydratedEnts = await Promise.all(ents.map(async (e) => {
+              const collector = await db.collectors.get(e.collector_id);
+              const denominations = await db.denominations.where('collection_entry_id').equals(e.id).toArray();
+              return { ...e, collector, denominations };
+          }));
 
-      let recQuery = supabase
-        .from('recoveries')
-        .select('*, collector: collectors(*)')
-        .eq('recovery_date', dateStr);
-      if (effectiveHubId) recQuery = recQuery.eq('hub_id', effectiveHubId);
-      const { data: recData } = await recQuery.order('created_at', { ascending: false });
-      setRecoveries(recData ?? []);
+          setEntries(hydratedEnts.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as any[]);
+
+          let dueData = await db.dues.filter(d => d.status !== 'fully_recovered').toArray();
+          if (effectiveHubId) dueData = dueData.filter(d => d.hub_id === effectiveHubId);
+          const hydratedDues = await Promise.all(dueData.map(async (d) => {
+              const collector = await db.collectors.get(d.collector_id);
+              return { ...d, collector };
+          }));
+          setDues(hydratedDues.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()) as any[]);
+
+          let recData = await db.recoveries.filter(r => r.recovery_date === dateStr).toArray();
+          if (effectiveHubId) recData = recData.filter(r => r.hub_id === effectiveHubId);
+          const hydratedRecs = await Promise.all(recData.map(async (r) => {
+              const collector = await db.collectors.get(r.collector_id);
+              return { ...r, collector };
+          }));
+          setRecoveries(hydratedRecs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()) as any[]);
+
+      } else {
+        let collectorQuery = supabase.from('collectors').select('*');
+        if (effectiveHubId) collectorQuery = collectorQuery.eq('hub_id', effectiveHubId);
+        const { data: cols, error: colErr } = await collectorQuery.order('name');
+        if (colErr) throw colErr;
+        setCollectors(cols ?? []);
+
+        // Populate offline cache
+        await db.collectors.bulkPut(cols ?? []);
+
+        let entryQuery = supabase
+          .from('collection_entries')
+          .select('*, collector: collectors(*), hub: hubs(*), denominations: denominations(*)')
+          .eq('collection_date', dateStr);
+        if (effectiveHubId) entryQuery = entryQuery.eq('hub_id', effectiveHubId);
+        const { data: ents, error: entErr } = await entryQuery.order('created_at', { ascending: false });
+        if (entErr) throw entErr;
+        setEntries((ents ?? []) as CollectionEntry[]);
+
+        // Populate offline cache
+        const pureEntries = (ents ?? []).map(e => {
+            const { collector, hub, denominations, ...rest } = e as any;
+            return rest;
+        });
+        const denoms = (ents ?? []).flatMap((e: any) => e.denominations || []);
+        await db.collection_entries.bulkPut(pureEntries);
+        await db.denominations.bulkPut(denoms);
+
+        let dueQuery = supabase
+          .from('dues')
+          .select('*, collector: collectors(*)')
+          .neq('status', 'fully_recovered');
+        if (effectiveHubId) dueQuery = dueQuery.eq('hub_id', effectiveHubId);
+        const { data: dueData } = await dueQuery.order('due_date', { ascending: false });
+        setDues(dueData ?? []);
+
+        const pureDues = (dueData ?? []).map(d => {
+            const { collector, ...rest } = d as any;
+            return rest;
+        });
+        await db.dues.bulkPut(pureDues);
+
+        let recQuery = supabase
+          .from('recoveries')
+          .select('*, collector: collectors(*)')
+          .eq('recovery_date', dateStr);
+        if (effectiveHubId) recQuery = recQuery.eq('hub_id', effectiveHubId);
+        const { data: recData } = await recQuery.order('created_at', { ascending: false });
+        setRecoveries(recData ?? []);
+
+        const pureRecs = (recData ?? []).map(r => {
+            const { collector, ...rest } = r as any;
+            return rest;
+        });
+        await db.recoveries.bulkPut(pureRecs);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load data';
       toast.error(msg);
@@ -161,12 +223,20 @@ export default function Dashboard() {
       danger: true,
     });
     if (!ok) return;
-    const { error } = await supabase.from('collection_entries').delete().eq('id', entry.id);
-    if (error) {
-      toast.error(error.message);
+    if (!navigator.onLine) {
+        await db.collection_entries.delete(entry.id);
+        await db.denominations.where('collection_entry_id').equals(entry.id).delete();
+        await addToQueue(profile?.id || '', entry.hub_id, 'collection_entries', 'DELETE', { id: entry.id });
+        toast.success('Entry deleted offline');
+        loadData();
     } else {
-      toast.success('Entry deleted');
-      loadData();
+        const { error } = await supabase.from('collection_entries').delete().eq('id', entry.id);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Entry deleted');
+          loadData();
+        }
     }
   };
 
