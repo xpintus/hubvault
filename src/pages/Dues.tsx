@@ -15,6 +15,13 @@ import { Due, DueStatus, DUE_STATUS_LABELS, Collector, Recovery } from '@/types'
 import { formatINR, formatDate, toISODate } from '@/lib/format';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
+import {
+  safeAmount,
+  getEmployeeOutstanding,
+  getActiveEmployeeDues,
+  allocateRecoveryFIFO,
+  executeEmployeeRecovery,
+} from '@/lib/recoveryService';
 import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 import * as XLSX from 'xlsx';
@@ -45,12 +52,6 @@ const statusConfig: Record<DueStatus, { color: string; dot: string; badge: strin
     badge: 'bg-neutral-500/10 text-neutral-400 ring-neutral-500/30',
     label: 'Cancelled / Voided',
   },
-};
-
-const safeAmount = (val: any): number => {
-  if (val === null || val === undefined) return 0;
-  const num = typeof val === 'number' ? val : parseFloat(String(val));
-  return isNaN(num) ? 0 : num;
 };
 
 const DUE_REASONS = [
@@ -119,9 +120,16 @@ export default function Dues() {
   // Collapsible state for Individual Dues Records (Default: collapsed)
   const [isIndividualDuesExpanded, setIsIndividualDuesExpanded] = useState(false);
 
-  // Recovery State
-  const [recoveryForDue, setRecoveryForDue] = useState<Due | null>(null);
+  // Employee-Level Recovery State
+  const [recoveryEmployee, setRecoveryEmployee] = useState<{
+    collectorId: string;
+    collectorName: string;
+    employeeId: string;
+    phone: string;
+    collector: Collector | null;
+  } | null>(null);
   const [recoveryAmount, setRecoveryAmount] = useState('');
+  const [recoveryDate, setRecoveryDate] = useState(toISODate(new Date()));
   const [recoveryMode, setRecoveryMode] = useState('cash');
   const [recoveryNotes, setRecoveryNotes] = useState('');
   const [recoveryRef, setRecoveryRef] = useState('');
@@ -366,6 +374,36 @@ export default function Dues() {
       return name.includes(q) || empId.includes(q) || phone.includes(q);
     });
   }, [employeeSummaryRows, modalSearch]);
+
+  // Active Dues & Outstanding metrics for Recovery Modal
+  const recoveryEmployeeActiveDues = useMemo(() => {
+    if (!recoveryEmployee) return [];
+    return getActiveEmployeeDues(recoveryEmployee.collectorId, dues);
+  }, [recoveryEmployee, dues]);
+
+  const recoveryEmployeeTotalOutstanding = useMemo(() => {
+    if (!recoveryEmployee) return 0;
+    return getEmployeeOutstanding(recoveryEmployee.collectorId, dues);
+  }, [recoveryEmployee, dues]);
+
+  const recoveryEmployeeTotalOriginal = useMemo(() => {
+    if (!recoveryEmployee) return 0;
+    const empDues = dues.filter(d => (d.collector_id === recoveryEmployee.collectorId || d.collector?.id === recoveryEmployee.collectorId) && d.status !== 'cancelled');
+    return empDues.reduce((sum, d) => sum + safeAmount(d.original_amount), 0);
+  }, [recoveryEmployee, dues]);
+
+  const recoveryEmployeeTotalRecovered = useMemo(() => {
+    if (!recoveryEmployee) return 0;
+    const empDues = dues.filter(d => (d.collector_id === recoveryEmployee.collectorId || d.collector?.id === recoveryEmployee.collectorId) && d.status !== 'cancelled');
+    return empDues.reduce((sum, d) => sum + safeAmount(d.recovered_amount), 0);
+  }, [recoveryEmployee, dues]);
+
+  const recoveryFIFOPreview = useMemo(() => {
+    if (!recoveryEmployee) return [];
+    const amt = safeAmount(recoveryAmount);
+    if (amt <= 0) return [];
+    return allocateRecoveryFIFO(dues, recoveryEmployee.collectorId, amt);
+  }, [recoveryEmployee, recoveryAmount, dues]);
 
   // Employee Ledger Event Calculations
   const rawLedgerEvents = useMemo(() => {
@@ -693,77 +731,69 @@ export default function Dues() {
     }
   };
 
-  const handleRecovery = async () => {
-    if (!recoveryForDue) return;
+  const openEmployeeRecoveryModal = (collectorId: string, collectorName: string, employeeId: string, phone: string, collectorObj?: Collector | null) => {
+    setRecoveryEmployee({
+      collectorId,
+      collectorName,
+      employeeId,
+      phone,
+      collector: collectorObj ?? null,
+    });
+    setRecoveryAmount('');
+    setRecoveryDate(toISODate(new Date()));
+    setRecoveryMode('cash');
+    setRecoveryNotes('');
+    setRecoveryRef('');
+  };
+
+  const handleEmployeeRecoverySave = async () => {
+    if (!recoveryEmployee || savingRecovery) return;
+
     const amount = safeAmount(recoveryAmount);
-    if (amount <= 0) { toast.error('Enter a valid recovery amount'); return; }
-    if (amount > safeAmount(recoveryForDue.remaining_amount)) {
-      toast.error('Recovery amount exceeds remaining due');
+    if (amount <= 0) {
+      toast.error('Recovery amount must be greater than ₹0');
       return;
     }
 
+    if (amount > recoveryEmployeeTotalOutstanding) {
+      toast.error(`Recovery amount cannot exceed total outstanding balance (${formatINR(recoveryEmployeeTotalOutstanding)})`);
+      return;
+    }
+
+    const firstActiveDue = recoveryEmployeeActiveDues[0];
+    const targetHubId = firstActiveDue?.hub_id || activeHubId || (hubCtx.accessibleHubs[0]?.id ?? '');
+
     setSavingRecovery(true);
     try {
-      const recId = uuidv4();
-      const payload = {
-        id: recId,
-        collector_id: recoveryForDue.collector_id,
-        hub_id: recoveryForDue.hub_id,
-        due_id: recoveryForDue.id,
-        recovery_date: toISODate(new Date()),
+      await executeEmployeeRecovery({
+        collectorId: recoveryEmployee.collectorId,
+        hubId: targetHubId,
         amount,
-        payment_mode: recoveryMode as any,
-        reference_number: recoveryRef.trim() || null,
+        paymentMode: recoveryMode,
+        recoveryDate,
+        referenceNumber: recoveryRef.trim() || null,
         notes: recoveryNotes.trim() || null,
-        created_by: profile?.id ?? null,
-        created_at: new Date().toISOString(),
-      };
-
-      if (!navigator.onLine) {
-        await db.recoveries.put(payload as any);
-        const newRecovered = safeAmount(recoveryForDue.recovered_amount) + amount;
-        const newRemaining = Math.max(0, safeAmount(recoveryForDue.original_amount) - newRecovered);
-        const newStatus: DueStatus = newRemaining === 0 ? 'fully_recovered' : 'partially_recovered';
-
-        await db.dues.update(recoveryForDue.id, {
-          recovered_amount: newRecovered,
-          remaining_amount: newRemaining,
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        });
-
-        await addToQueue(profile?.id || '', recoveryForDue.hub_id, 'recoveries', 'INSERT', payload);
-      } else {
-        const { error } = await supabase.rpc('record_recovery_transaction', {
-          p_due_id: recoveryForDue.id,
-          p_collector_id: recoveryForDue.collector_id,
-          p_hub_id: recoveryForDue.hub_id,
-          p_amount: amount,
-          p_payment_mode: recoveryMode,
-          p_reference_number: recoveryRef.trim() || null,
-          p_notes: recoveryNotes.trim() || null,
-          p_user_id: profile?.id ?? null,
-          p_recovery_date: toISODate(new Date()),
-        });
-        if (error) throw error;
-      }
+        createdBy: profile?.id ?? null,
+        dues,
+        isOnline: navigator.onLine,
+      });
 
       await logAudit(
         'recovery_record',
         profile?.id ?? null,
-        `Recorded recovery of ${formatINR(amount)} for due ${recoveryForDue.id}`,
+        `Recorded employee recovery of ${formatINR(amount)} for ${recoveryEmployee.collectorName} (${recoveryEmployee.employeeId})`,
         null,
-        recoveryForDue.hub_id
+        targetHubId
       );
 
-      toast.success(`Recovery of ${formatINR(amount)} recorded`);
-      setRecoveryForDue(null);
+      toast.success(`Employee recovery of ${formatINR(amount)} recorded successfully`);
+      setRecoveryEmployee(null);
       setRecoveryAmount('');
       setRecoveryNotes('');
       setRecoveryRef('');
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to record recovery');
+      toast.error(err instanceof Error ? err.message : 'Failed to record employee recovery');
     } finally {
       setSavingRecovery(false);
     }
@@ -1021,8 +1051,12 @@ export default function Dues() {
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {canManage && emp.currentOutstanding > 0 && emp.dueRecords[0] && (
-                              <Button size="sm" onClick={() => setRecoveryForDue(emp.dueRecords[0])} className="min-h-[36px] px-2.5 text-xs font-semibold">
+                            {canManage && emp.currentOutstanding > 0 && (
+                              <Button
+                                size="sm"
+                                onClick={() => openEmployeeRecoveryModal(emp.collectorId, emp.collectorName, emp.employeeId, emp.phone, emp.collector)}
+                                className="min-h-[36px] px-2.5 text-xs font-semibold"
+                              >
                                 + Recover
                               </Button>
                             )}
@@ -1103,8 +1137,12 @@ export default function Dues() {
                       View Dues
                     </Button>
 
-                    {canManage && emp.currentOutstanding > 0 && emp.dueRecords[0] && (
-                      <Button size="sm" onClick={() => setRecoveryForDue(emp.dueRecords[0])} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial">
+                    {canManage && emp.currentOutstanding > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={() => openEmployeeRecoveryModal(emp.collectorId, emp.collectorName, emp.employeeId, emp.phone, emp.collector)}
+                        className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial"
+                      >
                         + Recover
                       </Button>
                     )}
@@ -1236,7 +1274,11 @@ export default function Dues() {
                           </Button>
 
                           {canManage && d.status !== 'fully_recovered' && d.status !== 'cancelled' && (
-                            <Button size="sm" onClick={() => setRecoveryForDue(d)} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial">
+                            <Button
+                              size="sm"
+                              onClick={() => openEmployeeRecoveryModal(d.collector_id, d.collector?.name || 'Employee', d.collector?.employee_id || 'N/A', d.collector?.phone || 'N/A', d.collector)}
+                              className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial"
+                            >
                               + Recover
                             </Button>
                           )}
@@ -1324,7 +1366,11 @@ export default function Dues() {
                                   </Button>
 
                                   {canManage && d.status !== 'fully_recovered' && d.status !== 'cancelled' && (
-                                    <Button size="sm" onClick={() => setRecoveryForDue(d)} className="min-h-[36px] px-3 text-xs font-semibold">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => openEmployeeRecoveryModal(d.collector_id, d.collector?.name || 'Employee', d.collector?.employee_id || 'N/A', d.collector?.phone || 'N/A', d.collector)}
+                                      className="min-h-[36px] px-3 text-xs font-semibold"
+                                    >
                                       + Recover
                                     </Button>
                                   )}
@@ -1446,59 +1492,127 @@ export default function Dues() {
         </div>
       </Modal>
 
-      {/* Record Recovery Modal */}
-      {recoveryForDue && (
+      {/* Record Employee Recovery Modal (Employee Level FIFO) */}
+      {recoveryEmployee && (
         <Modal
-          open={!!recoveryForDue}
-          onClose={() => setRecoveryForDue(null)}
-          title="Record Recovery Payment"
-          subtitle={`Recovering due for ${recoveryForDue.collector?.name ?? 'Employee'}`}
-          size="md"
+          open={!!recoveryEmployee}
+          onClose={() => setRecoveryEmployee(null)}
+          title={`Record Employee Recovery — ${recoveryEmployee.collectorName}`}
+          subtitle={`Employee ID: ${recoveryEmployee.employeeId} · Phone: ${recoveryEmployee.phone}`}
+          size="lg"
           footer={
             <>
-              <Button variant="outline" onClick={() => setRecoveryForDue(null)} disabled={savingRecovery} className="min-h-[44px]">Cancel</Button>
-              <Button onClick={handleRecovery} loading={savingRecovery} disabled={savingRecovery} className="min-h-[44px]">Record Recovery</Button>
+              <Button variant="outline" onClick={() => setRecoveryEmployee(null)} disabled={savingRecovery} className="min-h-[44px]">Cancel</Button>
+              <Button onClick={handleEmployeeRecoverySave} loading={savingRecovery} disabled={savingRecovery} className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                Record Employee Recovery
+              </Button>
             </>
           }
         >
-          <div className="space-y-4">
-            <div className="rounded-xl bg-neutral-100 dark:bg-neutral-900 p-4 space-y-1">
-              <p className="text-xs text-neutral-500">Original Due: {formatINR(recoveryForDue.original_amount)}</p>
-              <p className="text-sm font-bold text-red-500">Remaining Backlog: {formatINR(recoveryForDue.remaining_amount)}</p>
+          <div className="space-y-4 text-sm">
+            {/* Employee Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-neutral-50 dark:bg-neutral-950 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
+              <div>
+                <p className="text-xs text-neutral-500">Active Dues</p>
+                <p className="font-bold text-neutral-900 dark:text-neutral-100">{recoveryEmployeeActiveDues.length} entries</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">Total Original</p>
+                <p className="font-bold text-neutral-900 dark:text-neutral-100">{formatINR(recoveryEmployeeTotalOriginal)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-emerald-600 font-semibold">Total Recovered</p>
+                <p className="font-bold text-emerald-600">{formatINR(recoveryEmployeeTotalRecovered)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-red-500 font-semibold">Total Outstanding</p>
+                <p className="font-bold text-red-500 text-base">{formatINR(recoveryEmployeeTotalOutstanding)}</p>
+              </div>
             </div>
 
-            <Input
-              label="Recovery Amount (₹)"
-              type="number"
-              value={recoveryAmount}
-              onChange={(e) => setRecoveryAmount(e.target.value)}
-              placeholder="Amount recovered"
-            />
+            {/* Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Recovery Amount (₹)"
+                type="number"
+                value={recoveryAmount}
+                onChange={(e) => setRecoveryAmount(e.target.value)}
+                placeholder={`Max: ₹${recoveryEmployeeTotalOutstanding}`}
+              />
 
-            <Select
-              label="Payment Mode"
-              value={recoveryMode}
-              onChange={(e) => setRecoveryMode(e.target.value)}
-            >
-              <option value="cash">Cash</option>
-              <option value="online">Online / UPI</option>
-              <option value="other">Other / Salary Adjustment</option>
-            </Select>
+              <Input
+                label="Recovery Date"
+                type="date"
+                value={recoveryDate}
+                onChange={(e) => setRecoveryDate(e.target.value)}
+              />
+            </div>
 
-            <Input
-              label="Reference Number (optional)"
-              value={recoveryRef}
-              onChange={(e) => setRecoveryRef(e.target.value)}
-              placeholder="Transaction ID / Slip No."
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Payment Mode"
+                value={recoveryMode}
+                onChange={(e) => setRecoveryMode(e.target.value)}
+              >
+                <option value="cash">Cash</option>
+                <option value="online">Online / UPI</option>
+                <option value="other">Other / Salary Adjustment</option>
+              </Select>
 
-            <textarea
-              value={recoveryNotes}
-              onChange={(e) => setRecoveryNotes(e.target.value)}
-              rows={2}
-              placeholder="Recovery notes..."
-              className="input-base resize-none"
-            />
+              <Input
+                label="Reference Number (optional)"
+                value={recoveryRef}
+                onChange={(e) => setRecoveryRef(e.target.value)}
+                placeholder="Transaction ID / Receipt No."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1">Remarks / Notes (optional)</label>
+              <textarea
+                value={recoveryNotes}
+                onChange={(e) => setRecoveryNotes(e.target.value)}
+                rows={2}
+                placeholder="Employee recovery remarks..."
+                className="input-base resize-none"
+              />
+            </div>
+
+            {/* Live FIFO Allocation Preview */}
+            {safeAmount(recoveryAmount) > 0 && (
+              <div className="space-y-2 border-t border-neutral-200 dark:border-neutral-800 pt-3">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  <span>Live Outstanding Impact:</span>
+                  <span className="tabular-nums">
+                    ₹{recoveryEmployeeTotalOutstanding.toLocaleString('en-IN')} $\rightarrow$ ₹{Math.max(0, recoveryEmployeeTotalOutstanding - safeAmount(recoveryAmount)).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden text-xs">
+                  <div className="bg-neutral-100 dark:bg-neutral-900 px-3 py-2 font-bold text-neutral-600 dark:text-neutral-400">
+                    FIFO Allocation Preview (Oldest First):
+                  </div>
+                  <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                    {recoveryFIFOPreview.map((item) => (
+                      <div key={item.due.id} className="p-3 flex justify-between items-center bg-neutral-50/50 dark:bg-neutral-950/50">
+                        <div>
+                          <p className="font-semibold text-neutral-900 dark:text-neutral-100">
+                            {item.due.source === 'manual_old_due' || item.due.collection_entry_id === null ? 'Manual Old Due' : 'Collection Shortage'} ({formatDate(item.due.due_date)})
+                          </p>
+                          <p className="text-[11px] text-neutral-500">
+                            Original: {formatINR(item.due.original_amount)} · Was Remaining: {formatINR(item.due.remaining_amount)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-600 tabular-nums">+ {formatINR(item.allocated)}</p>
+                          <p className="text-[11px] text-neutral-400 font-semibold">New Rem: {formatINR(item.newRemaining)} ({item.newStatus})</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}
@@ -1589,8 +1703,20 @@ export default function Dues() {
                   <p className="font-bold text-neutral-900 dark:text-neutral-100">{group.collectorName} ({group.employeeId})</p>
                   <p className="text-xs text-neutral-500">{group.dueEntryCount} due records · Phone: {group.phone}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex items-center gap-2">
                   <p className="font-bold text-red-500 tabular-nums">{formatINR(group.currentOutstanding)}</p>
+                  {canManage && group.currentOutstanding > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setShowOutstandingModal(false);
+                        openEmployeeRecoveryModal(group.collectorId, group.collectorName, group.employeeId, group.phone, group.collector);
+                      }}
+                      className="min-h-[36px] px-2 text-xs font-semibold"
+                    >
+                      + Recover
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
