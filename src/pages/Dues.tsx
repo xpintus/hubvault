@@ -116,6 +116,9 @@ export default function Dues() {
   const [expandedDue, setExpandedDue] = useState<string | null>(null);
   const [detailDue, setDetailDue] = useState<Due | null>(null);
 
+  // Collapsible state for Individual Dues Records (Default: collapsed)
+  const [isIndividualDuesExpanded, setIsIndividualDuesExpanded] = useState(false);
+
   // Recovery State
   const [recoveryForDue, setRecoveryForDue] = useState<Due | null>(null);
   const [recoveryAmount, setRecoveryAmount] = useState('');
@@ -253,7 +256,7 @@ export default function Dues() {
     return { totalOutstanding, employeesWithDues, recoveredThisMonth, totalDuesIssued, manualDuesCount };
   }, [dues]);
 
-  // SECTION 4: Derived Employee Summary Aggregation (Restored)
+  // SECTION 4: Derived Employee Summary Aggregation (Always Visible)
   const employeeSummaryRows = useMemo<EmployeeSummaryRow[]>(() => {
     const map = new Map<string, {
       collectorId: string;
@@ -949,7 +952,7 @@ export default function Dues() {
         </div>
       </Card>
 
-      {/* 4. SECTION 4: Derived Employee Summary (RESTORED DIRECTLY ON PAGE) */}
+      {/* 4. SECTION 4: Derived Employee Summary (Always Visible) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
@@ -1040,112 +1043,236 @@ export default function Dues() {
         )}
       </div>
 
-      {/* 5. SECTION 5: Individual Dues Records */}
+      {/* 5. SECTION 5: Individual Dues Records (Collapsible Panel with Mobile Gallery) */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-            Individual Dues Records ({filtered.length} Records)
-          </h2>
-          <span className="text-xs text-neutral-500">{filtered.length} matching dues</span>
+        {/* Collapsible Header */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={isIndividualDuesExpanded}
+          aria-controls="individual-dues-panel"
+          onClick={() => setIsIndividualDuesExpanded(prev => !prev)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsIndividualDuesExpanded(prev => !prev);
+            }
+          }}
+          className="flex items-center justify-between p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-200/70 dark:hover:bg-neutral-800/80 cursor-pointer select-none transition-colors"
+        >
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              Individual Dues Records ({filtered.length} Records)
+            </h2>
+            <p className="text-xs text-neutral-500 mt-0.5">{filtered.length} matching dues</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-neutral-500 hidden sm:inline">
+              {isIndividualDuesExpanded ? 'Collapse' : 'Expand'}
+            </span>
+            <div className={clsx('h-8 w-8 rounded-lg bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center transition-transform duration-300', isIndividualDuesExpanded && 'rotate-180')}>
+              <ChevronDown className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
+            </div>
+          </div>
         </div>
 
-        {loading ? (
-          <Card className="p-8 flex justify-center"><Spinner className="h-6 w-6" /></Card>
-        ) : filtered.length === 0 ? (
-          <Card>
-            <EmptyState icon={<AlertCircle className="h-8 w-8" />} title="No individual dues found" message="No matching due records found." />
-          </Card>
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-neutral-50 dark:bg-neutral-950/80 text-neutral-500 text-xs uppercase tracking-wide">
-                  <tr>
-                    <th className="text-left px-5 py-3 font-semibold">Due Date</th>
-                    <th className="text-left px-4 py-3 font-semibold">Employee</th>
-                    <th className="text-left px-4 py-3 font-semibold">Source</th>
-                    <th className="text-left px-4 py-3 font-semibold">Reason</th>
-                    <th className="text-right px-4 py-3 font-semibold">Original</th>
-                    <th className="text-right px-4 py-3 font-semibold text-emerald-600">Recovered</th>
-                    <th className="text-right px-4 py-3 font-semibold text-red-500">Remaining</th>
-                    <th className="text-center px-4 py-3 font-semibold">Status</th>
-                    <th className="text-right px-5 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        {/* Collapsible Panel Body */}
+        {isIndividualDuesExpanded && (
+          <div id="individual-dues-panel" className="space-y-3 animate-fade-in">
+            {loading ? (
+              <Card className="p-8 flex justify-center"><Spinner className="h-6 w-6" /></Card>
+            ) : filtered.length === 0 ? (
+              <Card>
+                <EmptyState icon={<AlertCircle className="h-8 w-8" />} title="No individual dues found" message="No matching due records found." />
+              </Card>
+            ) : (
+              <>
+                {/* Desktop View: Table (visible on screens >= 768px / md breakpoint) */}
+                <Card className="hidden md:block overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-neutral-50 dark:bg-neutral-950/80 text-neutral-500 text-xs uppercase tracking-wide">
+                        <tr>
+                          <th className="text-left px-5 py-3 font-semibold">Due Date</th>
+                          <th className="text-left px-4 py-3 font-semibold">Employee</th>
+                          <th className="text-left px-4 py-3 font-semibold">Source</th>
+                          <th className="text-left px-4 py-3 font-semibold">Reason</th>
+                          <th className="text-right px-4 py-3 font-semibold">Original</th>
+                          <th className="text-right px-4 py-3 font-semibold text-emerald-600">Recovered</th>
+                          <th className="text-right px-4 py-3 font-semibold text-red-500">Remaining</th>
+                          <th className="text-center px-4 py-3 font-semibold">Status</th>
+                          <th className="text-right px-5 py-3 font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                        {filtered.map((d) => {
+                          const isManual = d.source === 'manual_old_due' || d.collection_entry_id === null;
+                          const cfg = statusConfig[d.status] || statusConfig.outstanding;
+
+                          return (
+                            <tr key={d.id} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
+                              <td className="px-5 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200 tabular-nums">
+                                {formatDate(d.due_date)}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <p className="font-bold text-neutral-900 dark:text-neutral-100">{d.collector?.name ?? '—'}</p>
+                                <p className="text-xs text-neutral-400 font-mono">{d.collector?.employee_id ?? 'N/A'}</p>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {isManual ? (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[11px] font-bold ring-1 ring-amber-500/30">
+                                    MANUAL OLD DUE
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-neutral-500/10 text-neutral-500 px-2 py-0.5 text-[11px] font-medium">
+                                    SHORTAGE
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-neutral-700 dark:text-neutral-300 font-medium text-xs">
+                                {d.due_reason || (isManual ? 'Old Due' : 'Collection Shortage')}
+                              </td>
+                              <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-900 dark:text-neutral-100">
+                                {formatINR(d.original_amount)}
+                              </td>
+                              <td className="px-4 py-3.5 text-right tabular-nums text-emerald-600 font-medium">
+                                {formatINR(d.recovered_amount)}
+                              </td>
+                              <td className={clsx('px-4 py-3.5 text-right tabular-nums font-bold', safeAmount(d.remaining_amount) > 0 ? 'text-red-500' : 'text-neutral-400')}>
+                                {formatINR(d.remaining_amount)}
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1', cfg.badge)}>
+                                  {cfg.label}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <Button size="sm" variant="outline" onClick={() => setDetailDue(d)} className="min-h-[36px] px-2.5 text-xs">
+                                    <Eye className="h-3.5 w-3.5 text-neutral-500" />
+                                  </Button>
+
+                                  {canManage && d.status !== 'fully_recovered' && d.status !== 'cancelled' && (
+                                    <Button size="sm" onClick={() => setRecoveryForDue(d)} className="min-h-[36px] px-3 text-xs font-semibold">
+                                      + Recover
+                                    </Button>
+                                  )}
+
+                                  {canManage && isManual && (
+                                    <Button size="sm" variant="outline" onClick={() => openEditManualDue(d)} className="min-h-[36px] px-2.5 text-xs" title="Edit manual due">
+                                      <Edit3 className="h-3.5 w-3.5 text-blue-500" />
+                                    </Button>
+                                  )}
+
+                                  {canManage && (
+                                    <Button size="sm" variant="outline" onClick={() => handleDeleteOrCancelDue(d)} className="min-h-[36px] px-2.5 text-xs text-red-500 hover:bg-red-500/10" title="Delete or cancel due">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+
+                {/* Mobile View: Gallery-style Responsive Cards (visible on screens < 768px / md breakpoint) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:hidden gap-3 w-full max-w-full">
                   {filtered.map((d) => {
                     const isManual = d.source === 'manual_old_due' || d.collection_entry_id === null;
                     const cfg = statusConfig[d.status] || statusConfig.outstanding;
 
                     return (
-                      <tr key={d.id} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
-                        <td className="px-5 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200 tabular-nums">
-                          {formatDate(d.due_date)}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="font-bold text-neutral-900 dark:text-neutral-100">{d.collector?.name ?? '—'}</p>
-                          <p className="text-xs text-neutral-400 font-mono">{d.collector?.employee_id ?? 'N/A'}</p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          {isManual ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[11px] font-bold ring-1 ring-amber-500/30">
-                              MANUAL OLD DUE
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-neutral-500/10 text-neutral-500 px-2 py-0.5 text-[11px] font-medium">
-                              SHORTAGE
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3.5 text-neutral-700 dark:text-neutral-300 font-medium text-xs">
-                          {d.due_reason || (isManual ? 'Old Due' : 'Collection Shortage')}
-                        </td>
-                        <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-900 dark:text-neutral-100">
-                          {formatINR(d.original_amount)}
-                        </td>
-                        <td className="px-4 py-3.5 text-right tabular-nums text-emerald-600 font-medium">
-                          {formatINR(d.recovered_amount)}
-                        </td>
-                        <td className={clsx('px-4 py-3.5 text-right tabular-nums font-bold', safeAmount(d.remaining_amount) > 0 ? 'text-red-500' : 'text-neutral-400')}>
-                          {formatINR(d.remaining_amount)}
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1', cfg.badge)}>
+                      <Card key={d.id} className="p-4 space-y-3 border border-neutral-200 dark:border-neutral-800 w-full min-w-0">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">{d.collector?.name ?? '—'}</p>
+                            <p className="text-xs text-neutral-400 font-mono mt-0.5">{d.collector?.employee_id ?? 'N/A'}</p>
+                          </div>
+                          <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 shrink-0', cfg.badge)}>
                             {cfg.label}
                           </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="outline" onClick={() => setDetailDue(d)} className="min-h-[36px] px-2.5 text-xs">
-                              <Eye className="h-3.5 w-3.5 text-neutral-500" />
-                            </Button>
+                        </div>
 
-                            {canManage && d.status !== 'fully_recovered' && d.status !== 'cancelled' && (
-                              <Button size="sm" onClick={() => setRecoveryForDue(d)} className="min-h-[36px] px-3 text-xs font-semibold">
-                                + Recover
-                              </Button>
-                            )}
-
-                            {canManage && isManual && (
-                              <Button size="sm" variant="outline" onClick={() => openEditManualDue(d)} className="min-h-[36px] px-2.5 text-xs" title="Edit manual due">
-                                <Edit3 className="h-3.5 w-3.5 text-blue-500" />
-                              </Button>
-                            )}
-
-                            {canManage && (
-                              <Button size="sm" variant="outline" onClick={() => handleDeleteOrCancelDue(d)} className="min-h-[36px] px-2.5 text-xs text-red-500 hover:bg-red-500/10" title="Delete or cancel due">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                        {/* Body Details */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <p className="text-neutral-500">Due Date</p>
+                            <p className="font-semibold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatDate(d.due_date)}</p>
+                          </div>
+                          <div>
+                            <p className="text-neutral-500">Source</p>
+                            {isManual ? (
+                              <span className="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-amber-500/30">
+                                MANUAL OLD DUE
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-md bg-neutral-500/10 text-neutral-500 px-1.5 py-0.5 text-[10px] font-medium">
+                                SHORTAGE
+                              </span>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                          <div className="col-span-2">
+                            <p className="text-neutral-500">Reason</p>
+                            <p className="font-medium text-neutral-800 dark:text-neutral-200 truncate">
+                              {d.due_reason || (isManual ? 'Old Due' : 'Collection Shortage')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Amount Grid */}
+                        <div className="grid grid-cols-3 gap-1.5 p-2.5 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center text-xs border border-neutral-200/60 dark:border-neutral-800/60">
+                          <div>
+                            <p className="text-neutral-500 text-[11px]">Original</p>
+                            <p className="font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(d.original_amount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-emerald-600 text-[11px]">Recovered</p>
+                            <p className="font-bold text-emerald-600 tabular-nums">{formatINR(d.recovered_amount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-red-500 text-[11px]">Remaining</p>
+                            <p className={clsx('font-bold tabular-nums', safeAmount(d.remaining_amount) > 0 ? 'text-red-500' : 'text-neutral-400')}>
+                              {formatINR(d.remaining_amount)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Footer Actions (Minimum 44px touch targets) */}
+                        <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                          <Button size="sm" variant="outline" onClick={() => setDetailDue(d)} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial">
+                            View
+                          </Button>
+
+                          {canManage && d.status !== 'fully_recovered' && d.status !== 'cancelled' && (
+                            <Button size="sm" onClick={() => setRecoveryForDue(d)} className="min-h-[44px] text-xs font-semibold px-3 flex-1 sm:flex-initial">
+                              + Recover
+                            </Button>
+                          )}
+
+                          {canManage && isManual && (
+                            <Button size="sm" variant="outline" onClick={() => openEditManualDue(d)} className="min-h-[44px] text-xs font-semibold px-3" title="Edit manual due">
+                              Edit
+                            </Button>
+                          )}
+
+                          {canManage && (
+                            <Button size="sm" variant="outline" onClick={() => handleDeleteOrCancelDue(d)} className="min-h-[44px] text-xs font-semibold px-3 text-red-500 border-red-500/20 hover:bg-red-500/10" title="Delete or cancel due">
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -1392,7 +1519,7 @@ export default function Dues() {
         </div>
       </Modal>
 
-      {/* 7. SECTION 7: Employee Ledger Drawer/Modal (RESTORED) */}
+      {/* 7. SECTION 7: Employee Ledger Drawer/Modal */}
       {selectedLedgerCollector && (
         <Modal
           open={!!selectedLedgerCollector}
