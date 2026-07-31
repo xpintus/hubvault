@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Landmark, Search, Plus, Trash2, Banknote, TrendingDown, TrendingUp,
   Wallet, Calendar, FileBarChart, Edit3, Eye, ArrowRight,
-  X, CheckCircle2, RotateCcw, Clock, Building2,
-  Download, AlertCircle, FileText, Smartphone
+  X, RotateCcw, Building2, Download, AlertCircle, FileText, Smartphone
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '@/lib/auth';
@@ -26,7 +25,7 @@ type DetailType =
   | 'online_collected'
   | 'collection_shortage'
   | 'total_expected_cms'
-  | 'total_cms_submitted'
+  | 'total_deposited'
   | 'cms_pending_deposit'
   | 'cms_excess'
   | 'deposit_count'
@@ -38,11 +37,15 @@ const safeAmount = (val: any): number => {
   return isNaN(num) ? 0 : num;
 };
 
-// Shared helper to normalize submitted amounts across legacy and new deposit records
-export function getCmsSubmittedAmount(deposit: CmsDeposit): number {
-  const combinedSplit = safeAmount(deposit.cash_submitted) + safeAmount(deposit.online_submitted);
-  if (combinedSplit > 0) return combinedSplit;
-  return safeAmount(deposit.deposited_amount ?? (deposit as any).amount ?? deposit.total_deposited ?? deposit.cash_deposited);
+// Shared helper to normalize deposited amounts across legacy and new deposit records
+export function getDepositAmount(deposit: CmsDeposit): number {
+  return safeAmount(
+    deposit.total_deposited ??
+    (deposit as any).deposited_amount ??
+    (deposit as any).amount_submitted ??
+    deposit.cash_deposited ??
+    (deposit as any).amount
+  );
 }
 
 const SHORTAGE_REASONS = [
@@ -68,9 +71,9 @@ export interface DailyCmsRow {
   totalCollection: number; // cashCollected + onlineCollected
   collectionShortage: number; // max(expectedCod - totalCollection, 0)
   totalExpectedCms: number; // strictly equals expectedCod
-  totalSubmitted: number; // sum of getCmsSubmittedAmount(deposit)
-  cmsPending: number; // max(totalExpectedCms - totalSubmitted, 0)
-  cmsExcess: number; // max(totalSubmitted - totalExpectedCms, 0)
+  totalDeposited: number; // sum of getDepositAmount(deposit)
+  cmsPending: number; // max(totalExpectedCms - totalDeposited, 0)
+  cmsExcess: number; // max(totalDeposited - totalExpectedCms, 0)
   status: 'Fully Deposited' | 'Partially Deposited' | 'Not Deposited' | 'Over Deposited';
   depositCount: number;
   references: string[];
@@ -82,7 +85,7 @@ interface FormState {
   collection_date: string;
   deposit_date: string;
   hub_id: string;
-  amount_submitted: string;
+  total_deposited: string;
   reference_number: string;
   bank_name: string;
   remarks: string;
@@ -92,7 +95,7 @@ const emptyForm: FormState = {
   collection_date: toISODate(new Date()),
   deposit_date: toISODate(new Date()),
   hub_id: '',
-  amount_submitted: '',
+  total_deposited: '',
   reference_number: '',
   bank_name: '',
   remarks: '',
@@ -169,11 +172,9 @@ export default function DepositsPage() {
   // Card Drill-Down Drawer state
   const [activeDetail, setActiveDetail] = useState<DetailType>(null);
   const [detailSearch, setDetailSearch] = useState('');
-  const [detailFilterStatus, setDetailFilterStatus] = useState('all');
   const [detailFilterReason, setDetailFilterReason] = useState('all');
   const [detailFilterRecovery, setDetailFilterRecovery] = useState('all');
   const [detailFilterEmployee, setDetailFilterEmployee] = useState('all');
-  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
   const canManage = ['super_admin', 'hub_admin', 'supervisor'].includes(profile?.role ?? '');
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -247,14 +248,14 @@ export default function DepositsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Section 1: Collection Summary Metrics
+  // Section 1: Field Collection Summary Metrics
   const collectionStats = useMemo(() => {
     const totalExpectedCod = entries.reduce((s, e) => s + safeAmount(e.expected_cod), 0);
     const totalCollection = entries.reduce((s, e) => s + safeAmount(e.total_collection), 0);
     const totalCash = entries.reduce((s, e) => s + safeAmount(e.cash_amount), 0);
     const totalOnline = entries.reduce((s, e) => s + safeAmount(e.online_amount), 0);
     
-    // Collection Shortage = expected_cod - total_collection (when total_collection < expected_cod)
+    // Collection Shortage = max(expected_cod - total_collection, 0)
     const collectionShortage = entries
       .filter((e) => safeAmount(e.total_collection) < safeAmount(e.expected_cod))
       .reduce((s, e) => s + (safeAmount(e.expected_cod) - safeAmount(e.total_collection)), 0);
@@ -303,21 +304,21 @@ export default function DepositsPage() {
 
       // Total Expected CMS strictly equals Total Expected COD!
       const totalExpectedCms = expectedCod;
-      const totalSubmitted = dateDeposits.reduce((s, d) => s + getCmsSubmittedAmount(d), 0);
+      const totalDeposited = dateDeposits.reduce((s, d) => s + getDepositAmount(d), 0);
 
-      const cmsPending = Math.max(0, totalExpectedCms - totalSubmitted);
-      const cmsExcess = Math.max(0, totalSubmitted - totalExpectedCms);
+      const cmsPending = Math.max(0, totalExpectedCms - totalDeposited);
+      const cmsExcess = Math.max(0, totalDeposited - totalExpectedCms);
 
       let status: DailyCmsRow['status'] = 'Not Deposited';
-      if (totalSubmitted > totalExpectedCms) {
+      if (totalDeposited > totalExpectedCms) {
         status = 'Over Deposited';
-      } else if (totalSubmitted === 0 && totalExpectedCms > 0) {
+      } else if (totalDeposited === 0 && totalExpectedCms > 0) {
         status = 'Not Deposited';
-      } else if (totalSubmitted > 0 && totalSubmitted < totalExpectedCms) {
+      } else if (totalDeposited > 0 && totalDeposited < totalExpectedCms) {
         status = 'Partially Deposited';
-      } else if (totalSubmitted === totalExpectedCms) {
+      } else if (totalDeposited === totalExpectedCms) {
         status = 'Fully Deposited';
-      } else if (totalExpectedCms === 0 && totalSubmitted === 0) {
+      } else if (totalExpectedCms === 0 && totalDeposited === 0) {
         status = 'Fully Deposited';
       }
 
@@ -335,7 +336,7 @@ export default function DepositsPage() {
         totalCollection,
         collectionShortage,
         totalExpectedCms,
-        totalSubmitted,
+        totalDeposited,
         cmsPending,
         cmsExcess,
         status,
@@ -361,20 +362,20 @@ export default function DepositsPage() {
     });
   }, [dailyRows, search]);
 
-  // Section 2: CMS Summary Cards (strictly derived from visible date rows)
+  // Section 2: CMS Summary Cards (strictly derived from visible normalized date rows)
   const cmsSummaryStats = useMemo(() => {
-    // Total Expected CMS card = sum of expectedCod across visible dates
+    // Total Expected CMS card = sum of expectedCod once per visible collection date
     const totalExpectedCms = filteredDailyRows.reduce((s, r) => s + r.totalExpectedCms, 0);
-    // Total CMS Submitted card = sum of totalSubmitted across visible dates
-    const totalCmsSubmitted = filteredDailyRows.reduce((s, r) => s + r.totalSubmitted, 0);
-    // CMS Pending Deposit card = sum of max(expectedCod - totalSubmitted, 0)
-    const cmsPending = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalExpectedCms - r.totalSubmitted), 0);
-    // CMS Excess card = sum of max(totalSubmitted - expectedCod, 0)
-    const cmsExcess = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalSubmitted - r.totalExpectedCms), 0);
+    // Total Deposited card = sum of all valid deposit amounts
+    const totalDeposited = filteredDailyRows.reduce((s, r) => s + r.totalDeposited, 0);
+    // CMS Pending Deposit card = sum of max(expectedCod - totalDeposited, 0)
+    const cmsPending = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalExpectedCms - r.totalDeposited), 0);
+    // CMS Excess card = sum of max(totalDeposited - expectedCod, 0)
+    const cmsExcess = filteredDailyRows.reduce((s, r) => s + Math.max(0, r.totalDeposited - r.totalExpectedCms), 0);
 
     return {
       totalExpectedCms,
-      totalCmsSubmitted,
+      totalDeposited,
       cmsPending,
       cmsExcess,
       depositCount: deposits.length,
@@ -390,7 +391,7 @@ export default function DepositsPage() {
       collection_date: defaultDate,
       deposit_date: toISODate(new Date()),
       hub_id: presetHub,
-      amount_submitted: prefillRow ? String(prefillRow.cmsPending) : '',
+      total_deposited: prefillRow ? String(prefillRow.cmsPending) : '',
       reference_number: '',
       bank_name: '',
       remarks: '',
@@ -405,7 +406,7 @@ export default function DepositsPage() {
       collection_date: d.collection_date || d.deposit_date,
       deposit_date: d.deposit_date,
       hub_id: d.hub_id,
-      amount_submitted: String(getCmsSubmittedAmount(d)),
+      total_deposited: String(getDepositAmount(d)),
       reference_number: d.reference_number ?? '',
       bank_name: d.bank_name ?? '',
       remarks: d.remarks ?? '',
@@ -420,12 +421,16 @@ export default function DepositsPage() {
 
     const matchedEntries = entries.filter(e => e.collection_date === cDate);
     const expectedCod = matchedEntries.reduce((s, e) => s + safeAmount(e.expected_cod), 0);
+    const cashCollected = matchedEntries.reduce((s, e) => s + safeAmount(e.cash_amount), 0);
+    const onlineCollected = matchedEntries.reduce((s, e) => s + safeAmount(e.online_amount), 0);
+    const totalCollection = cashCollected + onlineCollected;
     const totalExpectedCms = expectedCod;
 
-    const priorDeposits = deposits.filter(d => (d.collection_date === cDate || d.deposit_date === cDate));
-    const alreadySubmitted = priorDeposits.reduce((s, d) => s + getCmsSubmittedAmount(d), 0);
+    // Sum prior deposits excluding current editing record to avoid double counting
+    const priorDeposits = deposits.filter(d => (d.collection_date === cDate || d.deposit_date === cDate) && (!editing || d.id !== editing.id));
+    const alreadySubmitted = priorDeposits.reduce((s, d) => s + getDepositAmount(d), 0);
 
-    const newDeposit = safeAmount(form.amount_submitted);
+    const newDeposit = safeAmount(form.total_deposited);
     const totalAfterDeposit = alreadySubmitted + newDeposit;
 
     const remainingPending = Math.max(0, totalExpectedCms - totalAfterDeposit);
@@ -433,6 +438,9 @@ export default function DepositsPage() {
 
     return {
       expectedCod,
+      cashCollected,
+      onlineCollected,
+      totalCollection,
       totalExpectedCms,
       alreadySubmitted,
       newDeposit,
@@ -440,7 +448,7 @@ export default function DepositsPage() {
       remainingPending,
       isOverDeposit,
     };
-  }, [form.collection_date, form.amount_submitted, entries, deposits]);
+  }, [form.collection_date, form.total_deposited, entries, deposits, editing]);
 
   const handleSaveGeneralDeposit = async () => {
     const hubId = form.hub_id || activeHubId;
@@ -448,8 +456,8 @@ export default function DepositsPage() {
     if (!form.collection_date) { toast.error('Select a collection date'); return; }
     if (!form.deposit_date) { toast.error('Select a deposit date'); return; }
 
-    const submitted = safeAmount(form.amount_submitted);
-    if (submitted <= 0) { toast.error('CMS Submitted amount must be greater than ₹0'); return; }
+    const submitted = safeAmount(form.total_deposited);
+    if (submitted <= 0) { toast.error('CMS Deposited amount must be greater than ₹0'); return; }
 
     setSaving(true);
     try {
@@ -493,7 +501,7 @@ export default function DepositsPage() {
   const handleDeleteDeposit = async (d: CmsDeposit) => {
     const ok = await confirm({
       title: 'Delete this deposit record?',
-      message: `This will remove the CMS deposit of ${formatINR(getCmsSubmittedAmount(d))} dated ${formatDate(d.deposit_date)}.`,
+      message: `This will remove the CMS deposit of ${formatINR(getDepositAmount(d))} dated ${formatDate(d.deposit_date)}.`,
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -728,7 +736,7 @@ export default function DepositsPage() {
       'Total Collection': r.totalCollection,
       'Collection Shortage': r.collectionShortage,
       'Total Expected CMS': r.totalExpectedCms,
-      'Total Submitted': r.totalSubmitted,
+      'Total Deposited': r.totalDeposited,
       'CMS Pending': r.cmsPending,
       'CMS Excess': r.cmsExcess,
       Status: r.status,
@@ -756,7 +764,7 @@ export default function DepositsPage() {
             CMS Deposition Dashboard
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-neutral-500">
-            Track bank cash & digital CMS depositions, monitor pending deposits, and resolve collection shortages.
+            Total Expected COD amount ko CMS me record aur reconcile karein.
           </p>
           <div className="mt-2 flex items-center gap-2 text-xs sm:text-sm text-neutral-500">
             <Calendar className="h-4 w-4 text-neutral-500" />
@@ -865,11 +873,11 @@ export default function DepositsPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 xl:grid-cols-5">
-            {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
             {/* Total Expected CMS (strictly equals Total Expected COD) */}
             <Card hover onClick={() => handleCardClick('total_expected_cms')} className="p-4 cursor-pointer min-w-0">
               <div className="flex items-center gap-2">
@@ -884,16 +892,16 @@ export default function DepositsPage() {
               <p className="mt-1 text-xs text-neutral-400">Total Expected COD</p>
             </Card>
 
-            {/* Total CMS Submitted */}
-            <Card hover onClick={() => handleCardClick('total_cms_submitted')} className="p-4 cursor-pointer min-w-0">
+            {/* Total Deposited */}
+            <Card hover onClick={() => handleCardClick('total_deposited')} className="p-4 cursor-pointer min-w-0">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
                   <Landmark className="h-5 w-5" />
                 </div>
-                <p className="text-xs font-medium text-neutral-500 truncate">Total CMS Submitted</p>
+                <p className="text-xs font-medium text-neutral-500 truncate">Total Deposited</p>
               </div>
               <p className="mt-2 text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums truncate">
-                {formatINR(cmsSummaryStats.totalCmsSubmitted)}
+                {formatINR(cmsSummaryStats.totalDeposited)}
               </p>
               <p className="mt-1 text-xs text-neutral-400">Total bank/CMS deposits</p>
             </Card>
@@ -914,25 +922,11 @@ export default function DepositsPage() {
               <p className={clsx('mt-2 text-xl sm:text-2xl font-bold tabular-nums truncate', cmsSummaryStats.cmsPending > 0 ? 'text-red-500 dark:text-red-400' : 'text-emerald-500')}>
                 {formatINR(cmsSummaryStats.cmsPending)}
               </p>
-              <p className="mt-1 text-xs text-neutral-400">Total Expected CMS − Submitted</p>
-            </Card>
-
-            {/* CMS Excess */}
-            <Card hover onClick={() => handleCardClick('cms_excess')} className="p-4 cursor-pointer min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
-                  <TrendingUp className="h-5 w-5 text-blue-500" />
-                </div>
-                <p className="text-xs font-medium text-neutral-500 truncate">CMS Excess</p>
-              </div>
-              <p className="mt-2 text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums truncate">
-                {formatINR(cmsSummaryStats.cmsExcess)}
-              </p>
-              <p className="mt-1 text-xs text-neutral-400">Submitted − Expected CMS</p>
+              <p className="mt-1 text-xs text-neutral-400">Total Expected CMS − Deposited</p>
             </Card>
 
             {/* Deposit Count */}
-            <Card hover onClick={() => handleCardClick('deposit_count')} className="p-4 cursor-pointer min-w-0 col-span-2 sm:col-span-1">
+            <Card hover onClick={() => handleCardClick('deposit_count')} className="p-4 cursor-pointer min-w-0">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold">
                   <FileBarChart className="h-5 w-5" />
@@ -942,7 +936,7 @@ export default function DepositsPage() {
               <p className="mt-2 text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
                 {cmsSummaryStats.depositCount}
               </p>
-              <p className="mt-1 text-xs text-neutral-400">Valid deposit records</p>
+              <p className="mt-1 text-xs text-neutral-400">Valid deposit transactions</p>
             </Card>
           </div>
         )}
@@ -1004,11 +998,11 @@ export default function DepositsPage() {
                   <tr>
                     <th className="text-left px-5 py-3 font-semibold">Collection Date</th>
                     {isSuperAdmin && <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Hub</th>}
-                    <th className="text-right px-4 py-3 font-semibold">Total Expected CMS</th>
-                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Total Submitted</th>
+                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Cash Collected</th>
+                    <th className="text-right px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">Online Collected</th>
+                    <th className="text-right px-4 py-3 font-semibold">Expected CMS</th>
+                    <th className="text-right px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">Total Deposited</th>
                     <th className="text-right px-4 py-3 font-semibold text-red-500">CMS Pending</th>
-                    <th className="text-right px-4 py-3 font-semibold text-blue-500">CMS Excess</th>
-                    <th className="text-right px-4 py-3 font-semibold text-amber-500">Collection Shortage</th>
                     <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">Reference</th>
                     <th className="text-center px-4 py-3 font-semibold">Status</th>
                     <th className="text-right px-5 py-3 font-semibold">Actions</th>
@@ -1019,11 +1013,11 @@ export default function DepositsPage() {
                     <tr key={`${r.date}_${r.hubId}`} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
                       <td className="px-5 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatDate(r.date)}</td>
                       {isSuperAdmin && <td className="px-4 py-3.5 text-neutral-500 hidden md:table-cell">{r.hubName}</td>}
+                      <td className="px-4 py-3.5 text-right tabular-nums text-emerald-600 font-medium">{formatINR(r.cashCollected)}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums text-blue-600 font-medium">{formatINR(r.onlineCollected)}</td>
                       <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-900 dark:text-neutral-100">{formatINR(r.totalExpectedCms)}</td>
-                      <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">{formatINR(r.totalSubmitted)}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">{formatINR(r.totalDeposited)}</td>
                       <td className={clsx('px-4 py-3.5 text-right tabular-nums font-bold', r.cmsPending > 0 ? 'text-red-500 dark:text-red-400' : 'text-neutral-400')}>{formatINR(r.cmsPending)}</td>
-                      <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-blue-500">{formatINR(r.cmsExcess)}</td>
-                      <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold', r.collectionShortage > 0 ? 'text-amber-500' : 'text-neutral-400')}>{formatINR(r.collectionShortage)}</td>
                       <td className="px-4 py-3.5 text-neutral-500 font-mono text-xs hidden lg:table-cell">
                         {r.references.length > 0 ? r.references.join(', ') : '—'}
                       </td>
@@ -1059,7 +1053,7 @@ export default function DepositsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit CMS Deposit Record' : 'Record CMS Deposit'}
-        subtitle="Deposit collected funds to bank / CMS counter"
+        subtitle="Cash aur online source se alag, CMS me jama ki gayi total amount record karein."
         size="md"
         footer={
           <>
@@ -1096,20 +1090,39 @@ export default function DepositsPage() {
             </Select>
           )}
 
-          {/* Live Calculation Preview */}
+          {/* Read-Only Info Box for Collection Reference */}
           {depositPreview && (
-            <div className={clsx('rounded-xl border p-4 space-y-2', depositPreview.isOverDeposit ? 'bg-blue-500/10 border-blue-500/30' : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800')}>
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Live Deposit Calculation</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Collection Reference Information (Read-Only)</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-center">
+                <div className="bg-neutral-200/50 dark:bg-neutral-800/50 p-2 rounded-lg">
+                  <p className="text-neutral-500">Expected COD</p>
+                  <p className="font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(depositPreview.expectedCod)}</p>
+                </div>
+                <div className="bg-emerald-500/10 p-2 rounded-lg">
+                  <p className="text-emerald-500">Cash Collected</p>
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatINR(depositPreview.cashCollected)}</p>
+                </div>
+                <div className="bg-blue-500/10 p-2 rounded-lg">
+                  <p className="text-blue-500">Online Collected</p>
+                  <p className="font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatINR(depositPreview.onlineCollected)}</p>
+                </div>
+                <div className="bg-brand-500/10 p-2 rounded-lg">
+                  <p className="text-brand-600">Total Collection</p>
+                  <p className="font-bold text-brand-600 tabular-nums">{formatINR(depositPreview.totalCollection)}</p>
+                </div>
+              </div>
+
+              {/* Live Deposit Preview */}
+              <div className="border-t border-neutral-200 dark:border-neutral-800 pt-2 grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <p className="text-neutral-500">Total Expected COD: <strong>{formatINR(depositPreview.expectedCod)}</strong></p>
-                  <p className="text-brand-600 font-bold">Total Expected CMS: {formatINR(depositPreview.totalExpectedCms)}</p>
+                  <p className="text-neutral-500">Expected CMS: <strong className="text-neutral-900 dark:text-neutral-100">{formatINR(depositPreview.totalExpectedCms)}</strong></p>
+                  <p className="text-neutral-500">Already Deposited: <strong>{formatINR(depositPreview.alreadySubmitted)}</strong></p>
                 </div>
                 <div>
-                  <p className="text-neutral-500">Already Submitted: <strong>{formatINR(depositPreview.alreadySubmitted)}</strong></p>
-                  <p className="text-emerald-500 font-bold">New Deposit: {formatINR(depositPreview.newDeposit)}</p>
+                  <p className="text-emerald-500 font-bold">New CMS Deposit: {formatINR(depositPreview.newDeposit)}</p>
                   <p className={clsx('font-bold', depositPreview.remainingPending > 0 ? 'text-red-500' : 'text-emerald-500')}>
-                    Remaining Pending: {formatINR(depositPreview.remainingPending)}
+                    Remaining CMS Pending: {formatINR(depositPreview.remainingPending)}
                   </p>
                 </div>
               </div>
@@ -1117,11 +1130,11 @@ export default function DepositsPage() {
           )}
 
           <Input
-            label="CMS Amount Submitted (₹)"
+            label="CMS Amount Deposited (₹)"
             type="number"
-            value={form.amount_submitted}
-            onChange={(e) => setForm((f) => ({ ...f, amount_submitted: e.target.value }))}
-            placeholder="Enter CMS deposit amount…"
+            value={form.total_deposited}
+            onChange={(e) => setForm((f) => ({ ...f, total_deposited: e.target.value }))}
+            placeholder="Enter manual CMS deposit amount…"
           />
 
           <Input
@@ -1226,8 +1239,6 @@ export default function DepositsPage() {
           selectedHubName={hubCtx.selectedHub?.name}
           detailSearch={detailSearch}
           setDetailSearch={setDetailSearch}
-          detailFilterStatus={detailFilterStatus}
-          setDetailFilterStatus={setDetailFilterStatus}
           detailFilterReason={detailFilterReason}
           setDetailFilterReason={setDetailFilterReason}
           detailFilterRecovery={detailFilterRecovery}
@@ -1252,7 +1263,7 @@ export default function DepositsPage() {
 function DetailDrawer({
   type, onClose, entries, deposits, dues, recoveries, collectors, dailyRows,
   from, to, selectedHubName, detailSearch, setDetailSearch,
-  detailFilterStatus, setDetailFilterStatus, detailFilterReason, setDetailFilterReason,
+  detailFilterReason, setDetailFilterReason,
   detailFilterRecovery, setDetailFilterRecovery, detailFilterEmployee, setDetailFilterEmployee,
   expandedHistoryId, setExpandedHistoryId, onExport, openAddShortage, openRecoveryModal,
   onMarkWrittenOff, openAddDeposit, canManage
@@ -1270,8 +1281,6 @@ function DetailDrawer({
   selectedHubName?: string;
   detailSearch: string;
   setDetailSearch: (s: string) => void;
-  detailFilterStatus: string;
-  setDetailFilterStatus: (s: string) => void;
   detailFilterReason: string;
   setDetailFilterReason: (s: string) => void;
   detailFilterRecovery: string;
@@ -1294,7 +1303,7 @@ function DetailDrawer({
     online_collected: 'Online Collection Entries',
     collection_shortage: 'Collection Shortage Investigation',
     total_expected_cms: 'Total Expected CMS Details',
-    total_cms_submitted: 'Total CMS Submitted Transactions',
+    total_deposited: 'Total CMS Deposited Transactions',
     cms_pending_deposit: 'CMS Pending Deposition Audit',
     cms_excess: 'CMS Over-Deposited Audit',
     deposit_count: 'Deposit Transaction Log',
@@ -1307,7 +1316,7 @@ function DetailDrawer({
     online_collected: Smartphone,
     collection_shortage: TrendingDown,
     total_expected_cms: Banknote,
-    total_cms_submitted: Landmark,
+    total_deposited: Landmark,
     cms_pending_deposit: AlertCircle,
     cms_excess: TrendingUp,
     deposit_count: FileBarChart,
@@ -1348,7 +1357,7 @@ function DetailDrawer({
     return dailyRows.filter((r) => {
       if (type === 'cms_pending_deposit' && r.cmsPending <= 0) return false;
       if (type === 'cms_excess' && r.cmsExcess <= 0) return false;
-      if (type === 'total_cms_submitted' && r.totalSubmitted <= 0) return false;
+      if (type === 'total_deposited' && r.totalDeposited <= 0) return false;
       if (!q) return true;
       return r.date.toLowerCase().includes(q) || r.hubName.toLowerCase().includes(q) || r.references.join(' ').toLowerCase().includes(q);
     });
@@ -1361,7 +1370,7 @@ function DetailDrawer({
     if (type === 'online_collected') return filteredEntries.reduce((s, e) => s + safeAmount(e.online_amount), 0);
     if (type === 'collection_shortage') return shortageRecords.reduce((s, e) => s + (safeAmount(e.expected_cod) - safeAmount(e.total_collection)), 0);
     if (type === 'total_expected_cms') return filteredDaily.reduce((s, r) => s + r.totalExpectedCms, 0);
-    if (type === 'total_cms_submitted') return filteredDaily.reduce((s, r) => s + r.totalSubmitted, 0);
+    if (type === 'total_deposited') return filteredDaily.reduce((s, r) => s + r.totalDeposited, 0);
     if (type === 'cms_pending_deposit') return filteredDaily.reduce((s, r) => s + r.cmsPending, 0);
     if (type === 'cms_excess') return filteredDaily.reduce((s, r) => s + r.cmsExcess, 0);
     return deposits.length;
@@ -1433,7 +1442,7 @@ function DetailDrawer({
                 </Card>
               );
             })
-          ) : type === 'total_expected_cms' || type === 'total_cms_submitted' || type === 'cms_pending_deposit' || type === 'cms_excess' ? (
+          ) : type === 'total_expected_cms' || type === 'total_deposited' || type === 'cms_pending_deposit' || type === 'cms_excess' ? (
             filteredDaily.map((r) => (
               <Card key={`${r.date}_${r.hubId}`} className="p-4 space-y-3">
                 <div className="flex justify-between items-center text-xs font-semibold">
@@ -1446,8 +1455,8 @@ function DetailDrawer({
                     <p className="font-bold tabular-nums">{formatINR(r.totalExpectedCms)}</p>
                   </div>
                   <div className="rounded-lg bg-emerald-500/10 p-2">
-                    <p className="text-emerald-500">Submitted</p>
-                    <p className="font-bold text-emerald-500 tabular-nums">{formatINR(r.totalSubmitted)}</p>
+                    <p className="text-emerald-500">Total Deposited</p>
+                    <p className="font-bold text-emerald-500 tabular-nums">{formatINR(r.totalDeposited)}</p>
                   </div>
                   <div className="rounded-lg bg-red-500/10 p-2">
                     <p className="text-red-500">CMS Pending</p>
@@ -1457,7 +1466,7 @@ function DetailDrawer({
                 {r.references.length > 0 && <p className="text-xs text-neutral-500 font-mono">Ref: {r.references.join(', ')}</p>}
                 {canManage && r.cmsPending > 0 && (
                   <div className="flex justify-end pt-1">
-                    <Button size="sm" onClick={() => openAddDeposit(r)} className="min-h-[44px] text-xs px-3">+ Record Deposit</Button>
+                    <Button size="sm" onClick={() => openAddDeposit(r)} className="min-h-[44px] text-xs px-3">+ Deposit</Button>
                   </div>
                 )}
               </Card>
