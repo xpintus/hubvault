@@ -1174,16 +1174,16 @@ Deno.serve(async (req: Request) => {
         }
 
         // Count existing hubs created by this user — check for errors
-        const { count: hubCount, error: countErr } = await adminClient
-          .from("hubs")
+        const { count: assignedHubCount, error: countErr } = await adminClient
+          .from("user_hub_access")
           .select("*", { count: "exact", head: true })
-          .eq("created_by", callerUser.user.id);
+          .eq("user_id", callerUser.user.id);
 
         if (countErr) {
           return jsonError(500, "Failed to verify hub count: " + countErr.message);
         }
 
-        const isFirstHub = (hubCount ?? 0) === 0;
+        const isFirstHub = (assignedHubCount ?? 0) === 0;
 
         // If not first hub, require a credit — use atomic decrement
         let creditConsumed = false;

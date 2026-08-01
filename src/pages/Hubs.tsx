@@ -125,8 +125,8 @@ export default function Hubs() {
         .eq('id', profile.id)
         .maybeSingle();
       const latestCredits = freshProf?.hub_add_credits ?? 0;
-      const myHubCount = hubs.filter((h) => h.created_by === profile.id).length;
-      if (myHubCount > 0 && latestCredits <= 0) {
+      const assignedHubCount = hubCtx.accessibleHubs.length;
+      if (assignedHubCount > 0 && latestCredits <= 0) {
         setOpenFormAfterCredit(true);
         setHubAddModalOpen(true);
         return;
