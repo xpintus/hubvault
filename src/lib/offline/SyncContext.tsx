@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useAuth } from '../auth';
-import { db } from './db';
+import { setActiveUserId } from './db';
 import { getQueueCount } from './syncQueue';
 import {
   processSyncQueue,
@@ -37,14 +37,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
 
+  const userId = session?.user?.id ?? null;
+
+  useEffect(() => {
+    setActiveUserId(userId);
+  }, [userId]);
+
   const refreshQueueCount = useCallback(async () => {
     try {
-      const count = await getQueueCount();
+      const count = await getQueueCount(userId ?? undefined);
       setPendingCount(count);
     } catch (e) {
       console.error("Failed to read sync queue count:", e);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -83,15 +89,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [refreshQueueCount]);
 
   useEffect(() => {
-      // Whenever the user logs in and we are online, process the queue
-      if (session && isOnline) {
-          processSyncQueue();
-      }
-  }, [session, isOnline]);
+    // Whenever the user logs in and we are online, process the queue for active user
+    if (session && isOnline && userId) {
+      processSyncQueue(false, userId);
+    }
+  }, [session, isOnline, userId]);
 
   const syncNow = async () => {
-    if (!isOnline) return;
-    await processSyncQueue(true);
+    if (!isOnline || !userId) return;
+    await processSyncQueue(true, userId);
     await refreshQueueCount();
   };
 

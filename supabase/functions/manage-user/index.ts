@@ -394,13 +394,14 @@ Deno.serve(async (req: Request) => {
 
   const callerRole = callerProfile.role as string;
   const isSuperAdmin = callerRole === "super_admin";
-  const isHubManager = callerRole === "hub_admin" || callerRole === "supervisor";
+  const isHubAdmin = callerRole === "hub_admin";
+  const isHubManager = isSuperAdmin || isHubAdmin;
 
   const SELF_SERVICE_ACTIONS = new Set([
     "get-referral-stats", "apply-referral-code", "request-withdrawal", "get-withdrawals",
   ]);
 
-  if (!isSuperAdmin && !isHubManager && !SELF_SERVICE_ACTIONS.has(action)) {
+  if (!isSuperAdmin && !isHubAdmin && !SELF_SERVICE_ACTIONS.has(action)) {
     return jsonError(403, "You do not have permission to manage users");
   }
 

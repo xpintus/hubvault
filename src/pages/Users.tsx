@@ -58,8 +58,8 @@ export default function Users() {
   const [licenseSaving, setLicenseSaving] = useState(false);
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const isHubManager = currentUser?.role === 'hub_admin' || currentUser?.role === 'supervisor';
-  const canManageUsers = isSuperAdmin || isHubManager;
+  const isHubAdmin = currentUser?.role === 'hub_admin';
+  const canManageUsers = isSuperAdmin || isHubAdmin;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,10 +69,14 @@ export default function Users() {
 
       const { data: u, error } = await supabase
         .from('profiles')
-        .select('*, hub: hubs!profiles_hub_id_fkey(*)')
+        .select('id, name, email, role, hub_id, can_create_hub, phone, company, created_at, is_approved, license_status, hub: hubs!profiles_hub_id_fkey(*)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setUsers(u ?? []);
+      const formatted = (u ?? []).map((row: any) => ({
+        ...row,
+        hub: Array.isArray(row.hub) ? row.hub[0] ?? null : row.hub ?? null,
+      }));
+      setUsers(formatted as Profile[]);
 
       const { data: access } = await supabase
         .from('user_hub_access')

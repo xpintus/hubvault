@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { db, SyncQueueItem } from './db';
+import { db, getUserDB, getActiveUserId, SyncQueueItem } from './db';
 import { getPendingQueue, markQueueStatus, removeFromQueue } from './syncQueue';
 
 export type ConflictAction = 'keep_local' | 'keep_server' | 'merge';
@@ -33,30 +33,35 @@ function notifySyncStatus(status: boolean) {
   }
 }
 
-export async function processSyncQueue(force = false) {
+export async function processSyncQueue(force = false, userId?: string) {
   if (isSyncing) return;
   if (!navigator.onLine && !force) return;
 
-  const queue = await getPendingQueue();
+  const activeUid = userId || getActiveUserId();
+  if (!activeUid) return;
+
+  const queue = await getPendingQueue(activeUid);
   if (queue.length === 0) return;
 
   notifySyncStatus(true);
 
   for (const item of queue) {
+    if (item.user_id !== activeUid) continue;
+
     // Exponential backoff based on retry count
     if (item.retry_count > 0 && !force) {
-        const backoffMs = Math.min(1000 * Math.pow(2, item.retry_count), 60000);
-        const itemTime = item.payload?.updated_at
-          ? new Date(item.payload.updated_at).getTime()
-          : new Date(item.created_at).getTime();
-        const elapsed = Date.now() - itemTime;
-        if (elapsed < backoffMs) {
-            continue; // Skip this item for now
-        }
+      const backoffMs = Math.min(1000 * Math.pow(2, item.retry_count), 60000);
+      const itemTime = item.payload?.updated_at
+        ? new Date(item.payload.updated_at).getTime()
+        : new Date(item.created_at).getTime();
+      const elapsed = Date.now() - itemTime;
+      if (elapsed < backoffMs) {
+        continue; // Skip this item for now
+      }
     }
 
     try {
-      await markQueueStatus(item.id, 'syncing');
+      await markQueueStatus(item.id, 'syncing', undefined, activeUid);
 
       // 1. Conflict Detection for UPDATEs
       if (item.operation === 'UPDATE' && item.payload.id) {
@@ -77,7 +82,7 @@ export async function processSyncQueue(force = false) {
           // If server is newer and we have a local timestamp
           if (localDate > 0 && serverDate > localDate) {
             // Conflict found!
-            await markQueueStatus(item.id, 'conflict', 'Server data is newer');
+            await markQueueStatus(item.id, 'conflict', 'Server data is newer', activeUid);
             if (onConflict) {
               onConflict({ queueItem: item, serverData, localData: item.payload });
             }
@@ -111,21 +116,21 @@ export async function processSyncQueue(force = false) {
       // 3. Handle Result
       if (error) {
         if (error.code === '23505' && item.operation === 'INSERT') {
-           // Duplicate ID, already synced before
-           await removeFromQueue(item.id);
+          // Duplicate ID, already synced before
+          await removeFromQueue(item.id, activeUid);
         } else if (error.code === 'PGRST116' && (item.operation === 'UPDATE' || item.operation === 'DELETE')) {
-           // Record doesn't exist on server, clear queue item
-           await removeFromQueue(item.id);
+          // Record doesn't exist on server, clear queue item
+          await removeFromQueue(item.id, activeUid);
         } else {
-           throw new Error(error.message);
+          throw new Error(error.message);
         }
       } else {
-        await removeFromQueue(item.id);
+        await removeFromQueue(item.id, activeUid);
       }
 
     } catch (err: any) {
       console.error(`Sync error for item ${item.id}:`, err);
-      await markQueueStatus(item.id, 'failed', err.message);
+      await markQueueStatus(item.id, 'failed', err.message, activeUid);
     }
   }
 
@@ -134,15 +139,16 @@ export async function processSyncQueue(force = false) {
 
 export async function resolveConflict(conflict: SyncConflict, action: ConflictAction, mergedPayload?: any) {
   const { queueItem } = conflict;
+  const userDb = getUserDB(queueItem.user_id);
 
   if (action === 'keep_server') {
     // Discard local change
-    await removeFromQueue(queueItem.id);
+    await removeFromQueue(queueItem.id, queueItem.user_id);
 
     // Also need to update local Dexie DB with server data
-    const dexieTable = (db as any)[queueItem.table_name];
+    const dexieTable = (userDb as any)[queueItem.table_name];
     if (dexieTable && conflict.serverData) {
-        await dexieTable.put(conflict.serverData);
+      await dexieTable.put(conflict.serverData);
     }
 
   } else if (action === 'keep_local' || action === 'merge') {
@@ -152,20 +158,20 @@ export async function resolveConflict(conflict: SyncConflict, action: ConflictAc
     // Update local updated_at to ensure it overrides server on next try
     newPayload.updated_at = new Date().toISOString();
 
-    await db.sync_queue.update(queueItem.id, {
-        payload: newPayload,
-        status: 'pending',
-        retry_count: 0
+    await userDb.sync_queue.update(queueItem.id, {
+      payload: newPayload,
+      status: 'pending',
+      retry_count: 0
     });
 
     // Update local Dexie DB
-    const dexieTable = (db as any)[queueItem.table_name];
+    const dexieTable = (userDb as any)[queueItem.table_name];
     if (dexieTable) {
-        await dexieTable.put(newPayload);
+      await dexieTable.put(newPayload);
     }
 
     // Retry sync
-    processSyncQueue(true);
+    processSyncQueue(true, queueItem.user_id);
   }
 }
 

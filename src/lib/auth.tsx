@@ -2,6 +2,9 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Profile } from '@/types';
+import { setActiveUserId } from './offline/db';
+import { getQueueCount } from './offline/syncQueue';
+import { confirm } from './confirm';
 
 interface AuthContextValue {
   session: Session | null;
@@ -31,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (uid: string) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*, hub: hubs!profiles_hub_id_fkey(*)')
+      .select('id, name, email, role, hub_id, can_create_hub, phone, company, location, created_at, is_approved, license_status, license_expires_at, license_activated_at, hub_credits, referral_code, referred_by, referral_earnings, hub: hubs!profiles_hub_id_fkey(*)')
       .eq('id', uid)
       .maybeSingle();
     if (error) {
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setSession(data.session);
+      setActiveUserId(data.session?.user?.id ?? null);
       if (data.session?.user) {
         fetchProfile(data.session.user.id).finally(() => mounted && setLoading(false));
       } else {
@@ -59,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
       setSession(newSession);
+      setActiveUserId(newSession?.user?.id ?? null);
       if (event === 'SIGNED_OUT' || !newSession?.user) {
         setProfile(null);
         setLoading(false);
@@ -69,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (mounted) setLoading(false);
           if (!fetched) {
             await supabase.auth.signOut();
+            setActiveUserId(null);
             setSession(null);
             setProfile(null);
           }
@@ -91,16 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (data.session) {
       setSession(data.session);
+      setActiveUserId(data.session.user.id);
       const fetched = await fetchProfile(data.session.user.id);
       setLoading(false);
       if (!fetched) {
         await supabase.auth.signOut();
+        setActiveUserId(null);
         setSession(null);
         setProfile(null);
         return { error: 'Your account has been removed. Please contact your administrator.' };
       }
       if (fetched.role === 'trial_user' && fetched.is_approved === false) {
         await supabase.auth.signOut();
+        setActiveUserId(null);
         setSession(null);
         setProfile(null);
         return { error: 'Your account is pending admin approval. Please contact the administrator.' };
@@ -108,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check license status for hub_admin
       if (fetched.role === 'hub_admin' && fetched.license_status === 'expired') {
         await supabase.auth.signOut();
+        setActiveUserId(null);
         setSession(null);
         setProfile(null);
         return { error: 'Your license has expired. Please contact your administrator for a new activation code.' };
@@ -116,11 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const expiresAt = fetched.license_expires_at ? new Date(fetched.license_expires_at) : null;
         if (expiresAt && expiresAt < new Date()) {
           await supabase.auth.signOut();
+          setActiveUserId(null);
           setSession(null);
           setProfile(null);
           return { error: 'Your 24-hour activation window has passed. Please contact your administrator for a new activation code.' };
         }
-        // Pending hub_admins go straight to dashboard — activation popup shows there
         return { error: null };
       }
     }
@@ -140,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (data.session) {
       setSession(data.session);
+      setActiveUserId(data.session.user.id);
       await fetchProfile(data.session.user.id);
     }
     setLoading(false);
@@ -147,10 +158,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
+    const uid = session?.user?.id;
+    if (uid) {
+      const pendingCount = await getQueueCount(uid);
+      if (pendingCount > 0) {
+        const ok = await confirm({
+          title: 'Unsynced Changes Warning',
+          message: `You have ${pendingCount} unsynced offline change${pendingCount > 1 ? 's' : ''}. Signing out will switch user context. Unsynced changes remain saved on this device for your account, but will not sync until you log back in. Are you sure you want to sign out?`,
+          confirmLabel: 'Sign Out',
+          danger: true,
+        });
+        if (!ok) return;
+      }
+    }
     await supabase.auth.signOut();
+    setActiveUserId(null);
     setProfile(null);
     setSession(null);
-  }, []);
+  }, [session]);
 
   const refreshProfile = useCallback(async () => {
     if (session?.user) await fetchProfile(session.user.id);

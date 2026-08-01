@@ -42,7 +42,7 @@ const NAV: NavItem[] = [
   { to: '/dues', label: 'Dues', icon: AlertCircle, roles: ['super_admin', 'hub_admin', 'supervisor'] },
   { to: '/deposits', label: 'CMS Deposition', icon: Landmark, roles: ['super_admin', 'hub_admin', 'supervisor'] },
   { to: '/recovery', label: 'Recovery', icon: RotateCcw, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
-  { to: '/users', label: 'Users & Access', icon: UserCog, roles: ['super_admin', 'hub_admin', 'supervisor'] },
+  { to: '/users', label: 'Users & Access', icon: UserCog, roles: ['super_admin', 'hub_admin'] },
   { to: '/trial-users', label: 'Trial Users', icon: UserPlus, roles: ['super_admin'] },
   { to: '/messages', label: 'Messages', icon: Mail, roles: ['super_admin'] },
   { to: '/purchases', label: 'Purchase Requests', icon: ShoppingBag, roles: ['super_admin'] },
