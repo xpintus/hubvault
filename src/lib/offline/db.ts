@@ -1,4 +1,4 @@
-import { CollectionEntry,Collector,DenominationInput,Due,Party,PartyTransaction,Recovery } from '@/types';
+import { CollectionEntry,Collector,DailyClosing,DenominationInput,Due,Party,PartyTransaction,Recovery } from '@/types';
 import Dexie,{ Table } from 'dexie';
 
 // Extend types to include offline tracking fields
@@ -40,11 +40,15 @@ export interface OfflinePartyTransaction extends PartyTransaction {
   created_offline?: boolean;
 }
 
+export interface OfflineDailyClosing extends DailyClosing {
+  created_offline?: boolean;
+}
+
 export interface SyncQueueItem {
   id: string; // client generated UUID for the queue item
   user_id: string;
   hub_id: string;
-  table_name: 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations' | 'parties' | 'party_transactions';
+  table_name: 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations' | 'parties' | 'party_transactions' | 'daily_closings';
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
   payload: any;
   created_at: string;
@@ -129,6 +133,7 @@ export class HubVaultDB extends Dexie {
   denominations!: Table<OfflineDenomination, string>;
   parties!: Table<OfflineParty, string>;
   party_transactions!: Table<OfflinePartyTransaction, string>;
+  daily_closings!: Table<OfflineDailyClosing, string>;
   sync_queue!: Table<SyncQueueItem, string>;
 
   constructor(dbName = 'HubVaultDB_default') {
@@ -156,6 +161,18 @@ export class HubVaultDB extends Dexie {
       sync_queue: 'id, user_id, hub_id, table_name, operation, status, created_at'
     });
 
+    this.version(3).stores({
+      collection_entries: 'id, collection_date, collector_id, hub_id, status, client_id, updated_at',
+      collectors: 'id, employee_id, hub_id, profile_id, status, client_id, updated_at',
+      dues: 'id, collector_id, hub_id, status, client_id, updated_at',
+      recoveries: 'id, collector_id, hub_id, due_id, client_id, updated_at',
+      denominations: 'id, collection_entry_id, client_id, updated_at',
+      parties: 'id, hub_id, name, mobile, client_id, updated_at',
+      party_transactions: 'id, party_id, hub_id, transaction_date, client_id, updated_at',
+      daily_closings: 'id, closing_date, collector_id, hub_id, status, submitted_by, updated_at',
+      sync_queue: 'id, user_id, hub_id, table_name, operation, status, created_at'
+    });
+
     if (!isIndexedDbSupported) {
       (this as any).collection_entries = new InMemoryTable<OfflineCollectionEntry>();
       (this as any).collectors = new InMemoryTable<OfflineCollector>();
@@ -164,6 +181,7 @@ export class HubVaultDB extends Dexie {
       (this as any).denominations = new InMemoryTable<OfflineDenomination>();
       (this as any).parties = new InMemoryTable<OfflineParty>();
       (this as any).party_transactions = new InMemoryTable<OfflinePartyTransaction>();
+      (this as any).daily_closings = new InMemoryTable<OfflineDailyClosing>();
       (this as any).sync_queue = new InMemoryTable<SyncQueueItem>();
     }
   }
@@ -177,6 +195,7 @@ export class HubVaultDB extends Dexie {
       this.denominations.clear(),
       this.parties.clear(),
       this.party_transactions.clear(),
+      this.daily_closings.clear(),
       this.sync_queue.clear()
     ]);
   }

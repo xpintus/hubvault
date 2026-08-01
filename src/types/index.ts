@@ -84,7 +84,59 @@ export interface Collector {
   hub_id: string;
   status: CollectorStatus;
   created_at: string;
+  profile_id?: string | null;
   hub?: Hub | null;
+}
+
+export type DailyClosingStatus = 'submitted' | 'approved' | 'rejected' | 'reopened';
+
+export interface DailyClosing {
+  id: string;
+  closing_date: string;
+  collector_id: string;
+  hub_id: string;
+  expected_cash: number;
+  actual_cash: number;
+  online_amount: number;
+  denomination_total: number;
+  shortage_excess: number;
+  note_500: number;
+  note_200: number;
+  note_100: number;
+  note_50: number;
+  note_20: number;
+  note_10: number;
+  note_5: number;
+  note_2: number;
+  note_1: number;
+  denomination_verified: boolean;
+  source_snapshot: Record<string, unknown>;
+  notes: string | null;
+  rejection_reason: string | null;
+  status: DailyClosingStatus;
+  submitted_by: string;
+  submitted_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  reopened_by: string | null;
+  reopened_at: string | null;
+  created_at: string;
+  updated_at: string;
+  collector?: Collector | null;
+  hub?: Hub | null;
+}
+
+export interface DailyClosingHistory {
+  id: string;
+  daily_closing_id: string;
+  action: 'submitted' | 'approved' | 'rejected' | 'reopened' | 'resubmitted';
+  from_status: DailyClosingStatus | null;
+  to_status: DailyClosingStatus;
+  reason: string | null;
+  snapshot: Record<string, unknown>;
+  performed_by: string;
+  created_at: string;
+  performer?: Profile | null;
 }
 
 export interface Denomination {

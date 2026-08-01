@@ -41,6 +41,7 @@ const Messages = lazy(() => import('@/pages/Messages'));
 const Purchases = lazy(() => import('@/pages/Purchases'));
 const AuditLogs = lazy(() => import('@/pages/AuditLogs'));
 const Deposits = lazy(() => import('@/pages/Deposits'));
+const DailyClosing = lazy(() => import('@/pages/DailyClosing'));
 const Licenses = lazy(() => import('@/pages/Licenses'));
 const ReferEarn = lazy(() => import('@/pages/ReferEarn'));
 const Payouts = lazy(() => import('@/pages/Payouts'));
@@ -157,6 +158,7 @@ export default function App() {
                   <Route path="/payouts" element={<Suspense fallback={<FullPageSpinner message="Loading payouts…" />}><Payouts /></Suspense>} />
                   <Route path="/settings" element={<Suspense fallback={<FullPageSpinner message="Loading settings…" />}><SettingsPage /></Suspense>} />
                   <Route path="/deposits" element={<Suspense fallback={<FullPageSpinner message="Loading deposits…" />}><Deposits /></Suspense>} />
+                  <Route path="/daily-closing" element={<Suspense fallback={<FullPageSpinner message="Loading daily closing…" />}><DailyClosing /></Suspense>} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

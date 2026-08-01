@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getActiveUserId,getUserDB,SyncQueueItem } from './db';
 
 type OperationType = 'INSERT' | 'UPDATE' | 'DELETE';
-type TableName = 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations';
+type TableName = 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations' | 'daily_closings';
 
 export async function addToQueue(
   userId: string,
