@@ -131,6 +131,18 @@ export class HubVaultDB extends Dexie {
       dues: 'id, collector_id, hub_id, status, client_id, updated_at',
       recoveries: 'id, collector_id, hub_id, due_id, client_id, updated_at',
       denominations: 'id, collection_entry_id, client_id, updated_at',
+      sync_queue: 'id, user_id, hub_id, table_name, operation, status, created_at'
+    });
+
+    // KhataBook added two object stores after the original database shipped.
+    // A Dexie schema change must increment the version or existing browsers keep
+    // the v1 schema and `db.parties` / `db.party_transactions` fail at runtime.
+    this.version(2).stores({
+      collection_entries: 'id, collection_date, collector_id, hub_id, status, client_id, updated_at',
+      collectors: 'id, employee_id, hub_id, status, client_id, updated_at',
+      dues: 'id, collector_id, hub_id, status, client_id, updated_at',
+      recoveries: 'id, collector_id, hub_id, due_id, client_id, updated_at',
+      denominations: 'id, collection_entry_id, client_id, updated_at',
       parties: 'id, hub_id, name, mobile, client_id, updated_at',
       party_transactions: 'id, party_id, hub_id, transaction_date, client_id, updated_at',
       sync_queue: 'id, user_id, hub_id, table_name, operation, status, created_at'

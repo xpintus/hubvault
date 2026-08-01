@@ -12,6 +12,21 @@ import {
 import { db, SyncQueueItem } from './offline/db';
 import { v4 as uuidv4 } from 'uuid';
 
+/** Only connectivity failures are safe to treat as offline writes. */
+export function isOfflineFallbackError(error: unknown): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+  if (error instanceof TypeError) return true;
+
+  const message = error instanceof Error
+    ? error.message
+    : String((error as { message?: unknown } | null)?.message || '');
+  return /failed to fetch|networkerror|network request failed|load failed/i.test(message);
+}
+
+function rethrowUnlessOffline(error: unknown): void {
+  if (!isOfflineFallbackError(error)) throw error;
+}
+
 /**
  * Formats a currency amount into standard INR notation
  */
@@ -282,6 +297,7 @@ export async function fetchParties(hubId?: string | null): Promise<Party[]> {
       return data as Party[];
     }
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Fetching parties from Supabase failed, falling back to local database:', err);
   }
 
@@ -316,6 +332,7 @@ export async function fetchPartyTransactions(partyId?: string, hubId?: string | 
       return data as PartyTransaction[];
     }
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Fetching party transactions from Supabase failed, falling back to local database:', err);
   }
 
@@ -354,6 +371,7 @@ export async function createParty(input: PartyInput, userId?: string): Promise<P
     await db.parties.put(data);
     return data as Party;
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Supabase party creation failed, saving to sync queue for offline sync:', err);
     await db.parties.put({ ...newParty, created_offline: true });
     if (userId && input.hub_id) {
@@ -396,6 +414,7 @@ export async function updateParty(id: string, input: Partial<PartyInput>, userId
       await db.parties.put({ ...existing, ...updates });
     }
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Supabase party update failed, queuing for offline sync:', err);
     const existing = await db.parties.get(id);
     if (existing) {
@@ -424,6 +443,7 @@ export async function deleteParty(id: string, userId?: string, hubId?: string): 
     if (error) throw error;
     await db.parties.delete(id);
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Supabase party deletion failed, queuing for offline sync:', err);
     await db.parties.delete(id);
     if (userId && hubId) {
@@ -467,6 +487,7 @@ export async function createPartyTransaction(input: PartyTransactionInput, userI
     await db.party_transactions.put(data);
     return data as PartyTransaction;
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Supabase party transaction creation failed, saving offline:', err);
     await db.party_transactions.put({ ...newTx, created_offline: true });
     if (userId && input.hub_id) {
@@ -508,6 +529,7 @@ export async function updatePartyTransaction(id: string, input: Partial<PartyTra
       await db.party_transactions.put({ ...existing, ...updates });
     }
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Supabase party transaction update failed, queuing offline:', err);
     const existing = await db.party_transactions.get(id);
     if (existing) {
@@ -536,6 +558,7 @@ export async function deletePartyTransaction(id: string, userId?: string, hubId?
     if (error) throw error;
     await db.party_transactions.delete(id);
   } catch (err) {
+    rethrowUnlessOffline(err);
     console.warn('Supabase party transaction deletion failed, queuing offline:', err);
     await db.party_transactions.delete(id);
     if (userId && hubId) {
