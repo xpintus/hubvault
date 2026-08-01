@@ -46,6 +46,12 @@ const ReferEarn = lazy(() => import('@/pages/ReferEarn'));
 const Payouts = lazy(() => import('@/pages/Payouts'));
 const SettingsPage = lazy(() => import('@/pages/Settings'));
 
+const KhataBookLayout = lazy(() => import('@/pages/khatabook/KhataBookLayout'));
+const KhataBookDashboard = lazy(() => import('@/pages/khatabook/Dashboard'));
+const KhataBookParties = lazy(() => import('@/pages/khatabook/Parties'));
+const KhataBookLedger = lazy(() => import('@/pages/khatabook/Ledger'));
+const KhataBookReports = lazy(() => import('@/pages/khatabook/Reports'));
+
 import {
   Wallet, LayoutDashboard, FileBarChart, Building2, Users as UsersIcon,
   AlertCircle, RotateCcw, UserCog, Lock, LogOut, Menu, Calendar, UserPlus,
@@ -122,6 +128,13 @@ export default function App() {
                 {/* Protected app routes */}
                 <Route element={<ProtectedRoutes />}>
                   <Route path="/dashboard" element={<Suspense fallback={<FullPageSpinner message="Loading dashboard…" />}><Dashboard /></Suspense>} />
+                  <Route path="/khatabook" element={<Suspense fallback={<FullPageSpinner message="Loading KhataBook…" />}><KhataBookLayout /></Suspense>}>
+                    <Route index element={<Navigate to="/khatabook/dashboard" replace />} />
+                    <Route path="dashboard" element={<KhataBookDashboard />} />
+                    <Route path="parties" element={<KhataBookParties />} />
+                    <Route path="ledger" element={<KhataBookLedger />} />
+                    <Route path="reports" element={<KhataBookReports />} />
+                  </Route>
                   <Route path="/reports" element={<Suspense fallback={<FullPageSpinner message="Loading reports…" />}><Reports /></Suspense>} />
                   <Route path="/hubs" element={<Suspense fallback={<FullPageSpinner message="Loading hubs…" />}><Hubs /></Suspense>} />
                   <Route path="/collectors" element={<Suspense fallback={<FullPageSpinner message="Loading employees…" />}><Collectors /></Suspense>} />

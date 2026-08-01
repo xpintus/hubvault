@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { CollectionEntry, Collector, Due, Recovery, DenominationInput } from '@/types';
+import { CollectionEntry, Collector, Due, Recovery, DenominationInput, Party, PartyTransaction } from '@/types';
 
 // Extend types to include offline tracking fields
 export interface OfflineCollectionEntry extends CollectionEntry {
@@ -30,11 +30,21 @@ export interface OfflineDenomination extends DenominationInput {
   updated_at?: string;
 }
 
+export interface OfflineParty extends Party {
+  client_id?: string;
+  created_offline?: boolean;
+}
+
+export interface OfflinePartyTransaction extends PartyTransaction {
+  client_id?: string;
+  created_offline?: boolean;
+}
+
 export interface SyncQueueItem {
   id: string; // client generated UUID for the queue item
   user_id: string;
   hub_id: string;
-  table_name: 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations';
+  table_name: 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations' | 'parties' | 'party_transactions';
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
   payload: any;
   created_at: string;
@@ -109,6 +119,8 @@ export class HubVaultDB extends Dexie {
   dues!: Table<OfflineDue, string>;
   recoveries!: Table<OfflineRecovery, string>;
   denominations!: Table<OfflineDenomination, string>;
+  parties!: Table<OfflineParty, string>;
+  party_transactions!: Table<OfflinePartyTransaction, string>;
   sync_queue!: Table<SyncQueueItem, string>;
 
   constructor(dbName = 'HubVaultDB_default') {
@@ -119,6 +131,8 @@ export class HubVaultDB extends Dexie {
       dues: 'id, collector_id, hub_id, status, client_id, updated_at',
       recoveries: 'id, collector_id, hub_id, due_id, client_id, updated_at',
       denominations: 'id, collection_entry_id, client_id, updated_at',
+      parties: 'id, hub_id, name, mobile, client_id, updated_at',
+      party_transactions: 'id, party_id, hub_id, transaction_date, client_id, updated_at',
       sync_queue: 'id, user_id, hub_id, table_name, operation, status, created_at'
     });
 
@@ -128,6 +142,8 @@ export class HubVaultDB extends Dexie {
       (this as any).dues = new InMemoryTable<OfflineDue>();
       (this as any).recoveries = new InMemoryTable<OfflineRecovery>();
       (this as any).denominations = new InMemoryTable<OfflineDenomination>();
+      (this as any).parties = new InMemoryTable<OfflineParty>();
+      (this as any).party_transactions = new InMemoryTable<OfflinePartyTransaction>();
       (this as any).sync_queue = new InMemoryTable<SyncQueueItem>();
     }
   }
@@ -139,6 +155,8 @@ export class HubVaultDB extends Dexie {
       this.dues.clear(),
       this.recoveries.clear(),
       this.denominations.clear(),
+      this.parties.clear(),
+      this.party_transactions.clear(),
       this.sync_queue.clear()
     ]);
   }

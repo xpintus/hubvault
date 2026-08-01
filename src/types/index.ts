@@ -354,3 +354,124 @@ export interface CmsDepositInput {
   remarks?: string | null;
 }
 
+// ==========================================
+// KhataBook (Party Ledger) Types
+// ==========================================
+
+export type OpeningBalanceType = 'receivable' | 'payable';
+
+export interface Party {
+  id: string;
+  hub_id: string | null;
+  name: string;
+  company_name: string | null;
+  mobile: string | null;
+  address: string | null;
+  gstin: string | null;
+  opening_balance: number;
+  opening_balance_type: OpeningBalanceType;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  hub?: Hub | null;
+}
+
+export interface PartyInput {
+  hub_id?: string | null;
+  name: string;
+  company_name?: string | null;
+  mobile?: string | null;
+  address?: string | null;
+  gstin?: string | null;
+  opening_balance: number;
+  opening_balance_type: OpeningBalanceType;
+  notes?: string | null;
+}
+
+export interface PartyTransaction {
+  id: string;
+  party_id: string;
+  hub_id: string | null;
+  transaction_date: string;
+  amount_received: number;
+  cash_paid: number;
+  online_paid: number;
+  payment_reference: string | null;
+  remarks: string | null;
+  attachment_url: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  party?: Party | null;
+  hub?: Hub | null;
+}
+
+export interface PartyTransactionInput {
+  party_id: string;
+  hub_id?: string | null;
+  transaction_date: string;
+  amount_received: number;
+  cash_paid: number;
+  online_paid: number;
+  payment_reference?: string | null;
+  remarks?: string | null;
+  attachment_url?: string | null;
+}
+
+export interface PartyAdjustment {
+  id: string;
+  party_id: string;
+  due_transaction_id: string | null;
+  payment_transaction_id: string | null;
+  amount: number;
+  created_at: string;
+}
+
+export type PartyLedgerStatus = 'settled' | 'pending' | 'excess' | 'partial';
+
+export interface PartyLedgerEntry extends PartyTransaction {
+  total_paid: number;
+  difference: number;
+  running_balance: number;
+  status: PartyLedgerStatus;
+  status_label: string;
+  remaining_amount: number;
+  adjusted_amount: number;
+}
+
+export interface PartySummaryCardData {
+  party: Party;
+  total_received: number;
+  cash_paid: number;
+  online_paid: number;
+  total_paid: number;
+  current_balance: number;
+  last_transaction_date: string | null;
+  status: 'pending' | 'excess' | 'settled';
+  balance_text: string;
+}
+
+export interface KhataBookSummary {
+  total_parties: number;
+  total_received: number;
+  total_cash_paid: number;
+  total_online_paid: number;
+  total_paid: number;
+  current_pending: number;
+  current_excess: number;
+  settled_parties: number;
+  today_transactions_count: number;
+}
+
+export interface KhataBookFilterState {
+  party_id: string;
+  from_date: string;
+  to_date: string;
+  status: 'all' | 'pending' | 'excess' | 'settled' | 'cash' | 'online';
+  search_query: string;
+}
+
+
