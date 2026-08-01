@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (uid: string): Promise<{ profile: Profile | null; error: any }> => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, email, role, hub_id, can_create_hub, phone, company, location, created_at, is_approved, license_status, license_expires_at, license_activated_at, hub_credits, referral_code, referred_by, referral_earnings, hub: hubs!profiles_hub_id_fkey(*)')
+      .select('id, name, email, role, hub_id, can_create_hub, phone, company, location, created_at, is_approved, license_status, license_expires_at, license_activated_at, hub_add_credits, referral_code, referred_by, referral_earnings, hub: hubs!profiles_hub_id_fkey(*)')
       .eq('id', uid)
       .maybeSingle();
     if (error) {
