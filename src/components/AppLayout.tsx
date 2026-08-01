@@ -23,6 +23,7 @@ const TITLES: Record<string, string> = {
   '/dues': 'Dues Management',
   '/recovery': 'Recovery Management',
   '/deposits': 'CMS Deposition',
+  '/daily-closing': 'Daily Closing',
   '/users': 'User & Access Management',
   '/messages': 'Messages',
   '/purchases': 'Purchase Requests',
