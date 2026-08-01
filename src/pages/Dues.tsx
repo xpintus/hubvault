@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
 import { Button, Card, EmptyState, Select, Skeleton, Spinner, Input } from '@/components/ui/primitives';
 import Modal from '@/components/ui/Modal';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { confirm } from '@/lib/confirm';
 import { Due, DueStatus, DUE_STATUS_LABELS, Collector, Recovery } from '@/types';
 import { formatINR, formatDate, toISODate } from '@/lib/format';
@@ -24,8 +25,12 @@ import {
 } from '@/lib/recoveryService';
 import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
-import * as XLSX from 'xlsx';
 import { logAudit } from '@/lib/audit';
+
+import EmployeeSummary from '@/components/dues/EmployeeSummary';
+import EmployeeLedgerModal from '@/components/dues/EmployeeLedgerModal';
+import RecoveryModal from '@/components/dues/RecoveryModal';
+import DueTable from '@/components/dues/DueTable';
 
 const statusConfig: Record<DueStatus, { color: string; dot: string; badge: string; label: string }> = {
   outstanding: {
@@ -495,20 +500,17 @@ export default function Dues() {
     });
   }, [rawLedgerEvents, ledgerStatusFilter, ledgerSearch, ledgerStartDate, ledgerEndDate]);
 
-  const handleExportLedgerExcel = () => {
-    if (!selectedLedgerCollector || filteredLedgerEvents.length === 0) {
-      toast.warning('No ledger events to export');
-      return;
-    }
-    const rows = filteredLedgerEvents.map((evt) => ({
-      Date: formatDate(evt.dateStr),
-      Type: evt.typeLabel,
-      'Original Due': evt.originalDue !== null ? evt.originalDue : '—',
-      'Recovered Amount': evt.recovered !== null ? evt.recovered : '—',
-      'Running Outstanding': evt.runningBalance,
-      'Payment Mode': evt.paymentMode,
-      Status: evt.eventType === 'recovery' ? 'Recovered' : DUE_STATUS_LABELS[evt.status as DueStatus] || evt.status,
-      Remarks: evt.remarks,
+  const handleExportLedgerExcel = async () => {
+    if (!selectedLedgerCollector) return;
+    const XLSX = await import('xlsx');
+    const rows = filteredLedgerEvents.map((e) => ({
+      Date: e.dateStr,
+      Type: e.typeLabel,
+      'Original Due': e.originalDue ?? '',
+      Recovered: e.recovered ?? '',
+      'Running Balance': e.runningBalance,
+      Mode: e.paymentMode,
+      Remarks: e.remarks,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -827,7 +829,8 @@ export default function Dues() {
   };
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden">
+    <ErrorBoundary fallbackTitle="Dues Page Error">
+      <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* 1. Header & Main Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -1815,5 +1818,6 @@ export default function Dues() {
         </Modal>
       )}
     </div>
+    </ErrorBoundary>
   );
 }

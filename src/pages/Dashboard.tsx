@@ -16,6 +16,7 @@ import DenominationPanel from '@/components/DenominationPanel';
 import CollectionEntryModal from '@/components/CollectionEntryModal';
 import ImportModal from '@/components/ImportModal';
 import Modal from '@/components/ui/Modal';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { confirm } from '@/lib/confirm';
 import {
   CollectionEntry, Collector, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS, EntryStatus, Due, Recovery,
@@ -24,25 +25,19 @@ import { formatINR, formatDate, formatDateLong, toISODate } from '@/lib/format';
 import { exportEntriesToExcel } from '@/lib/excel';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
-import { computePendingAmount, computeExcessAmount } from '@/lib/calc';
+import { safeAmount, normalizeRecoveryMode, computePendingAmount, computeExcessAmount } from '@/lib/financeCalculations';
 import { subDays, addDays, isToday as isDateToday, parseISO } from 'date-fns';
 import { clsx } from 'clsx';
 
+import KPICard from '@/components/dashboard/KPICard';
+import ReconciliationCard from '@/components/dashboard/ReconciliationCard';
+import DateNavigation from '@/components/dashboard/DateNavigation';
+import DenominationSummary from '@/components/dashboard/DenominationSummary';
+import AvailableCollectionModal from '@/components/dashboard/AvailableCollectionModal';
+import StaffActivityTable, { RowHoverPopup } from '@/components/dashboard/StaffActivityTable';
+import StaffActivityMobile from '@/components/dashboard/StaffActivityMobile';
+
 type FilterStatus = 'all' | EntryStatus;
-
-const safeAmount = (val: any): number => {
-  if (val === null || val === undefined) return 0;
-  const num = typeof val === 'number' ? val : parseFloat(String(val));
-  return isNaN(num) ? 0 : num;
-};
-
-const normalizeRecoveryMode = (mode: string | null | undefined): 'cash' | 'online' | 'other' => {
-  if (!mode) return 'other';
-  const m = mode.toLowerCase().trim();
-  if (m === 'cash') return 'cash';
-  if (m === 'online' || m === 'upi' || m === 'bank_transfer' || m === 'net_banking' || m === 'qr') return 'online';
-  return 'other';
-};
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -539,7 +534,8 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden">
+    <ErrorBoundary fallbackTitle="Dashboard Error">
+      <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between border-b border-neutral-200/80 dark:border-neutral-800/80 pb-5">
         <div className="min-w-0 flex-1">
@@ -1161,6 +1157,7 @@ export default function Dashboard() {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 }
 

@@ -1,6 +1,4 @@
-import * as XLSX from 'xlsx';
 import { CollectionEntry, EntryStatus, OnlinePaymentMode, STATUS_LABELS } from '@/types';
-import { formatINR } from './format';
 
 export interface ExportRow {
   Date: string;
@@ -16,7 +14,8 @@ export interface ExportRow {
   Remarks: string;
 }
 
-export function exportEntriesToExcel(entries: CollectionEntry[], filename: string) {
+export async function exportEntriesToExcel(entries: CollectionEntry[], filename: string) {
+  const XLSX = await import('xlsx');
   const rows: ExportRow[] = entries.map((e) => ({
     Date: e.collection_date,
     Hub: e.hub?.name ?? '',
@@ -37,7 +36,8 @@ export function exportEntriesToExcel(entries: CollectionEntry[], filename: strin
   XLSX.writeFile(wb, filename);
 }
 
-export function downloadImportTemplate() {
+export async function downloadImportTemplate() {
+  const XLSX = await import('xlsx');
   const sample = [
     {
       Date: '2025-01-15',
@@ -94,9 +94,7 @@ function parseDateField(raw: unknown): string | null {
     return `${y}-${m}-${d}`;
   }
   const s = String(raw).trim();
-  // yyyy-mm-dd
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // dd/mm/yyyy or dd-mm-yyyy
   const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
   if (m) {
     const d = m[1].padStart(2, '0');
@@ -113,6 +111,7 @@ function parseNum(raw: unknown): number | null {
 }
 
 export async function parseImportFile(file: File): Promise<ImportPreview> {
+  const XLSX = await import('xlsx');
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array', cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
@@ -172,5 +171,3 @@ export function statusFromGap(gap: number, hasCollection: boolean): EntryStatus 
   if (gap < 0) return 'shortage';
   return 'excess';
 }
-
-
