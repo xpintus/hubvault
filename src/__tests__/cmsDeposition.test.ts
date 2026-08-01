@@ -27,14 +27,20 @@ describe('CMS Deposition Calculations', () => {
       deposit_date: '2025-01-10',
       collection_date: '2025-01-10',
       hub_id: 'hub-1',
+      total_cash_collected: 30000,
+      cash_deposited: 30000,
+      online_amount: 20000,
+      total_expected_cms: 50000,
       total_deposited: 50000,
       cash_submitted: 30000,
       online_submitted: 20000,
-      cash_deposited: 30000,
+      short_amount: 0,
       reference_number: null,
       bank_name: null,
       remarks: null,
+      created_by: 'user-1',
       created_at: '2025-01-10T00:00:00Z',
+      updated_at: '2025-01-10T00:00:00Z',
     };
     expect(getDepositAmount(depositTotal)).toBe(50000);
     expect(getCashSubmittedAmount(depositTotal)).toBe(30000);

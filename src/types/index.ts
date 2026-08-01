@@ -253,6 +253,7 @@ export const DUE_STATUS_LABELS: Record<DueStatus, string> = {
   outstanding: 'Outstanding',
   partially_recovered: 'Partially Recovered',
   fully_recovered: 'Fully Recovered',
+  cancelled: 'Cancelled',
 };
 
 export const RECOVERY_PAYMENT_MODE_LABELS: Record<RecoveryPaymentMode, string> = {

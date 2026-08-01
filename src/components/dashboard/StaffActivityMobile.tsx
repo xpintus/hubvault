@@ -1,5 +1,5 @@
 import React from 'react';
-import StatusBadge from '@/StatusBadge';
+import StatusBadge from '@/components/StatusBadge';
 import { CollectionEntry } from '@/types';
 import { formatINR } from '@/lib/format';
 import { Eye, Pencil, Trash2 } from 'lucide-react';

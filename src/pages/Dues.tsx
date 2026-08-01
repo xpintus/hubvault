@@ -801,7 +801,8 @@ export default function Dues() {
     }
   };
 
-  const handleExportDuesExcel = () => {
+  const handleExportDuesExcel = async () => {
+    const XLSX = await import('xlsx');
     const rows = filtered.map(d => ({
       'Due Date': formatDate(d.due_date),
       'Employee Name': d.collector?.name || '—',

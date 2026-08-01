@@ -1,5 +1,5 @@
 import React from 'react';
-import StatusBadge from '@/StatusBadge';
+import StatusBadge from '@/components/StatusBadge';
 import { CollectionEntry, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS } from '@/types';
 import { formatINR } from '@/lib/format';
 import { computePendingAmount, computeExcessAmount, safeAmount } from '@/lib/financeCalculations';
