@@ -522,12 +522,12 @@ export default function Dashboard() {
   ];
 
   const accentMap: Record<string, { icon: string; ring: string; text: string }> = {
-    brand: { icon: 'bg-brand-600/15 text-brand-600 dark:text-brand-400', ring: 'ring-brand-600/30', text: 'text-brand-600 dark:text-brand-400' },
-    emerald: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
-    blue: { icon: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', ring: 'ring-blue-500/20', text: 'text-blue-600 dark:text-blue-400' },
-    red: { icon: 'bg-red-500/10 text-red-600 dark:text-red-400', ring: 'ring-red-500/20', text: 'text-red-600 dark:text-red-400' },
-    amber: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', ring: 'ring-amber-500/20', text: 'text-amber-600 dark:text-amber-400' },
-    slate: { icon: 'bg-neutral-100 dark:bg-neutral-850 text-neutral-600 dark:text-neutral-400', ring: 'ring-neutral-200 dark:ring-neutral-800', text: 'text-neutral-600 dark:text-neutral-400' },
+    brand: { icon: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 dark:bg-brand-500/20', ring: 'ring-1 ring-brand-500/20 dark:ring-brand-500/30', text: 'text-brand-600 dark:text-brand-400' },
+    emerald: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-500/20', ring: 'ring-1 ring-emerald-500/20 dark:ring-emerald-500/30', text: 'text-emerald-600 dark:text-emerald-400' },
+    blue: { icon: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 dark:bg-blue-500/20', ring: 'ring-1 ring-blue-500/20 dark:ring-blue-500/30', text: 'text-blue-600 dark:text-blue-400' },
+    red: { icon: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 dark:bg-rose-500/20', ring: 'ring-1 ring-rose-500/20 dark:ring-rose-500/30', text: 'text-rose-600 dark:text-rose-400' },
+    amber: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-500/20', ring: 'ring-1 ring-amber-500/20 dark:ring-amber-500/30', text: 'text-amber-600 dark:text-amber-400' },
+    slate: { icon: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400', ring: 'ring-1 ring-neutral-200 dark:ring-neutral-700/60', text: 'text-neutral-600 dark:text-neutral-400' },
   };
 
   const filterTabs: { key: FilterStatus; label: string; count: number }[] = [
@@ -541,39 +541,38 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Page Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between border-b border-neutral-200/80 dark:border-neutral-800/80 pb-5">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 truncate">
-            Dashboard
-          </h1>
-          <p className="mt-0.5 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 truncate">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 truncate">
+              Dashboard
+            </h1>
+            <span className="inline-flex items-center rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 px-2.5 py-0.5 text-[11px] font-extrabold tracking-wide uppercase">
+              Live
+            </span>
+          </div>
+          <p className="mt-1 text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">
             Monitor daily collections and reconciliation status.
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">{formatDateLong(date)}</span>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-850 px-2.5 py-1 font-semibold text-neutral-700 dark:text-neutral-300 border border-neutral-200/70 dark:border-neutral-800">
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
+              {formatDateLong(date)}
+            </span>
             {hubCtx.selectedHub && (
-              <>
-                <span>·</span>
-                <Building2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[150px] sm:max-w-[220px]">
-                  {hubCtx.selectedHub.name}
-                </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 dark:bg-brand-950/50 px-2.5 py-1 font-semibold text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-900/50 truncate max-w-[240px]">
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+                {hubCtx.selectedHub.name}
                 {hubCtx.selectedHub.location && (
-                  <>
-                    <span className="hidden xs:inline">·</span>
-                    <MapPin className="h-3.5 w-3.5 shrink-0 hidden xs:inline" />
-                    <span className="hidden xs:inline truncate max-w-[120px]">{hubCtx.selectedHub.location}</span>
-                  </>
+                  <span className="hidden xs:inline text-neutral-400 font-normal">({hubCtx.selectedHub.location})</span>
                 )}
-              </>
+              </span>
             )}
             {hubCtx.isAllHubs && (
-              <>
-                <span>·</span>
-                <Building2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-semibold text-neutral-800 dark:text-neutral-200">All Hubs</span>
-              </>
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-850 px-2.5 py-1 font-semibold text-neutral-800 dark:text-neutral-200 border border-neutral-200/70 dark:border-neutral-800">
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
+                All Hubs
+              </span>
             )}
           </div>
         </div>
@@ -584,7 +583,7 @@ export default function Dashboard() {
             <Button
               icon={<Plus className="h-4 w-4" />}
               onClick={() => { setEditing(null); setEntryModalOpen(true); }}
-              className="w-full sm:w-auto min-h-[44px] shadow-glow px-4 py-2.5 font-semibold text-sm"
+              className="w-full sm:w-auto min-h-[44px] shadow-glow px-4 py-2.5 font-bold text-sm"
             >
               Add Entry
             </Button>
@@ -613,14 +612,14 @@ export default function Dashboard() {
                   <Card
                     key={c.title}
                     hover
-                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-300 hover:-translate-y-0.5 w-full min-w-0"
+                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90"
                     role="button"
                     tabIndex={0}
                     onClick={c.openModal}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.openModal(); } }}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ring-1 shrink-0', a.icon, a.ring)}>
+                      <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl shrink-0 transition-transform group-hover/kpi:scale-105', a.icon, a.ring)}>
                         <c.icon className="h-5 w-5" />
                       </div>
                       {c.badge && (
@@ -629,13 +628,13 @@ export default function Dashboard() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-3 sm:mt-4 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
-                      <p className={clsx('mt-1 text-xl sm:text-2xl font-bold tracking-tight tabular-nums truncate', c.stateClass || 'text-neutral-900 dark:text-neutral-100')}>
+                    <div className="mt-3.5 min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
+                      <p className={clsx('mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums truncate', c.stateClass || 'text-neutral-900 dark:text-neutral-50')}>
                         {c.formatted}
                       </p>
-                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
-                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 opacity-0 -translate-y-1 transition-all duration-300 group-hover/kpi:opacity-100 group-hover/kpi:translate-y-0">
+                      <p className="mt-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
+                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-600 dark:text-brand-400 opacity-0 -translate-y-1 transition-all duration-200 group-hover/kpi:opacity-100 group-hover/kpi:translate-y-0">
                         Click for details <ArrowRight className="h-3 w-3" />
                       </span>
                     </div>
@@ -652,21 +651,21 @@ export default function Dashboard() {
                   <Card
                     key={c.title}
                     hover
-                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-300 hover:-translate-y-0.5 w-full min-w-0"
+                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90"
                     role="button"
                     tabIndex={0}
                     onClick={c.openModal}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.openModal(); } }}
                   >
-                    <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ring-1 shrink-0', a.icon, a.ring)}>
+                    <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl shrink-0 transition-transform group-hover/kpi:scale-105', a.icon, a.ring)}>
                       <c.icon className="h-5 w-5" />
                     </div>
-                    <div className="mt-3 sm:mt-4 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
-                      <p className="mt-1 text-lg sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
+                    <div className="mt-3.5 min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
+                      <p className="mt-1 text-xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 tabular-nums truncate">
                         {c.formatted}
                       </p>
-                      <p className="mt-1 text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
+                      <p className="mt-1 text-[11px] sm:text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
                     </div>
                   </Card>
                 );
@@ -688,22 +687,22 @@ export default function Dashboard() {
                   <Card
                     key={c.title}
                     hover
-                    className="p-4 sm:p-5 group/dues cursor-pointer transition-all duration-300 hover:-translate-y-0.5 w-full min-w-0"
+                    className="p-4 sm:p-5 group/dues cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90"
                     role="button"
                     tabIndex={0}
                     onClick={c.openModal}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.openModal(); } }}
                   >
-                    <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl ring-1 shrink-0', a.icon, a.ring)}>
+                    <div className={clsx('flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl shrink-0 transition-transform group-hover/dues:scale-105', a.icon, a.ring)}>
                       <c.icon className="h-5 w-5" />
                     </div>
-                    <div className="mt-3 sm:mt-4 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
-                      <p className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 tabular-nums truncate">
+                    <div className="mt-3.5 min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 truncate">{c.title}</p>
+                      <p className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 tabular-nums truncate">
                         {c.formatted}
                       </p>
-                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
-                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 opacity-0 -translate-y-1 transition-all duration-300 group-hover/dues:opacity-100 group-hover/dues:translate-y-0">
+                      <p className="mt-1 text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate">{c.sub}</p>
+                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-600 dark:text-brand-400 opacity-0 -translate-y-1 transition-all duration-200 group-hover/dues:opacity-100 group-hover/dues:translate-y-0">
                         Click for details <ArrowRight className="h-3 w-3" />
                       </span>
                     </div>
@@ -718,25 +717,25 @@ export default function Dashboard() {
       {/* SECTION 3: Performance & Date Toolbar */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Reconciliation Rate Card */}
-        <Card className="p-4 sm:p-5 lg:col-span-1 min-w-0">
+        <Card className="p-4 sm:p-5 lg:col-span-1 min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Reconciliation Rate</h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              <h3 className="text-sm font-extrabold text-neutral-900 dark:text-neutral-100">Reconciliation Rate</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
                 {counts.reconciled} of {entries.length} {entries.length === 1 ? 'entry' : 'entries'} reconciled
               </p>
             </div>
             <span className={clsx(
-              'text-2xl sm:text-3xl font-bold tabular-nums',
+              'text-2xl sm:text-3xl font-extrabold tabular-nums',
               reconciledRate === 100 ? 'text-brand-600 dark:text-brand-400' : reconciledRate >= 80 ? 'text-neutral-700 dark:text-neutral-300' : 'text-amber-500'
             )}>
               {reconciledRate}%
             </span>
           </div>
 
-          <div className="mt-3.5 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+          <div className="mt-3.5 h-3 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800 p-0.5">
             <div
-              className={clsx('h-full rounded-full transition-all duration-700 ease-out', reconciledRate === 100 ? 'bg-brand-500' : 'bg-brand-400')}
+              className={clsx('h-full rounded-full transition-all duration-700 ease-out', reconciledRate === 100 ? 'bg-gradient-to-r from-brand-600 to-emerald-500' : 'bg-gradient-to-r from-brand-600 to-indigo-500')}
               style={{ width: `${reconciledRate}%` }}
             />
           </div>
@@ -746,38 +745,38 @@ export default function Dashboard() {
             {[
               { label: 'Reconciled', count: counts.reconciled, color: 'text-brand-600 dark:text-brand-400', dot: 'bg-brand-500' },
               ...(counts.pending > 0 ? [{ label: 'Pending', count: counts.pending, color: 'text-neutral-500', dot: 'bg-neutral-400' }] : []),
-              { label: 'Shortage', count: counts.shortage, color: 'text-red-500 dark:text-red-400', dot: 'bg-red-500' },
-              { label: 'Excess', count: counts.excess, color: 'text-amber-500 dark:text-amber-400', dot: 'bg-amber-500' },
+              { label: 'Shortage', count: counts.shortage, color: 'text-rose-500 dark:text-rose-400', dot: 'bg-rose-500' },
+              { label: 'Excess', count: counts.excess, color: 'text-emerald-500 dark:text-emerald-400', dot: 'bg-emerald-500' },
             ].map((s) => (
-              <div key={s.label} className="rounded-xl bg-neutral-50 dark:bg-neutral-900/60 p-2 text-center">
+              <div key={s.label} className="rounded-xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200/60 dark:border-neutral-800/60 p-2 text-center">
                 <div className="flex items-center justify-center gap-1">
                   <span className={clsx('h-1.5 w-1.5 rounded-full shrink-0', s.dot)} />
-                  <span className={clsx('text-sm sm:text-base font-bold tabular-nums', s.color)}>{s.count}</span>
+                  <span className={clsx('text-sm sm:text-base font-extrabold tabular-nums', s.color)}>{s.count}</span>
                 </div>
-                <p className="mt-0.5 text-[10px] sm:text-[11px] font-medium text-neutral-500 dark:text-neutral-400 truncate">{s.label}</p>
+                <p className="mt-0.5 text-[10px] sm:text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 truncate">{s.label}</p>
               </div>
             ))}
           </div>
         </Card>
 
         {/* Date Navigation Toolbar Card */}
-        <Card className="p-4 sm:p-5 lg:col-span-2 min-w-0 flex flex-col justify-between">
+        <Card className="p-4 sm:p-5 lg:col-span-2 min-w-0 flex flex-col justify-between border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90">
           <div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Date Navigation</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                <h3 className="text-sm font-extrabold text-neutral-900 dark:text-neutral-100">Date Navigation</h3>
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
                   Select date to inspect daily collection activity
                 </p>
               </div>
               
               {/* Controls */}
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 p-1">
+                <div className="flex items-center rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 p-1 shadow-xs">
                   <button
                     onClick={() => setDate(subDays(date, 1))}
                     aria-label="Previous day"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition active:scale-95 min-h-[44px] min-w-[44px]"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/70 dark:hover:bg-neutral-800 transition active:scale-95 min-h-[44px] min-w-[44px]"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -787,7 +786,7 @@ export default function Dashboard() {
                       value={dateStr}
                       max={todayStr}
                       onChange={(e) => { const d = parseISO(e.target.value); if (d && !isNaN(d.getTime())) setDate(d); }}
-                      className="border-0 bg-transparent px-2 py-1 text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-0 [color-scheme:light] dark:[color-scheme:dark] tabular-nums"
+                      className="border-0 bg-transparent px-2 py-1 text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-200 outline-none focus:ring-0 [color-scheme:light] dark:[color-scheme:dark] tabular-nums"
                     />
                   </div>
                   <button
@@ -798,7 +797,7 @@ export default function Dashboard() {
                       'flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 dark:text-neutral-400 transition active:scale-95 min-h-[44px] min-w-[44px]',
                       isNextDisabled
                         ? 'opacity-30 cursor-not-allowed'
-                        : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                        : 'hover:bg-neutral-200/70 dark:hover:bg-neutral-800'
                     )}
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -808,7 +807,7 @@ export default function Dashboard() {
                   variant={isDateToday(date) ? 'primary' : 'outline'}
                   size="sm"
                   onClick={() => setDate(new Date())}
-                  className="shrink-0 min-h-[44px] px-3.5 font-semibold text-xs sm:text-sm"
+                  className="shrink-0 min-h-[44px] px-3.5 font-bold text-xs sm:text-sm"
                 >
                   Today
                 </Button>
@@ -816,13 +815,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-200 dark:border-neutral-800 pt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-200/80 dark:border-neutral-800/80 pt-4">
             <Button
               variant="outline"
               size="sm"
               icon={<Download className="h-4 w-4" />}
               onClick={handleExport}
-              className="min-h-[44px] px-3 text-xs sm:text-sm"
+              className="min-h-[44px] px-3.5 text-xs sm:text-sm font-semibold"
             >
               Export Excel
             </Button>
@@ -832,13 +831,13 @@ export default function Dashboard() {
                 size="sm"
                 icon={<Upload className="h-4 w-4" />}
                 onClick={() => setImportModalOpen(true)}
-                className="min-h-[44px] px-3 text-xs sm:text-sm"
+                className="min-h-[44px] px-3.5 text-xs sm:text-sm font-semibold"
               >
                 Import Excel
               </Button>
             )}
-            <div className="ml-auto flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
+            <div className="ml-auto flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-950 px-2.5 py-1 rounded-lg border border-neutral-200/60 dark:border-neutral-800/60">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
               <span>{filtered.length} of {entries.length} shown</span>
             </div>
           </div>
@@ -853,7 +852,7 @@ export default function Dashboard() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by employee name, employee ID, or phone…"
-            className="input-base pl-10 min-h-[44px] text-sm"
+            className="input-base pl-10 min-h-[44px] text-sm rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
@@ -864,14 +863,14 @@ export default function Dashboard() {
               className={clsx(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium transition-all active:scale-95 min-h-[44px]',
                 filter === f.key
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-soft font-semibold'
-                  : 'bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-sm font-bold'
+                  : 'bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700'
               )}
             >
               {f.label}
               <span className={clsx(
-                'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
-                filter === f.key ? 'bg-white/20 dark:bg-neutral-900/20 text-current' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                'rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums',
+                filter === f.key ? 'bg-white/20 dark:bg-neutral-900/20 text-current' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-700/60'
               )}>
                 {f.count}
               </span>
@@ -883,15 +882,15 @@ export default function Dashboard() {
       {/* SECTION 5: Staff Activity Table & Denomination Summary */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2 min-w-0">
-          <Card className="overflow-hidden">
-            <div className="px-4 sm:px-5 py-4 border-b border-neutral-200 dark:border-neutral-800/70 flex items-center justify-between">
+          <Card className="overflow-hidden border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90 shadow-xs">
+            <div className="px-4 sm:px-5 py-4 border-b border-neutral-200/80 dark:border-neutral-800/80 flex items-center justify-between">
               <div>
-                <h2 className="font-bold text-neutral-900 dark:text-neutral-100 text-sm sm:text-base">Staff Activity</h2>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Collection records for {formatDate(date)}</p>
+                <h2 className="font-extrabold text-neutral-900 dark:text-neutral-100 text-sm sm:text-base">Staff Activity</h2>
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">Collection records for {formatDate(date)}</p>
               </div>
             </div>
             {loading ? (
-              <div className="py-20 flex justify-center"><Spinner className="h-6 w-6" /></div>
+              <div className="py-20 flex justify-center"><Spinner className="h-6 w-6 text-brand-600" /></div>
             ) : filtered.length === 0 ? (
               <EmptyState
                 icon={<Inbox className="h-8 w-8" />}
@@ -903,18 +902,18 @@ export default function Dashboard() {
                 {/* Desktop Table View */}
                 <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-sm">
-                    <thead className="bg-neutral-50 dark:bg-neutral-950/80 text-neutral-500 text-xs uppercase tracking-wide sticky top-0">
+                    <thead className="bg-neutral-50/90 dark:bg-neutral-950/90 backdrop-blur-xs text-neutral-500 text-[11px] uppercase tracking-wider font-bold border-b border-neutral-200/80 dark:border-neutral-800/80 sticky top-0">
                       <tr>
-                        <th className="text-left px-5 py-3 font-semibold">Employee</th>
-                        <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">Emp ID</th>
-                        <th className="text-right px-4 py-3 font-semibold hidden xl:table-cell">Expected COD</th>
-                        <th className="text-right px-4 py-3 font-semibold">Cash</th>
-                        <th className="text-right px-4 py-3 font-semibold hidden sm:table-cell">Online</th>
-                        <th className="text-right px-4 py-3 font-semibold">Total</th>
-                        <th className="text-right px-4 py-3 font-semibold">Pending</th>
-                        <th className="text-right px-4 py-3 font-semibold hidden xl:table-cell">Excess</th>
-                        <th className="text-center px-4 py-3 font-semibold">Status</th>
-                        <th className="text-right px-5 py-3 font-semibold">Actions</th>
+                        <th className="text-left px-5 py-3.5 font-bold">Employee</th>
+                        <th className="text-left px-4 py-3.5 font-bold hidden lg:table-cell">Emp ID</th>
+                        <th className="text-right px-4 py-3.5 font-bold hidden xl:table-cell">Expected COD</th>
+                        <th className="text-right px-4 py-3.5 font-bold">Cash</th>
+                        <th className="text-right px-4 py-3.5 font-bold hidden sm:table-cell">Online</th>
+                        <th className="text-right px-4 py-3.5 font-bold">Total</th>
+                        <th className="text-right px-4 py-3.5 font-bold">Pending</th>
+                        <th className="text-right px-4 py-3.5 font-bold hidden xl:table-cell">Excess</th>
+                        <th className="text-center px-4 py-3.5 font-bold">Status</th>
+                        <th className="text-right px-5 py-3.5 font-bold">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
@@ -1047,11 +1046,11 @@ export default function Dashboard() {
 
         {/* Denomination Summary */}
         <div className="min-w-0">
-          <Card className="p-4 sm:p-5">
+          <Card className="p-4 sm:p-5 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90 shadow-xs">
             <div className="flex items-center justify-between gap-2 mb-1">
               <div>
-                <h3 className="font-bold text-neutral-900 dark:text-neutral-100 text-sm sm:text-base">Denomination Summary</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Aggregated notes for {formatDate(date)}</p>
+                <h3 className="font-extrabold text-neutral-900 dark:text-neutral-100 text-sm sm:text-base">Denomination Summary</h3>
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">Aggregated notes for {formatDate(date)}</p>
               </div>
               <CopyDenominationButton entries={filtered} />
             </div>
