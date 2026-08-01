@@ -26,7 +26,7 @@ export default function Ledger() {
   const { profile } = useAuth();
   const hubCtx = useHub();
   const isSuperAdmin = profile?.role === 'super_admin';
-  const effectiveHubId = isSuperAdmin ? hubCtx.selectedHubId : profile?.hub_id ?? null;
+  const effectiveHubId = hubCtx.selectedHubId || null;
 
   const initialPartyId = searchParams.get('party_id') || '';
 
@@ -48,6 +48,12 @@ export default function Ledger() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    if (!isSuperAdmin && !effectiveHubId) {
+      setParties([]);
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
     try {
       const pData = await fetchParties(effectiveHubId);
       const tData = await fetchPartyTransactions(undefined, effectiveHubId);
@@ -58,7 +64,7 @@ export default function Ledger() {
     } finally {
       setLoading(false);
     }
-  }, [effectiveHubId, toast]);
+  }, [effectiveHubId, isSuperAdmin, toast]);
 
   useEffect(() => {
     loadData();

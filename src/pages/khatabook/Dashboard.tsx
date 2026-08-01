@@ -27,7 +27,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const hubCtx = useHub();
   const isSuperAdmin = profile?.role === 'super_admin';
-  const effectiveHubId = isSuperAdmin ? hubCtx.selectedHubId : profile?.hub_id ?? null;
+  const effectiveHubId = hubCtx.selectedHubId || null;
 
   const [loading, setLoading] = useState(true);
   const [parties, setParties] = useState<Party[]>([]);
@@ -47,6 +47,12 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    if (!isSuperAdmin && !effectiveHubId) {
+      setParties([]);
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
     try {
       const partyData = await fetchParties(effectiveHubId);
       const txData = await fetchPartyTransactions(undefined, effectiveHubId);
@@ -57,7 +63,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [effectiveHubId, toast]);
+  }, [effectiveHubId, isSuperAdmin, toast]);
 
   useEffect(() => {
     loadData();

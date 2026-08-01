@@ -16,7 +16,7 @@ export default function Parties() {
   const { profile } = useAuth();
   const hubCtx = useHub();
   const isSuperAdmin = profile?.role === 'super_admin';
-  const effectiveHubId = isSuperAdmin ? hubCtx.selectedHubId : profile?.hub_id ?? null;
+  const effectiveHubId = hubCtx.selectedHubId || null;
 
   const [loading, setLoading] = useState(true);
   const [parties, setParties] = useState<Party[]>([]);
@@ -27,6 +27,11 @@ export default function Parties() {
 
   const loadParties = useCallback(async () => {
     setLoading(true);
+    if (!isSuperAdmin && !effectiveHubId) {
+      setParties([]);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await fetchParties(effectiveHubId);
       setParties(data);
@@ -35,7 +40,7 @@ export default function Parties() {
     } finally {
       setLoading(false);
     }
-  }, [effectiveHubId, toast]);
+  }, [effectiveHubId, isSuperAdmin, toast]);
 
   useEffect(() => {
     loadParties();
