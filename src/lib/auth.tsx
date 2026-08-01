@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (uid: string) => {
+  const fetchProfile = useCallback(async (uid: string): Promise<{ profile: Profile | null; error: any }> => {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, name, email, role, hub_id, can_create_hub, phone, company, location, created_at, is_approved, license_status, license_expires_at, license_activated_at, hub_credits, referral_code, referred_by, referral_earnings, hub: hubs!profiles_hub_id_fkey(*)')
@@ -40,10 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error('profile fetch error', error);
       setProfile(null);
-      return null;
+      return { profile: null, error };
     }
-    setProfile(data as Profile | null);
-    return data as Profile | null;
+    const prof = data as Profile | null;
+    setProfile(prof);
+    return { profile: prof, error: null };
   }, []);
 
   useEffect(() => {
@@ -70,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setLoading(true);
         (async () => {
-          const fetched = await fetchProfile(newSession.user.id);
+          const { profile: fetched, error: fetchErr } = await fetchProfile(newSession.user.id);
           if (mounted) setLoading(false);
-          if (!fetched) {
+          if (fetchErr || !fetched) {
             await supabase.auth.signOut();
             setActiveUserId(null);
             setSession(null);
@@ -98,8 +99,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.session) {
       setSession(data.session);
       setActiveUserId(data.session.user.id);
-      const fetched = await fetchProfile(data.session.user.id);
+      const { profile: fetched, error: fetchErr } = await fetchProfile(data.session.user.id);
       setLoading(false);
+      if (fetchErr) {
+        await supabase.auth.signOut();
+        setActiveUserId(null);
+        setSession(null);
+        setProfile(null);
+        return { error: `Failed to load profile: ${fetchErr.message}` };
+      }
       if (!fetched) {
         await supabase.auth.signOut();
         setActiveUserId(null);
