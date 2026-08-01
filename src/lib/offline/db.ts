@@ -48,6 +48,7 @@ export interface SyncQueueItem {
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
   payload: any;
   created_at: string;
+  last_attempt_at?: string;
   retry_count: number;
   status: 'pending' | 'syncing' | 'failed' | 'conflict';
   error_message?: string;
@@ -70,6 +71,13 @@ class InMemoryTable<T extends { id: string }, Key = string> {
   async get(id: string): Promise<T | undefined> {
     const item = this.data.get(id);
     return item ? { ...item } : undefined;
+  }
+
+  async update(id: string, changes: Partial<T>): Promise<number> {
+    const current = this.data.get(id);
+    if (!current) return 0;
+    this.data.set(id, { ...current, ...changes });
+    return 1;
   }
 
   async delete(id: string): Promise<void> {

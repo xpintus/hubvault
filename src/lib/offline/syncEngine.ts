@@ -44,16 +44,14 @@ export async function processSyncQueue(force = false, userId?: string) {
   if (queue.length === 0) return;
 
   notifySyncStatus(true);
-
-  for (const item of queue) {
+  try {
+    for (const item of queue) {
     if (item.user_id !== activeUid) continue;
 
     // Exponential backoff based on retry count
     if (item.retry_count > 0 && !force) {
       const backoffMs = Math.min(1000 * Math.pow(2, item.retry_count), 60000);
-      const itemTime = item.payload?.updated_at
-        ? new Date(item.payload.updated_at).getTime()
-        : new Date(item.created_at).getTime();
+      const itemTime = new Date(item.last_attempt_at || item.created_at).getTime();
       const elapsed = Date.now() - itemTime;
       if (elapsed < backoffMs) {
         continue; // Skip this item for now
@@ -132,9 +130,10 @@ export async function processSyncQueue(force = false, userId?: string) {
       console.error(`Sync error for item ${item.id}:`, err);
       await markQueueStatus(item.id, 'failed', err.message, activeUid);
     }
+    }
+  } finally {
+    notifySyncStatus(false);
   }
-
-  notifySyncStatus(false);
 }
 
 export async function resolveConflict(conflict: SyncConflict, action: ConflictAction, mergedPayload?: any) {
@@ -153,7 +152,7 @@ export async function resolveConflict(conflict: SyncConflict, action: ConflictAc
 
   } else if (action === 'keep_local' || action === 'merge') {
     // Update the payload and force sync
-    const newPayload = action === 'keep_local' ? queueItem.payload : mergedPayload;
+    const newPayload = { ...(action === 'keep_local' ? queueItem.payload : mergedPayload) };
 
     // Update local updated_at to ensure it overrides server on next try
     newPayload.updated_at = new Date().toISOString();
@@ -171,14 +170,16 @@ export async function resolveConflict(conflict: SyncConflict, action: ConflictAc
     }
 
     // Retry sync
-    processSyncQueue(true, queueItem.user_id);
+    await processSyncQueue(true, queueItem.user_id);
   }
 }
 
 // Network Listeners
 export function setupNetworkListeners() {
-  window.addEventListener('online', () => {
+  const handleOnline = () => {
     console.log('[Offline] Back online. Processing sync queue...');
-    processSyncQueue(true);
-  });
+    void processSyncQueue(true);
+  };
+  window.addEventListener('online', handleOnline);
+  return () => window.removeEventListener('online', handleOnline);
 }

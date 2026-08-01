@@ -11,6 +11,9 @@ export async function addToQueue(
   operation: OperationType,
   payload: any
 ): Promise<string> {
+  if (!userId) {
+    throw new Error('Authenticated user is required for offline sync');
+  }
   const id = uuidv4();
 
   const item: SyncQueueItem = {
@@ -69,6 +72,7 @@ export async function markQueueStatus(
     const item = await userDb.sync_queue.get(id);
     if (item) {
       updateData.retry_count = item.retry_count + 1;
+      updateData.last_attempt_at = new Date().toISOString();
     }
   }
 

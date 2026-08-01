@@ -9,7 +9,8 @@ import { resolveConflict,SyncConflict } from '@/lib/offline/syncEngine';
 import {
 addToQueue,
 getPendingQueue,
-getQueueCount
+getQueueCount,
+markQueueStatus
 } from '@/lib/offline/syncQueue';
 import { beforeEach,describe,expect,it } from 'vitest';
 
@@ -66,6 +67,22 @@ describe('Offline Data Isolation & Multi-User Partitioning', () => {
     const queueB = await getPendingQueue('user_b');
     // User B queue is completely separate
     expect(queueB.length).toBe(0);
+  });
+
+  it('rejects queue writes without an authenticated user id', async () => {
+    setActiveUserId('user_a');
+    await expect(addToQueue('', 'hub-1', 'dues', 'INSERT', { id: 'orphan' }))
+      .rejects.toThrow('Authenticated user is required');
+    expect(await getQueueCount('user_a')).toBe(0);
+  });
+
+  it('records the last failed attempt for exponential retry backoff', async () => {
+    setActiveUserId('user_a');
+    const id = await addToQueue('user_a', 'hub-1', 'dues', 'INSERT', { id: 'retry-due' });
+    await markQueueStatus(id, 'failed', 'temporary failure', 'user_a');
+    const item = await getUserDB('user_a').sync_queue.get(id);
+    expect(item?.retry_count).toBe(1);
+    expect(Date.parse(item?.last_attempt_at ?? '')).not.toBeNaN();
   });
 
   it('switching hubs/users does not reveal unauthorized cached records', async () => {

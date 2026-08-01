@@ -672,22 +672,10 @@ export default function DepositsPage() {
       const gap = total - exp;
 
       const existingEntry = entries.find(e => e.collector_id === shortageForm.collector_id && e.collection_date === shortageForm.shortage_date);
-      let entryId = existingEntry?.id;
       const reasonNote = `Reason: ${shortageForm.reason}${shortageForm.remarks ? ` | ${shortageForm.remarks.trim()}` : ''}`;
 
-      if (existingEntry) {
-        const { error } = await supabase.from('collection_entries').update({
-          expected_cod: exp,
-          cash_amount: cash,
-          online_amount: online,
-          total_collection: total,
-          gap,
-          status: 'shortage',
-          remarks: reasonNote,
-        }).eq('id', existingEntry.id);
-        if (error) throw error;
-      } else {
-        const { data: newEntry, error } = await supabase.from('collection_entries').insert({
+      const { error } = await supabase.rpc('record_shortage_atomic', {
+        p_entry: {
           collection_date: shortageForm.shortage_date,
           collector_id: shortageForm.collector_id,
           hub_id: hubId,
@@ -699,41 +687,11 @@ export default function DepositsPage() {
           status: 'shortage',
           remarks: reasonNote,
           created_by: profile?.id ?? null,
-        }).select().single();
-        if (error) throw error;
-        entryId = newEntry.id;
-      }
-
-      const { data: existingDue } = await supabase
-        .from('dues')
-        .select('id, recovered_amount')
-        .eq('collector_id', shortageForm.collector_id)
-        .eq('due_date', shortageForm.shortage_date)
-        .maybeSingle();
-
-      if (existingDue) {
-        const rec = safeAmount(existingDue.recovered_amount);
-        const rem = Math.max(0, calculatedShortageAmount - rec);
-        await supabase.from('dues').update({
-          original_amount: calculatedShortageAmount,
-          remaining_amount: rem,
-          notes: reasonNote,
-          status: rem === 0 ? 'fully_recovered' : rec > 0 ? 'partially_recovered' : 'outstanding',
-        }).eq('id', existingDue.id);
-      } else {
-        await supabase.from('dues').insert({
-          collector_id: shortageForm.collector_id,
-          hub_id: hubId,
-          collection_entry_id: entryId,
-          original_amount: calculatedShortageAmount,
-          remaining_amount: calculatedShortageAmount,
-          recovered_amount: 0,
-          due_date: shortageForm.shortage_date,
-          status: 'outstanding',
-          notes: reasonNote,
-          created_by: profile?.id ?? null,
-        });
-      }
+        },
+        p_notes: reasonNote,
+        p_entry_id: existingEntry?.id ?? null,
+      });
+      if (error) throw error;
 
       toast.success('Shortage entry recorded');
       setShortageModalOpen(false);
@@ -765,29 +723,18 @@ export default function DepositsPage() {
 
     setRecoverySaving(true);
     try {
-      const { error: recErr } = await supabase.from('recoveries').insert({
-        collector_id: recoveryTargetDue.collector_id,
-        hub_id: recoveryTargetDue.hub_id,
-        due_id: recoveryTargetDue.id,
-        recovery_date: recoveryForm.recovery_date,
-        amount: amt,
-        payment_mode: recoveryForm.payment_mode,
-        reference_number: recoveryForm.reference_number.trim() || null,
-        notes: recoveryForm.notes.trim() || null,
-        created_by: profile?.id ?? null,
+      const { error } = await supabase.rpc('record_recovery_atomic', {
+        p_collector_id: recoveryTargetDue.collector_id,
+        p_hub_id: recoveryTargetDue.hub_id,
+        p_due_id: recoveryTargetDue.id,
+        p_recovery_date: recoveryForm.recovery_date,
+        p_amount: amt,
+        p_payment_mode: recoveryForm.payment_mode,
+        p_reference_number: recoveryForm.reference_number.trim() || null,
+        p_notes: recoveryForm.notes.trim() || null,
+        p_created_by: profile?.id ?? null,
       });
-      if (recErr) throw recErr;
-
-      const newRecovered = safeAmount(recoveryTargetDue.recovered_amount) + amt;
-      const newRemaining = Math.max(0, safeAmount(recoveryTargetDue.original_amount) - newRecovered);
-      const newStatus = newRemaining === 0 ? 'fully_recovered' : 'partially_recovered';
-
-      await supabase.from('dues').update({
-        recovered_amount: newRecovered,
-        remaining_amount: newRemaining,
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      }).eq('id', recoveryTargetDue.id);
+      if (error) throw error;
 
       toast.success('Recovery recorded');
       setRecoveryModalOpen(false);
@@ -809,12 +756,13 @@ export default function DepositsPage() {
     if (!ok) return;
 
     try {
-      await supabase.from('dues').update({
+      const { error } = await supabase.from('dues').update({
         status: 'fully_recovered',
         remaining_amount: 0,
         notes: `${due.notes ? `${due.notes} | ` : ''}[Written Off by ${profile?.name ?? 'Admin'}]`,
         updated_at: new Date().toISOString(),
       }).eq('id', due.id);
+      if (error) throw error;
       toast.success('Shortage marked as written off');
       load();
     } catch (err) {

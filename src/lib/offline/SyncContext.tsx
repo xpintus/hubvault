@@ -59,7 +59,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    setupNetworkListeners();
+    const cleanupNetworkSync = setupNetworkListeners();
 
     setSyncStatusCallback((syncing) => {
       setIsSyncing(syncing);
@@ -82,6 +82,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      cleanupNetworkSync();
       clearInterval(interval);
       setSyncStatusCallback(() => {});
       setConflictCallback(() => {});

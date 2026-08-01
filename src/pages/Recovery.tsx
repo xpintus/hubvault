@@ -404,11 +404,10 @@ export default function RecoveryPage() {
         }
         toast.success('Recovery transaction deleted offline');
       } else {
-        const { error: delErr } = await supabase.from('recoveries').delete().eq('id', rec.id);
-        if (delErr) throw delErr;
-        if (dueUpdate && due) {
-          await supabase.from('dues').update(dueUpdate).eq('id', due.id);
-        }
+        const { error } = await supabase.rpc('delete_recovery_atomic', {
+          p_recovery_id: rec.id,
+        });
+        if (error) throw error;
         toast.success('Recovery transaction deleted');
       }
       load();

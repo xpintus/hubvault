@@ -253,81 +253,14 @@ export default function CollectionEntryModal({
           toast.success('Collection entry saved offline');
         }
       } else {
-        // ONLINE
-        if (editing) {
-          const { error: entryErr } = await supabase
-            .from('collection_entries')
-            .update({ ...payload, created_by: profile.id })
-            .eq('id', editing.id);
-          if (entryErr) throw entryErr;
-
-          const existingDenom = Array.isArray(editing.denominations) ? editing.denominations[0] : editing.denominations;
-          if (existingDenom) {
-            const { error: dErr } = await supabase
-              .from('denominations')
-              .update(denoms)
-              .eq('collection_entry_id', editing.id);
-            if (dErr) throw dErr;
-          } else {
-            const { error: dErr } = await supabase
-              .from('denominations')
-              .insert({ collection_entry_id: editing.id, ...denoms });
-            if (dErr) throw dErr;
-          }
-
-          const { data: existingDue } = await supabase
-            .from('dues')
-            .select('id, original_amount, recovered_amount')
-            .eq('collection_entry_id', editing.id)
-            .maybeSingle();
-          if (pendingAmount > 0 && !existingDue) {
-            await supabase.from('dues').insert({
-              collector_id: form.collector_id,
-              hub_id: hubId,
-              collection_entry_id: editing.id,
-              original_amount: pendingAmount,
-              remaining_amount: pendingAmount,
-              due_date: form.collection_date,
-              status: 'outstanding',
-              created_by: profile.id,
-            });
-          } else if (pendingAmount === 0 && existingDue) {
-            await supabase.from('dues').delete().eq('id', existingDue.id);
-          } else if (pendingAmount > 0 && existingDue && existingDue.recovered_amount === 0) {
-            await supabase.from('dues').update({
-              original_amount: pendingAmount,
-              remaining_amount: pendingAmount,
-            }).eq('id', existingDue.id);
-          }
-
-          toast.success('Collection entry updated');
-        } else {
-          const { data: entry, error: entryErr } = await supabase
-            .from('collection_entries')
-            .insert({ ...payload, created_by: profile.id })
-            .select()
-            .single();
-          if (entryErr) throw entryErr;
-
-          const { error: dErr } = await supabase
-            .from('denominations')
-            .insert({ collection_entry_id: entry.id, ...denoms });
-          if (dErr) throw dErr;
-
-          if (pendingAmount > 0) {
-            await supabase.from('dues').insert({
-              collector_id: form.collector_id,
-              hub_id: hubId,
-              collection_entry_id: entry.id,
-              original_amount: pendingAmount,
-              remaining_amount: pendingAmount,
-              due_date: form.collection_date,
-              status: 'outstanding',
-              created_by: profile.id,
-            });
-          }
-          toast.success('Collection entry saved');
-        }
+        const { error } = await supabase.rpc('save_collection_entry_atomic', {
+          p_entry: { ...payload, created_by: profile.id },
+          p_denominations: denoms,
+          p_pending_amount: pendingAmount,
+          p_entry_id: editing?.id ?? null,
+        });
+        if (error) throw error;
+        toast.success(editing ? 'Collection entry updated' : 'Collection entry saved');
       }
       onSaved();
       onClose();
