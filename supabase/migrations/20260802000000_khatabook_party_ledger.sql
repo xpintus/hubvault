@@ -209,3 +209,6 @@ drop trigger if exists set_party_tx_updated_at on public.party_transactions;
 create trigger set_party_tx_updated_at
   before update on public.party_transactions
   for each row execute function public.update_khatabook_timestamp();
+
+-- Ask PostgREST to expose the new tables immediately after this migration.
+notify pgrst, 'reload schema';
