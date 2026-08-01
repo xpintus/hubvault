@@ -1,6 +1,6 @@
-import { EntryStatus, STATUS_LABELS } from '@/types';
-import { CheckCircle2, Clock, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { EntryStatus,STATUS_LABELS } from '@/types';
 import { clsx } from 'clsx';
+import { ArrowDownRight,ArrowUpRight,CheckCircle2,Clock } from 'lucide-react';
 
 export default function StatusBadge({ status, size = 'md' }: { status: EntryStatus; size?: 'sm' | 'md' }) {
   const config: Record<EntryStatus, { color: string; icon: typeof CheckCircle2 }> = {

@@ -1,6 +1,6 @@
-import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { clsx } from 'clsx';
+import { Moon,Sun } from 'lucide-react';
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();

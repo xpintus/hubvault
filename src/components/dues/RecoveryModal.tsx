@@ -1,9 +1,9 @@
-import React from 'react';
 import Modal from '@/components/ui/Modal';
-import { Button, Input, Select } from '@/components/ui/primitives';
-import { Collector, Due } from '@/types';
-import { formatINR, formatDate } from '@/lib/format';
+import { Button,Input,Select } from '@/components/ui/primitives';
 import { safeAmount } from '@/lib/financeCalculations';
+import { formatDate,formatINR } from '@/lib/format';
+import { Collector,Due } from '@/types';
+import React from 'react';
 
 export interface RecoveryModalProps {
   recoveryEmployee: {

@@ -1,25 +1,36 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Users, DollarSign, Wallet, CreditCard, ArrowDownLeft, ArrowUpRight,
-  CheckCircle2, Clock, Calendar, Plus, ChevronRight, Search, Layers, RefreshCw
-} from 'lucide-react';
-import { Party, PartyTransaction, PartySummaryCardData } from '@/types';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, Spinner, Skeleton, EmptyState, Badge } from '@/components/ui/primitives';
-import {
-  fetchParties,
-  fetchPartyTransactions,
-  calculatePartyCardData,
-  calculateRunningLedger,
-  calculateKhataBookSummary,
-  formatINRNumber,
-} from '@/lib/khatabook';
+import AdjustmentDetailModal from '@/components/khatabook/AdjustmentDetailModal';
 import PartyModal from '@/components/khatabook/PartyModal';
 import TransactionModal from '@/components/khatabook/TransactionModal';
-import AdjustmentDetailModal from '@/components/khatabook/AdjustmentDetailModal';
+import { useToast } from '@/components/ui/Toast';
+import { Badge,Button,Card,EmptyState,Skeleton } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
+import { useHub } from '@/lib/hubContext';
+import {
+calculateKhataBookSummary,
+calculatePartyCardData,
+calculateRunningLedger,
+fetchParties,
+fetchPartyTransactions,
+formatINRNumber,
+} from '@/lib/khatabook';
+import { Party,PartySummaryCardData,PartyTransaction } from '@/types';
+import {
+ArrowDownLeft,ArrowUpRight,
+Calendar,
+CheckCircle2,
+ChevronRight,
+Clock,
+CreditCard,
+DollarSign,
+Layers,
+Plus,
+RefreshCw,
+Search,
+Users,
+Wallet
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -58,7 +69,7 @@ export default function Dashboard() {
       const txData = await fetchPartyTransactions(undefined, effectiveHubId);
       setParties(partyData);
       setTransactions(txData);
-    } catch (err) {
+      } catch (_err) {
       toast.error('Failed to load KhataBook dashboard data');
     } finally {
       setLoading(false);
@@ -327,7 +338,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPartyCards.map((card) => {
             const p = card.party;
-            const pTxs = transactionsMap[p.id] || [];
+            const _pTxs = transactionsMap[p.id] || [];
             return (
               <Card
                 key={p.id}

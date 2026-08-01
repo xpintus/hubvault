@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { useSync } from '@/lib/offline/SyncContext';
-import { resolveConflict } from '@/lib/offline/syncEngine';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/primitives';
-import { AlertTriangle, Server, Smartphone, GitMerge } from 'lucide-react';
 import { formatDateLong } from '@/lib/format';
+import { useSync } from '@/lib/offline/SyncContext';
+import { resolveConflict } from '@/lib/offline/syncEngine';
+import { AlertTriangle,GitMerge,Server,Smartphone } from 'lucide-react';
+import { useState } from 'react';
 
 export default function ConflictResolver() {
   const { currentConflict, clearConflict } = useSync();
@@ -12,7 +12,7 @@ export default function ConflictResolver() {
 
   if (!currentConflict) return null;
 
-  const { serverData, localData, queueItem } = currentConflict;
+  const { serverData, localData, queueItem: _queueItem } = currentConflict;
 
   const handleResolve = async (action: 'keep_local' | 'keep_server' | 'merge') => {
     setResolving(true);

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { Profile, UserRole } from '@/types';
+import { Profile,UserRole } from '@/types';
+import { describe,expect,it } from 'vitest';
 
 // Mock function simulating the update_my_profile RPC logic
 interface SafeProfileUpdateInput {

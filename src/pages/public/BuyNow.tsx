@@ -1,15 +1,31 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  ShoppingBag, User, Mail, Phone, Building2, MessageSquare, Lock,
-  CheckCircle2, Gift, ArrowRight, ShieldCheck, Sparkles, Send,
-  TrendingUp, BarChart3, Scale, RotateCcw, Wallet, Eye, EyeOff,
-} from 'lucide-react';
 import SEO from '@/components/SEO';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, Input, Textarea, Spinner } from '@/components/ui/primitives';
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase';
+import { Button,Card,Input,Spinner,Textarea } from '@/components/ui/primitives';
 import { useSettings } from '@/lib/settings';
+import { supabase,SUPABASE_ANON_KEY,SUPABASE_URL } from '@/lib/supabase';
+import {
+ArrowRight,
+BarChart3,
+Building2,
+CheckCircle2,
+Eye,EyeOff,
+Gift,
+Lock,
+Mail,
+MessageSquare,
+Phone,
+RotateCcw,
+Scale,
+Send,
+ShieldCheck,
+ShoppingBag,
+Sparkles,
+TrendingUp,
+User,
+Wallet,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link,useNavigate } from 'react-router-dom';
 
 const BUY_FEATURES = [
   { icon: Sparkles, text: 'Lifetime access — pay once, use forever' },

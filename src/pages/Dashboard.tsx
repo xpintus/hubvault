@@ -1,38 +1,55 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Wallet, Banknote, Smartphone, TrendingDown, TrendingUp, Scale, Target,
-  ChevronLeft, ChevronRight, Calendar, Plus, Download, Upload, Search, Eye,
-  Pencil, Trash2, Inbox, Copy, CheckCircle2, Building2, Clock, MapPin,
-  AlertCircle, RotateCcw, Phone, BadgeCheck, Receipt, ArrowRight, RefreshCw
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Spinner, SkeletonCard } from '@/components/ui/primitives';
-import AdSlot from '@/components/ui/AdSlot';
-import StatusBadge from '@/components/StatusBadge';
-import DenominationPanel from '@/components/DenominationPanel';
 import CollectionEntryModal from '@/components/CollectionEntryModal';
-import ImportModal from '@/components/ImportModal';
-import Modal from '@/components/ui/Modal';
+import DenominationPanel from '@/components/DenominationPanel';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import ImportModal from '@/components/ImportModal';
+import StatusBadge from '@/components/StatusBadge';
+import AdSlot from '@/components/ui/AdSlot';
+import Modal from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { Button,Card,EmptyState,SkeletonCard,Spinner } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
-import {
-  CollectionEntry, Collector, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS, EntryStatus, Due, Recovery,
-} from '@/types';
-import { formatINR, formatDate, formatDateLong, toISODate } from '@/lib/format';
 import { exportEntriesToExcel } from '@/lib/excel';
+import { computeExcessAmount,computePendingAmount,normalizeRecoveryMode,safeAmount } from '@/lib/financeCalculations';
+import { formatDate,formatDateLong,formatINR,toISODate } from '@/lib/format';
+import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
-import { safeAmount, normalizeRecoveryMode, computePendingAmount, computeExcessAmount } from '@/lib/financeCalculations';
-import { subDays, addDays, isToday as isDateToday, parseISO } from 'date-fns';
+import { supabase } from '@/lib/supabase';
+import {
+CollectionEntry,Collector,DenominationInput,DENOMINATIONS,
+Due,
+EMPTY_DENOMINATIONS,EntryStatus,
+Recovery,
+} from '@/types';
 import { clsx } from 'clsx';
+import { addDays,isToday as isDateToday,parseISO,subDays } from 'date-fns';
+import {
+ArrowRight,
+Banknote,
+Building2,
+Calendar,
+CheckCircle2,
+ChevronLeft,ChevronRight,
+Clock,
+Copy,
+Download,
+Eye,
+Inbox,
+Pencil,
+Plus,
+RotateCcw,
+Scale,
+Search,
+Smartphone,
+Target,
+Trash2,
+TrendingDown,TrendingUp,
+Upload,
+Wallet
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
 
-import KPICard from '@/components/dashboard/KPICard';
-import ReconciliationCard from '@/components/dashboard/ReconciliationCard';
-import DateNavigation from '@/components/dashboard/DateNavigation';
-import DenominationSummary from '@/components/dashboard/DenominationSummary';
 import AvailableCollectionModal from '@/components/dashboard/AvailableCollectionModal';
 import { RowHoverPopup } from '@/components/dashboard/StaffActivityTable';
 

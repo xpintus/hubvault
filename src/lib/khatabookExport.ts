@@ -1,4 +1,4 @@
-import { Party, PartyLedgerEntry, PartySummaryCardData } from '@/types';
+import { Party,PartyLedgerEntry,PartySummaryCardData } from '@/types';
 import { formatINRNumber } from './khatabook';
 
 export interface LedgerExportRow {

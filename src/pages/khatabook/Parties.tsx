@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Search, Edit3, Trash2, BookOpen, Building2, Phone, MapPin, FileText } from 'lucide-react';
-import { Party } from '@/types';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { useToast } from '@/components/ui/Toast';
-import { confirm } from '@/lib/confirm';
-import { Button, Card, EmptyState, Skeleton, Badge } from '@/components/ui/primitives';
-import { fetchParties, createParty, updateParty, deleteParty, formatINRNumber } from '@/lib/khatabook';
 import PartyModal from '@/components/khatabook/PartyModal';
+import { Badge,Button,Card,EmptyState,Skeleton } from '@/components/ui/primitives';
+import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import { confirm } from '@/lib/confirm';
+import { useHub } from '@/lib/hubContext';
+import { createParty,deleteParty,fetchParties,formatINRNumber,updateParty } from '@/lib/khatabook';
+import { Party } from '@/types';
+import { BookOpen,Edit3,Plus,Search,Trash2,Users } from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Parties() {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ export default function Parties() {
     try {
       const data = await fetchParties(effectiveHubId);
       setParties(data);
-    } catch (err) {
+      } catch (_err) {
       toast.error('Failed to load parties');
     } finally {
       setLoading(false);

@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
-import { Minus, Plus } from 'lucide-react';
-import { DenominationInput, DENOMINATIONS } from '@/types';
 import { denomCashTotal } from '@/lib/calc';
 import { formatINR } from '@/lib/format';
+import { DenominationInput,DENOMINATIONS } from '@/types';
 import { clsx } from 'clsx';
+import { Minus,Plus } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface Props {
   value: DenominationInput;

@@ -1,25 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Banknote, Smartphone, Calculator } from 'lucide-react';
-import Modal from './ui/Modal';
-import { Button, Input, Select, Textarea } from './ui/primitives';
-import DenominationPanel from './DenominationPanel';
-import { useToast } from './ui/Toast';
 import { useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { computeGap,computePendingAmount,computeStatus,computeTotal,denomCashTotal } from '@/lib/calc';
+import { formatINR } from '@/lib/format';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
 import {
-  CollectionEntry,
-  CollectionEntryInput,
-  Collector,
-  DenominationInput,
-  EMPTY_DENOMINATIONS,
-  OnlinePaymentMode,
-  PAYMENT_MODE_LABELS,
+CollectionEntry,
+CollectionEntryInput,
+Collector,
+DenominationInput,
+EMPTY_DENOMINATIONS,
+OnlinePaymentMode,
+PAYMENT_MODE_LABELS,
 } from '@/types';
-import { computeGap, computeStatus, computeTotal, denomCashTotal, computePendingAmount } from '@/lib/calc';
-import { formatINR } from '@/lib/format';
+import { Banknote,Calculator,Smartphone } from 'lucide-react';
+import { useEffect,useMemo,useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import DenominationPanel from './DenominationPanel';
+import Modal from './ui/Modal';
+import { Button,Input,Select,Textarea } from './ui/primitives';
+import { useToast } from './ui/Toast';
 
 interface Props {
   open: boolean;
@@ -172,7 +172,7 @@ export default function CollectionEntryModal({
              await addToQueue(profile.id, hubId, 'denominations', 'INSERT', dPayload);
           }
 
-          let existingDue = await db.dues.where('collection_entry_id').equals(editing.id).first();
+          const existingDue = await db.dues.where('collection_entry_id').equals(editing.id).first();
           if (pendingAmount > 0 && !existingDue) {
             const dueId = uuidv4();
             const duePayload = {

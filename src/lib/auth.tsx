@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
 import { Profile } from '@/types';
+import { Session,User } from '@supabase/supabase-js';
+import { createContext,ReactNode,useCallback,useContext,useEffect,useState } from 'react';
+import { confirm } from './confirm';
 import { setActiveUserId } from './offline/db';
 import { getQueueCount } from './offline/syncQueue';
-import { confirm } from './confirm';
+import { supabase } from './supabase';
 
 interface AuthContextValue {
   session: Session | null;

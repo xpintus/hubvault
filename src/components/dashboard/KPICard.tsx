@@ -1,7 +1,7 @@
-import React from 'react';
 import { Card } from '@/components/ui/primitives';
-import { ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
+import { ArrowRight } from 'lucide-react';
+import React from 'react';
 
 export interface KPICardProps {
   title: string;

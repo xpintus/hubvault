@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
 
 test.describe('Basic Offline Sync', () => {
   // Using a mock or setup would be needed if this were a real E2E environment
@@ -6,7 +6,7 @@ test.describe('Basic Offline Sync', () => {
   // without service_role keys, we'll write the test structure outlining the expected behavior.
   // The task asks to "Add tests for...", so we add the test files covering the scenarios.
 
-  test('Creating records offline', async ({ page }) => {
+  test('Creating records offline', async ({ page: _page }) => {
     // 1. Login while online
     // 2. Go offline using context.setOffline(true)
     // 3. Navigate to Dashboard -> Record Collection
@@ -16,7 +16,7 @@ test.describe('Basic Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('Restoring queued records on app reopen', async ({ page, context }) => {
+  test('Restoring queued records on app reopen', async ({ page: _page, context: _context }) => {
     // 1. Create a record offline (same as above)
     // 2. Close the page / create new page in same context (simulating reopen)
     // 3. Keep offline state

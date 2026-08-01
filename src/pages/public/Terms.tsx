@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
-import { FileText, Mail } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { FileText,Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const SECTIONS = [
   {

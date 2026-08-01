@@ -1,16 +1,30 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Gift, Users, IndianRupee, Copy, CheckCircle2, Share2, TrendingUp,
-  Clock, BadgeCheck, AlertCircle, Sparkles, ChevronRight,
-  Wallet, Landmark, ArrowDownToLine, CalendarClock, XCircle, CheckCircle,
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { supabase, SUPABASE_URL } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Card, Button, Input, EmptyState, Spinner, Badge } from '@/components/ui/primitives';
 import Modal from '@/components/ui/Modal';
-import { formatINR, formatDate } from '@/lib/format';
+import { useToast } from '@/components/ui/Toast';
+import { Badge,Button,Card,EmptyState,Input,Spinner } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
+import { formatDate,formatINR } from '@/lib/format';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
 import { clsx } from 'clsx';
+import {
+ArrowDownToLine,
+BadgeCheck,
+CalendarClock,
+CheckCircle,
+CheckCircle2,
+ChevronRight,
+Clock,
+Copy,
+Gift,
+IndianRupee,
+Landmark,
+Share2,
+Sparkles,
+TrendingUp,
+Users,
+Wallet,
+XCircle
+} from 'lucide-react';
+import { useCallback,useEffect,useState } from 'react';
 
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/manage-user`;
 

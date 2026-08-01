@@ -1,13 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe,expect,it } from 'vitest';
 import {
-  computeGap,
-  computeStatus,
-  computePendingAmount,
-  computeExcessAmount,
-  calculateCollectionDifference,
-  calculateRecoveryPercentage,
-  safeAmount,
-  normalizeRecoveryMode,
+calculateRecoveryPercentage,
+computeExcessAmount,
+computeGap,
+computePendingAmount,
+computeStatus,
+normalizeRecoveryMode,
+safeAmount
 } from '../lib/financeCalculations';
 
 describe('Dashboard Financial Calculations', () => {

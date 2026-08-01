@@ -1,5 +1,5 @@
-import Dexie, { Table } from 'dexie';
-import { CollectionEntry, Collector, Due, Recovery, DenominationInput, Party, PartyTransaction } from '@/types';
+import { CollectionEntry,Collector,DenominationInput,Due,Party,PartyTransaction,Recovery } from '@/types';
+import Dexie,{ Table } from 'dexie';
 
 // Extend types to include offline tracking fields
 export interface OfflineCollectionEntry extends CollectionEntry {
@@ -198,7 +198,7 @@ export function resetAllUserDBs() {
   userDbMap.forEach((database) => {
     try {
       database.close();
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
   });
@@ -210,7 +210,7 @@ export function resetAllUserDBs() {
 if (isIndexedDbSupported) {
   try {
     Dexie.delete('HubVaultDB').catch(() => {});
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 }

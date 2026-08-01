@@ -1,24 +1,31 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import {
-  BookOpen, Plus, Search, Calendar, Download, Printer, Filter, Edit3, Trash2, Layers
-} from 'lucide-react';
-import { Party, PartyTransaction, PartyLedgerEntry } from '@/types';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { useToast } from '@/components/ui/Toast';
-import { confirm } from '@/lib/confirm';
-import { Button, Card, Select, Input, EmptyState, Skeleton, Badge } from '@/components/ui/primitives';
-import {
-  fetchParties,
-  fetchPartyTransactions,
-  calculateRunningLedger,
-  deletePartyTransaction,
-  formatINRNumber,
-} from '@/lib/khatabook';
-import { exportPartyLedgerToExcel, printKhataBookReport } from '@/lib/khatabookExport';
-import TransactionModal from '@/components/khatabook/TransactionModal';
 import AdjustmentDetailModal from '@/components/khatabook/AdjustmentDetailModal';
+import TransactionModal from '@/components/khatabook/TransactionModal';
+import { Badge,Button,Card,EmptyState,Input,Select,Skeleton } from '@/components/ui/primitives';
+import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import { confirm } from '@/lib/confirm';
+import { useHub } from '@/lib/hubContext';
+import {
+calculateRunningLedger,
+deletePartyTransaction,
+fetchParties,
+fetchPartyTransactions,
+formatINRNumber,
+} from '@/lib/khatabook';
+import { exportPartyLedgerToExcel,printKhataBookReport } from '@/lib/khatabookExport';
+import { Party,PartyLedgerEntry,PartyTransaction } from '@/types';
+import {
+BookOpen,
+Download,
+Edit3,
+Layers,
+Plus,
+Printer,
+Search,
+Trash2
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Ledger() {
   const toast = useToast();
@@ -59,7 +66,7 @@ export default function Ledger() {
       const tData = await fetchPartyTransactions(undefined, effectiveHubId);
       setParties(pData);
       setTransactions(tData);
-    } catch (err) {
+      } catch (_err) {
       toast.error('Failed to load ledger data');
     } finally {
       setLoading(false);

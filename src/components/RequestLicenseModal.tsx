@@ -1,14 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  Gift, Smartphone, CheckCircle2, Clock, AlertTriangle, Copy,
-  QrCode, Loader2, ArrowRight, KeyRound, Sparkles, Upload, X, Image as ImageIcon,
-} from 'lucide-react';
-import { supabase, SUPABASE_URL } from '@/lib/supabase';
-import { Button, Input } from '@/components/ui/primitives';
 import Modal from '@/components/ui/Modal';
+import { Button,Input } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/Toast';
 import { useSettings } from '@/lib/settings';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
 import { Profile } from '@/types';
+import {
+AlertTriangle,
+ArrowRight,
+CheckCircle2,Clock,
+Copy,
+Gift,
+KeyRound,
+Smartphone,
+Sparkles,Upload,X
+} from 'lucide-react';
+import { useCallback,useEffect,useState } from 'react';
 
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/manage-user`;
 

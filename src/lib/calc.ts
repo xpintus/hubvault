@@ -1,4 +1,4 @@
-import { DenominationInput, EntryStatus, DENOMINATIONS } from '@/types';
+import { DenominationInput,DENOMINATIONS,EntryStatus } from '@/types';
 
 export function denomCashTotal(d: DenominationInput): number {
   return DENOMINATIONS.reduce((sum, item) => sum + item.value * (d[item.key] || 0), 0);

@@ -1,22 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Landmark, Search, Plus, Trash2, Banknote, TrendingDown, TrendingUp,
-  Wallet, Calendar, FileBarChart, Edit3, Eye, ArrowRight,
-  X, RotateCcw, Building2, Download, AlertCircle, FileText, Smartphone
-} from 'lucide-react';
-import * as XLSX from 'xlsx';
+import Modal from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { Button,Card,EmptyState,Input,Select,Skeleton,Spinner } from '@/components/ui/primitives';
+import { logAudit } from '@/lib/audit';
 import { useAuth } from '@/lib/auth';
+import { confirm } from '@/lib/confirm';
+import { formatDate,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Skeleton, Spinner, Input, Select } from '@/components/ui/primitives';
-import Modal from '@/components/ui/Modal';
-import { confirm } from '@/lib/confirm';
-import { CollectionEntry, CmsDeposit, Due, Recovery, Collector, STATUS_LABELS, DUE_STATUS_LABELS } from '@/types';
-import { formatINR, formatDate, toISODate } from '@/lib/format';
-import { subDays } from 'date-fns';
+import { CmsDeposit,CollectionEntry,Collector,Due,Recovery } from '@/types';
 import { clsx } from 'clsx';
-import { logAudit } from '@/lib/audit';
+import { subDays } from 'date-fns';
+import {
+AlertCircle,
+Banknote,
+Building2,
+Calendar,
+Download,
+Edit3,
+FileBarChart,
+FileText,
+Landmark,
+Plus,
+Search,
+Trash2,
+TrendingUp,
+X
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import * as XLSX from 'xlsx';
 
 type DetailType = 'expected' | 'deposited' | 'pending' | 'count' | null;
 
@@ -148,8 +159,8 @@ export default function DepositsPage() {
   const [loading, setLoading] = useState(true);
   const [deposits, setDeposits] = useState<CmsDeposit[]>([]);
   const [entries, setEntries] = useState<CollectionEntry[]>([]);
-  const [dues, setDues] = useState<Due[]>([]);
-  const [recoveries, setRecoveries] = useState<Recovery[]>([]);
+  const [_dues, setDues] = useState<Due[]>([]);
+  const [_recoveries, setRecoveries] = useState<Recovery[]>([]);
   const [collectors, setCollectors] = useState<Collector[]>([]);
 
   const [search, setSearch] = useState('');
@@ -735,7 +746,7 @@ export default function DepositsPage() {
   };
 
   // Recovery Handler
-  const openRecoveryModal = (due: Due) => {
+  const _openRecoveryModal = (due: Due) => {
     setRecoveryTargetDue(due);
     setRecoveryForm({
       recovery_date: toISODate(new Date()),
@@ -788,7 +799,7 @@ export default function DepositsPage() {
     }
   };
 
-  const handleMarkWrittenOff = async (due: Due) => {
+  const _handleMarkWrittenOff = async (due: Due) => {
     const ok = await confirm({
       title: 'Mark shortage as Written Off?',
       message: `This will clear remaining backlog of ${formatINR(due.remaining_amount)} for ${due.collector?.name ?? 'Employee'}.`,

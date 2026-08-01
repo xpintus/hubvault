@@ -1,16 +1,16 @@
-import { supabase } from './supabase';
 import {
-  Party,
-  PartyInput,
-  PartyTransaction,
-  PartyTransactionInput,
-  PartyLedgerEntry,
-  PartySummaryCardData,
-  KhataBookSummary,
-  PartyLedgerStatus,
+KhataBookSummary,
+Party,
+PartyInput,
+PartyLedgerEntry,
+PartyLedgerStatus,
+PartySummaryCardData,
+PartyTransaction,
+PartyTransactionInput,
 } from '@/types';
-import { db, SyncQueueItem } from './offline/db';
 import { v4 as uuidv4 } from 'uuid';
+import { db,SyncQueueItem } from './offline/db';
+import { supabase } from './supabase';
 
 /** Only connectivity failures are safe to treat as offline writes. */
 export function isOfflineFallbackError(error: unknown): boolean {
@@ -291,7 +291,7 @@ export async function fetchParties(hubId?: string | null): Promise<Party[]> {
         for (const p of data) {
           await db.parties.put(p);
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore offline cache write error
       }
       return data as Party[];
@@ -326,7 +326,7 @@ export async function fetchPartyTransactions(partyId?: string, hubId?: string | 
         for (const t of data) {
           await db.party_transactions.put(t);
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore offline cache write error
       }
       return data as PartyTransaction[];

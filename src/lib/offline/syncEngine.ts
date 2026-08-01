@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
-import { db, getUserDB, getActiveUserId, SyncQueueItem } from './db';
-import { getPendingQueue, markQueueStatus, removeFromQueue } from './syncQueue';
+import { getActiveUserId,getUserDB,SyncQueueItem } from './db';
+import { getPendingQueue,markQueueStatus,removeFromQueue } from './syncQueue';
 
 export type ConflictAction = 'keep_local' | 'keep_server' | 'merge';
 

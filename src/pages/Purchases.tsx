@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Mail, Search, Trash2, MailOpen, Circle, User, Building2,
-  Calendar, Phone, ArrowLeft, ShoppingBag, Tag, CheckCircle2, XCircle,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Skeleton, Badge } from '@/components/ui/primitives';
-import { PurchaseRequest, PurchaseStatus, PURCHASE_STATUS_LABELS } from '@/types';
-import { formatDateTime } from '@/lib/format';
+import { Badge,Button,Card,EmptyState,Skeleton } from '@/components/ui/primitives';
 import { confirm } from '@/lib/confirm';
+import { formatDateTime } from '@/lib/format';
+import { supabase } from '@/lib/supabase';
+import { PURCHASE_STATUS_LABELS,PurchaseRequest,PurchaseStatus } from '@/types';
 import { clsx } from 'clsx';
+import {
+ArrowLeft,
+Building2,
+Calendar,
+Circle,
+Mail,
+MailOpen,
+Phone,
+Search,
+ShoppingBag,Tag,
+Trash2,
+User
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
 
 const STATUS_COLORS: Record<PurchaseStatus, string> = {
   pending: 'amber',

@@ -1,13 +1,24 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  UserPlus, Eye, EyeOff, ArrowRight, Phone, Mail, Building2,
-  KeyRound, User, MapPin, CheckCircle2, Lock, Sparkles, Wallet,
-} from 'lucide-react';
 import SEO from '@/components/SEO';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, Input, Select } from '@/components/ui/primitives';
+import { Button,Card,Input,Select } from '@/components/ui/primitives';
 import { SUPABASE_URL } from '@/lib/supabase';
+import {
+ArrowRight,
+Building2,
+CheckCircle2,
+Eye,EyeOff,
+KeyRound,
+Lock,
+Mail,
+MapPin,
+Phone,
+Sparkles,
+User,
+UserPlus,
+Wallet,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const COMPANIES = ['Valmo', 'Amazon', 'Flipkart', 'Shadowfax', 'Delhivery'];
 

@@ -1,12 +1,18 @@
-import { useParams, Link, Navigate } from 'react-router-dom';
-import {
-  Calendar, Clock, ArrowLeft, ArrowRight, Tag, User,
-  Share2, Twitter, Linkedin, Facebook,
-} from 'lucide-react';
 import SEO from '@/components/SEO';
-import { getPostBySlug, getRelatedPosts } from '@/lib/blogData';
 import AdSlot from '@/components/ui/AdSlot';
+import { getPostBySlug,getRelatedPosts } from '@/lib/blogData';
 import { formatDate } from '@/lib/format';
+import {
+ArrowLeft,ArrowRight,
+Calendar,Clock,
+Facebook,
+Linkedin,
+Share2,
+Tag,
+Twitter,
+User,
+} from 'lucide-react';
+import { Link,Navigate,useParams } from 'react-router-dom';
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();

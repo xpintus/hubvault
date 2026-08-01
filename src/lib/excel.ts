@@ -1,4 +1,4 @@
-import { CollectionEntry, EntryStatus, OnlinePaymentMode, STATUS_LABELS } from '@/types';
+import { CollectionEntry,EntryStatus,OnlinePaymentMode,STATUS_LABELS } from '@/types';
 
 export interface ExportRow {
   Date: string;
@@ -95,7 +95,7 @@ function parseDateField(raw: unknown): string | null {
   }
   const s = String(raw).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  const m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
   if (m) {
     const d = m[1].padStart(2, '0');
     const mo = m[2].padStart(2, '0');
@@ -106,7 +106,7 @@ function parseDateField(raw: unknown): string | null {
 
 function parseNum(raw: unknown): number | null {
   if (raw == null || raw === '') return null;
-  const n = Number(String(raw).replace(/[^0-9.\-]/g, ''));
+  const n = Number(String(raw).replace(/[^0-9.-]/g, ''));
   return isFinite(n) ? n : null;
 }
 

@@ -1,7 +1,7 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, BookOpen, FileText } from 'lucide-react';
-import { clsx } from 'clsx';
 import SEO from '@/components/SEO';
+import { clsx } from 'clsx';
+import { BookOpen,FileText,LayoutDashboard,Users } from 'lucide-react';
+import { NavLink,Outlet,useLocation } from 'react-router-dom';
 
 const SUB_NAV = [
   { to: '/khatabook/dashboard', label: 'Dashboard', icon: LayoutDashboard },

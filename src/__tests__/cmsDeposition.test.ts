@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe,expect,it } from 'vitest';
 import {
-  calculateCmsPending,
-  calculateCmsExcess,
-  getDepositAmount,
-  getCashSubmittedAmount,
-  getOnlineSubmittedAmount,
+calculateCmsExcess,
+calculateCmsPending,
+getCashSubmittedAmount,
+getDepositAmount,
+getOnlineSubmittedAmount,
 } from '../lib/financeCalculations';
 import { CmsDeposit } from '../types';
 

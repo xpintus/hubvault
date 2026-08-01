@@ -1,32 +1,32 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { HashRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
-import { AuthProvider, useAuth } from '@/lib/auth';
-import { HubProvider } from '@/lib/hubContext';
-import { ThemeProvider } from '@/lib/theme';
-import { ToastProvider } from '@/components/ui/Toast';
-import { NotificationProvider } from '@/lib/notifications';
-import { SettingsProvider } from '@/lib/settings';
-import { SyncProvider } from '@/lib/offline/SyncContext';
-import { FullPageSpinner } from '@/components/ui/primitives';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import AppLayout from '@/components/AppLayout';
 import PublicLayout from '@/components/PublicLayout';
-import Login from '@/pages/Login';
+import { FullPageSpinner } from '@/components/ui/primitives';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { ToastProvider } from '@/components/ui/Toast';
+import { AuthProvider,useAuth } from '@/lib/auth';
+import { HubProvider } from '@/lib/hubContext';
+import { NotificationProvider } from '@/lib/notifications';
+import { SyncProvider } from '@/lib/offline/SyncContext';
+import { SettingsProvider } from '@/lib/settings';
+import { ThemeProvider } from '@/lib/theme';
 import ForgotPassword from '@/pages/ForgotPassword';
 import GuestDashboard from '@/pages/GuestDashboard';
+import Login from '@/pages/Login';
+import { lazy,Suspense,useEffect,useState } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
+import { HashRouter,Link,Navigate,Route,Routes,useLocation,useNavigate } from 'react-router-dom';
 
-import Home from '@/pages/public/Home';
+import PaymentPage from '@/pages/PaymentPage';
 import About from '@/pages/public/About';
-import Contact from '@/pages/public/Contact';
-import FAQ from '@/pages/public/FAQ';
-import Privacy from '@/pages/public/Privacy';
-import Terms from '@/pages/public/Terms';
 import BlogList from '@/pages/public/BlogList';
 import BlogPost from '@/pages/public/BlogPost';
-import TrialSignup from '@/pages/public/TrialSignup';
 import BuyNow from '@/pages/public/BuyNow';
-import PaymentPage from '@/pages/PaymentPage';
+import Contact from '@/pages/public/Contact';
+import FAQ from '@/pages/public/FAQ';
+import Home from '@/pages/public/Home';
+import Privacy from '@/pages/public/Privacy';
+import Terms from '@/pages/public/Terms';
+import TrialSignup from '@/pages/public/TrialSignup';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const ActivateLicense = lazy(() => import('@/pages/ActivateLicense'));
@@ -52,11 +52,18 @@ const KhataBookParties = lazy(() => import('@/pages/khatabook/Parties'));
 const KhataBookLedger = lazy(() => import('@/pages/khatabook/Ledger'));
 const KhataBookReports = lazy(() => import('@/pages/khatabook/Reports'));
 
-import {
-  Wallet, LayoutDashboard, FileBarChart, Building2, Users as UsersIcon,
-  AlertCircle, RotateCcw, UserCog, Lock, LogOut, Menu, Calendar, UserPlus,
-} from 'lucide-react';
 import { formatDateLong } from '@/lib/format';
+import {
+AlertCircle,
+Building2,
+Calendar,
+FileBarChart,
+LayoutDashboard,
+Lock,LogOut,Menu,
+RotateCcw,UserCog,
+Users as UsersIcon,
+Wallet
+} from 'lucide-react';
 
 function ProtectedRoutes() {
   const { user, profile, loading, signOut } = useAuth();
@@ -168,7 +175,7 @@ export default function App() {
 function GuestAppLayout() {
   const { profile, loading, signOut, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const _location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {

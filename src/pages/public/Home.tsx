@@ -1,14 +1,28 @@
+import SEO from '@/components/SEO';
+import AdSlot from '@/components/ui/AdSlot';
+import Modal from '@/components/ui/Modal';
+import {
+ArrowRight,
+Banknote,
+BarChart3,
+Building2,
+Check,
+CheckCircle2,
+Coins,
+FileText,
+RotateCcw,
+Scale,
+Send,
+ShieldCheck,
+Smartphone,
+Sparkles,
+Tag,
+TrendingUp,
+Users,
+Wallet,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  BarChart3, ShieldCheck, Building2, Users,
-  FileText, ArrowRight, Scale, Smartphone, Banknote,
-  RotateCcw, Wallet, Coins, TrendingUp,
-  Tag, Check, Sparkles, Send, CheckCircle2,
-} from 'lucide-react';
-import SEO from '@/components/SEO';
-import Modal from '@/components/ui/Modal';
-import AdSlot from '@/components/ui/AdSlot';
 
 const PRICE = 999;
 const BUY_FEATURES = [

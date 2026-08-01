@@ -1,19 +1,19 @@
-import { ReactNode, useState, useEffect, useRef, useCallback } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, LogOut, ChevronDown, Calendar, Check, Building2, Layers, KeyRound, Clock, AlertTriangle } from 'lucide-react';
-import Sidebar from './Sidebar';
-import LicenseActivationModal from './LicenseActivationModal';
 import { useAuth } from '@/lib/auth';
+import { formatDateLong } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { useNotifications } from '@/lib/notifications';
 import { ROLE_LABELS } from '@/types';
-import { formatDateLong } from '@/lib/format';
+import { clsx } from 'clsx';
+import { AlertTriangle,Building2,Calendar,Check,ChevronDown,KeyRound,Layers,LogOut,Menu } from 'lucide-react';
+import { useCallback,useEffect,useRef,useState } from 'react';
+import { Outlet,useLocation,useNavigate } from 'react-router-dom';
+import LicenseActivationModal from './LicenseActivationModal';
+import ConflictResolver from './offline/ConflictResolver';
+import SyncIndicator from './offline/SyncIndicator';
+import Sidebar from './Sidebar';
 import { FullPageSpinner } from './ui/primitives';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useToast } from './ui/Toast';
-import SyncIndicator from './offline/SyncIndicator';
-import ConflictResolver from './offline/ConflictResolver';
-import { clsx } from 'clsx';
 
 const TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',

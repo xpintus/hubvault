@@ -1,14 +1,27 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  Wallet, Banknote, Smartphone, TrendingDown, TrendingUp, Scale, Target,
-  Building2, Calendar, CheckCircle2, Clock, AlertCircle, RotateCcw,
-  ShoppingBag, Sparkles, X, ArrowRight, Lock, Phone, BadgeCheck, Receipt,
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { Card } from '@/components/ui/primitives';
-import { clsx } from 'clsx';
-import { formatINR, formatDateLong } from '@/lib/format';
 import PurchaseFormModal from '@/components/PurchaseFormModal';
+import { Card } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
+import { formatDateLong,formatINR } from '@/lib/format';
+import { clsx } from 'clsx';
+import {
+AlertCircle,
+ArrowRight,
+BadgeCheck,
+Banknote,
+Building2,Calendar,CheckCircle2,Clock,
+Lock,Phone,
+Receipt,
+RotateCcw,
+Scale,
+ShoppingBag,
+Smartphone,
+Sparkles,
+Target,
+TrendingDown,TrendingUp,
+Wallet,
+X,
+} from 'lucide-react';
+import { useCallback,useEffect,useState } from 'react';
 
 const DUMMY_KPIS = [
   { label: 'Total Expected COD', value: 485200, icon: Target, accent: 'slate', sub: '12 entries' },
@@ -141,7 +154,7 @@ function DummyRowHoverPopup({ entry }: { entry: typeof DUMMY_ENTRIES[0] }) {
 export default function GuestDashboard() {
   const { profile } = useAuth();
   const [showBuyBanner, setShowBuyBanner] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [_bannerDismissed, setBannerDismissed] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(3);
 

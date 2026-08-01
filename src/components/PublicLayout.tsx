@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Wallet, Menu, X, ChevronRight, Mail, Phone, ArrowRight } from 'lucide-react';
-import { clsx } from 'clsx';
 import { SITE_NAME } from '@/components/SEO';
+import { clsx } from 'clsx';
+import { ArrowRight,ChevronRight,Mail,Menu,Wallet,X } from 'lucide-react';
+import { useEffect,useState } from 'react';
+import { Link,Outlet,useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ui/ThemeToggle';
 
 const NAV_LINKS = [

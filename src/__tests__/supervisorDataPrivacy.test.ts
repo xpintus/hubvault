@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Profile, UserRole, Hub } from '@/types';
+import { Profile,UserRole } from '@/types';
+import { describe,expect,it } from 'vitest';
 
 // Mock authorization evaluator representing RLS and Edge Function policies
-interface QueryContext {
+interface _QueryContext {
   caller: Profile;
   accessibleHubIds: string[];
 }

@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { KeyRound, ShieldCheck, Clock, AlertTriangle, CheckCircle2, Gift, ShoppingCart } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { supabase, SUPABASE_URL } from '@/lib/supabase';
-import { Button, Input, Spinner } from '@/components/ui/primitives';
-import { useToast } from '@/components/ui/Toast';
 import RequestLicenseModal from '@/components/RequestLicenseModal';
+import { Button,Input,Spinner } from '@/components/ui/primitives';
+import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
+import { AlertTriangle,CheckCircle2,Clock,Gift,KeyRound,ShieldCheck,ShoppingCart } from 'lucide-react';
+import { useEffect,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/manage-user`;
 
 export default function ActivateLicense() {
-  const { profile, loading, checkLicenseExpired, signOut } = useAuth();
+  const { profile, loading, checkLicenseExpired: _checkLicenseExpired, signOut } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [code, setCode] = useState('');

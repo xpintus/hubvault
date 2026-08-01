@@ -1,6 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Button, Card } from '@/components/ui/primitives';
+import { Button,Card } from '@/components/ui/primitives';
+import { AlertCircle,RefreshCw } from 'lucide-react';
+import { Component,ErrorInfo,ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { db, getUserDB, getActiveUserId, SyncQueueItem } from './db';
+import { getActiveUserId,getUserDB,SyncQueueItem } from './db';
 
 type OperationType = 'INSERT' | 'UPDATE' | 'DELETE';
 type TableName = 'collection_entries' | 'collectors' | 'dues' | 'recoveries' | 'denominations';

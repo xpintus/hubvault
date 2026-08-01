@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
 
 test.describe('Advanced Offline Sync', () => {
 
-  test('Reconnecting and syncing', async ({ page, context }) => {
+  test('Reconnecting and syncing', async ({ page: _page, context: _context }) => {
     // 1. Create a record offline
     // 2. Turn network online context.setOffline(false)
     // 3. SyncEngine should auto-trigger processSyncQueue
@@ -10,7 +10,7 @@ test.describe('Advanced Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('Duplicate prevention', async ({ page }) => {
+  test('Duplicate prevention', async ({ page: _page }) => {
     // 1. Create record offline
     // 2. Trigger sync manually
     // 3. Trigger sync again quickly or simulate network failure during response
@@ -18,7 +18,7 @@ test.describe('Advanced Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('Expired session', async ({ page }) => {
+  test('Expired session', async ({ page: _page }) => {
     // 1. Create record offline
     // 2. Simulate session expiry (clear localStorage supabase auth token)
     // 3. Go online
@@ -27,7 +27,7 @@ test.describe('Advanced Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('Partial sync failure', async ({ page }) => {
+  test('Partial sync failure', async ({ page: _page }) => {
     // 1. Create multiple operations in queue (e.g. Insert Collector, Insert Due)
     // 2. Force the first operation to fail (e.g. mock API response 500)
     // 3. Verify the first operation is marked failed and retry_count increases
@@ -35,7 +35,7 @@ test.describe('Advanced Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('Conflict detection', async ({ page }) => {
+  test('Conflict detection', async ({ page: _page }) => {
     // 1. Go offline
     // 2. Update an existing record
     // 3. Simulate another user updating the same record on the server (change updated_at)

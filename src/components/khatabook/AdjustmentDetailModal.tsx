@@ -1,7 +1,7 @@
-import { X, Layers, Calendar, DollarSign, Tag, CheckCircle2, Clock } from 'lucide-react';
-import { PartyLedgerEntry, Party } from '@/types';
-import { formatINRNumber } from '@/lib/khatabook';
 import { Badge } from '@/components/ui/primitives';
+import { formatINRNumber } from '@/lib/khatabook';
+import { Party,PartyLedgerEntry } from '@/types';
+import { Layers,X } from 'lucide-react';
 
 interface AdjustmentDetailModalProps {
   open: boolean;

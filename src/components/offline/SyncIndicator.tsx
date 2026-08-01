@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useSync } from '@/lib/offline/SyncContext';
-import { Wifi, WifiOff, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { clsx } from 'clsx';
 import { formatTimeShort } from '@/lib/format';
+import { useSync } from '@/lib/offline/SyncContext';
+import { clsx } from 'clsx';
+import { AlertCircle,RefreshCw,Wifi,WifiOff } from 'lucide-react';
+import { useState } from 'react';
 
 export default function SyncIndicator() {
   const { isOnline, isSyncing, pendingCount, lastSyncTime, syncNow } = useSync();

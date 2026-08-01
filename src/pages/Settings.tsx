@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Save, Smartphone, IndianRupee, Image as ImageIcon, CheckCircle2, Loader2, Megaphone, Trash2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { db } from '@/lib/offline/db';
-import { confirm } from '@/lib/confirm';
-import { useAuth } from '@/lib/auth';
-import { useSettings } from '@/lib/settings';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, Input, Spinner } from '@/components/ui/primitives';
+import { Button,Card,Input,Spinner } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
+import { confirm } from '@/lib/confirm';
+import { db } from '@/lib/offline/db';
+import { useSettings } from '@/lib/settings';
+import { supabase } from '@/lib/supabase';
+import { CheckCircle2,Image as ImageIcon,IndianRupee,Megaphone,Save,Settings as SettingsIcon,Smartphone,Trash2 } from 'lucide-react';
+import { useEffect,useState } from 'react';
 
 export default function SettingsPage() {
   const { profile } = useAuth();

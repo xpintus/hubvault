@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronDown, HelpCircle, ArrowRight } from 'lucide-react';
-import { clsx } from 'clsx';
 import SEO from '@/components/SEO';
 import AdSlot from '@/components/ui/AdSlot';
+import { clsx } from 'clsx';
+import { ArrowRight,ChevronDown,HelpCircle } from 'lucide-react';
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
 
 interface FAQItem {
   question: string;

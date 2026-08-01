@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
 
 test.describe('Edge Case Offline Sync', () => {
 
-  test('Permission rejection', async ({ page }) => {
+  test('Permission rejection', async ({ page: _page }) => {
     // 1. Go offline
     // 2. Perform an action the user is not allowed to do (e.g. edit a Hub they don't own)
     // 3. Go online
@@ -11,7 +11,7 @@ test.describe('Edge Case Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('Multiple users using the same device', async ({ page }) => {
+  test('Multiple users using the same device', async ({ page: _page }) => {
     // 1. User A logs in, goes offline, creates a record
     // 2. User A logs out (clearing auth)
     // 3. User B logs in
@@ -20,7 +20,7 @@ test.describe('Edge Case Offline Sync', () => {
     expect(true).toBeTruthy();
   });
 
-  test('App update while unsynced records exist', async ({ page }) => {
+  test('App update while unsynced records exist', async ({ page: _page }) => {
     // 1. Create a record offline
     // 2. Simulate a Service Worker update (new CACHE_NAME)
     // 3. Reopen the app

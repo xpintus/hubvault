@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, Plus, Pencil, Trash2, MapPin, Search, User, Shield, CreditCard, Lock } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { useNotifications } from '@/lib/notifications';
-import { supabase, SUPABASE_URL } from '@/lib/supabase';
+import RequestLicenseModal from '@/components/RequestLicenseModal';
+import Modal from '@/components/ui/Modal';
+import { Badge,Button,Card,EmptyState,Input,Select,Skeleton } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/Toast';
 import { logAudit } from '@/lib/audit';
-import { Button, Card, EmptyState, Input, Select, Spinner, Badge, Skeleton } from '@/components/ui/primitives';
-import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
-import { Hub, HubStatus, Profile } from '@/types';
-import { formatDate, formatINR } from '@/lib/format';
-import { clsx } from 'clsx';
-import RequestLicenseModal from '@/components/RequestLicenseModal';
+import { formatINR } from '@/lib/format';
+import { useHub } from '@/lib/hubContext';
+import { useNotifications } from '@/lib/notifications';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
+import { Hub,HubStatus,Profile } from '@/types';
+import { Building2,CreditCard,MapPin,Pencil,Plus,Search,Shield,Trash2,User } from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
 
 export default function Hubs() {
   const { profile, refreshProfile } = useAuth();

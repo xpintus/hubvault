@@ -1,10 +1,10 @@
-import React from 'react';
 import StatusBadge from '@/components/StatusBadge';
-import { CollectionEntry, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS } from '@/types';
+import { computeExcessAmount,computePendingAmount,safeAmount } from '@/lib/financeCalculations';
 import { formatINR } from '@/lib/format';
-import { computePendingAmount, computeExcessAmount, safeAmount } from '@/lib/financeCalculations';
-import { Eye, Pencil, Trash2, BadgeCheck, Phone, Receipt } from 'lucide-react';
+import { CollectionEntry,DenominationInput,DENOMINATIONS,EMPTY_DENOMINATIONS } from '@/types';
 import { clsx } from 'clsx';
+import { BadgeCheck,Eye,Pencil,Phone,Receipt,Trash2 } from 'lucide-react';
+import React from 'react';
 
 export function RowHoverPopup({ entry, mobile = false, onView }: { entry: CollectionEntry; mobile?: boolean; onView: () => void }) {
   const denom: DenominationInput = (() => {

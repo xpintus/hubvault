@@ -395,7 +395,7 @@ Deno.serve(async (req: Request) => {
   const callerRole = callerProfile.role as string;
   const isSuperAdmin = callerRole === "super_admin";
   const isHubAdmin = callerRole === "hub_admin";
-  const isHubManager = isSuperAdmin || isHubAdmin;
+  const _isHubManager = isSuperAdmin || isHubAdmin;
 
   const SELF_SERVICE_ACTIONS = new Set([
     "get-referral-stats", "apply-referral-code", "request-withdrawal", "get-withdrawals",

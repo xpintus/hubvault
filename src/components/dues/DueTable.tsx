@@ -1,8 +1,8 @@
-import React from 'react';
-import { Due, DueStatus } from '@/types';
-import { formatINR, formatDate } from '@/lib/format';
-import { Eye, Edit3, Trash2 } from 'lucide-react';
+import { formatDate,formatINR } from '@/lib/format';
+import { Due,DueStatus } from '@/types';
 import { clsx } from 'clsx';
+import { Edit3,Eye,Trash2 } from 'lucide-react';
+import React from 'react';
 import DueCard from './DueCard';
 
 export interface DueTableProps {

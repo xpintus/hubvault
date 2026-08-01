@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users, Plus, Pencil, Search, Phone, BadgeCheck, Ban, MoreVertical, RotateCcw, Eye, TrendingDown, Wallet, Banknote, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Input, Select, Spinner, Badge, Skeleton } from '@/components/ui/primitives';
 import Modal from '@/components/ui/Modal';
-import { confirm } from '@/lib/confirm';
-import { Collector, CollectorStatus, Hub, Due, Recovery } from '@/types';
-import { formatINR, formatDate, toISODate } from '@/lib/format';
+import { useToast } from '@/components/ui/Toast';
+import { Button,Card,EmptyState,Input,Select,Skeleton,Spinner } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
+import { formatDate,formatINR,toISODate } from '@/lib/format';
+import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
+import { Collector,CollectorStatus,Due,Hub,Recovery } from '@/types';
 import { clsx } from 'clsx';
+import { BadgeCheck,Ban,Banknote,CheckCircle2,Eye,Pencil,Phone,Plus,RotateCcw,Search,TrendingDown,Users,Wallet } from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Collectors() {
   const { profile } = useAuth();

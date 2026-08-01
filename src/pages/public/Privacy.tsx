@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
-import { ShieldCheck, Mail } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { Mail,ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const SECTIONS = [
   {

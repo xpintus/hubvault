@@ -1,20 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  FileText, Download, Printer, Filter, Calendar, Users, DollarSign, Wallet, CreditCard, Clock, CheckCircle2
-} from 'lucide-react';
-import { Party, PartyTransaction, PartyLedgerEntry, PartySummaryCardData } from '@/types';
+import { useToast } from '@/components/ui/Toast';
+import { Badge,Button,Card,EmptyState,Input,Select,Skeleton } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, Select, Input, EmptyState, Skeleton, Badge } from '@/components/ui/primitives';
 import {
-  fetchParties,
-  fetchPartyTransactions,
-  calculatePartyCardData,
-  calculateRunningLedger,
-  formatINRNumber,
+calculatePartyCardData,
+calculateRunningLedger,
+fetchParties,
+fetchPartyTransactions,
+formatINRNumber,
 } from '@/lib/khatabook';
-import { exportPartyLedgerToExcel, exportPartySummaryToExcel, printKhataBookReport } from '@/lib/khatabookExport';
+import { exportPartyLedgerToExcel,exportPartySummaryToExcel,printKhataBookReport } from '@/lib/khatabookExport';
+import { Party,PartySummaryCardData,PartyTransaction } from '@/types';
+import {
+Download,
+FileText,
+Printer
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
 
 export type ReportType =
   | 'party_statement'
@@ -55,7 +57,7 @@ export default function Reports() {
       const tData = await fetchPartyTransactions(undefined, effectiveHubId);
       setParties(pData);
       setTransactions(tData);
-    } catch (err) {
+      } catch (_err) {
       toast.error('Failed to load report data');
     } finally {
       setLoading(false);

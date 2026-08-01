@@ -1,36 +1,42 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  AlertCircle, Search, RotateCcw, Eye, TrendingDown, Users as UsersIcon,
-  CheckCircle2, Clock, ChevronDown, ChevronUp, ArrowLeft, BookOpen, Printer, Download, FileText,
-  Plus, Edit3, Trash2, ShieldAlert, Tag, Filter, X, ArrowRight
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Select, Skeleton, Spinner, Input } from '@/components/ui/primitives';
-import Modal from '@/components/ui/Modal';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import Modal from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { Button,Card,EmptyState,Input,Select,Spinner } from '@/components/ui/primitives';
+import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
-import { Due, DueStatus, DUE_STATUS_LABELS, Collector, Recovery } from '@/types';
-import { formatINR, formatDate, toISODate } from '@/lib/format';
+import { formatDate,formatINR,toISODate } from '@/lib/format';
+import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
 import {
-  safeAmount,
-  getEmployeeOutstanding,
-  getActiveEmployeeDues,
-  allocateRecoveryFIFO,
-  executeEmployeeRecovery,
+allocateRecoveryFIFO,
+executeEmployeeRecovery,
+getActiveEmployeeDues,
+getEmployeeOutstanding,
+safeAmount,
 } from '@/lib/recoveryService';
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
+import { Collector,Due,DueStatus,Recovery } from '@/types';
 import { clsx } from 'clsx';
-import { logAudit } from '@/lib/audit';
+import {
+AlertCircle,
+BookOpen,
+CheckCircle2,
+ChevronDown,
+Clock,
+Download,
+Edit3,
+Eye,
+Plus,
+Search,
+Tag,
+Trash2,
+TrendingDown,Users as UsersIcon
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
-import EmployeeSummary from '@/components/dues/EmployeeSummary';
-import EmployeeLedgerModal from '@/components/dues/EmployeeLedgerModal';
-import RecoveryModal from '@/components/dues/RecoveryModal';
-import DueTable from '@/components/dues/DueTable';
 
 const statusConfig: Record<DueStatus, { color: string; dot: string; badge: string; label: string }> = {
   outstanding: {
@@ -119,7 +125,7 @@ export default function Dues() {
   const [statusFilter, setStatusFilter] = useState<'all' | DueStatus>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'collection_shortage' | 'manual_old_due'>('all');
 
-  const [expandedDue, setExpandedDue] = useState<string | null>(null);
+  const [_expandedDue, _setExpandedDue] = useState<string | null>(null);
   const [detailDue, setDetailDue] = useState<Due | null>(null);
 
   // Collapsible state for Individual Dues Records (Default: collapsed)
@@ -153,7 +159,7 @@ export default function Dues() {
   // Employee Ledger Drawer State
   const [selectedLedgerCollector, setSelectedLedgerCollector] = useState<Collector | null>(null);
   const [ledgerSearch, setLedgerSearch] = useState('');
-  const [ledgerStatusFilter, setLedgerStatusFilter] = useState<'all' | 'pending' | 'recovered' | 'partial'>('all');
+  const [ledgerStatusFilter, _setLedgerStatusFilter] = useState<'all' | 'pending' | 'recovered' | 'partial'>('all');
   const [ledgerStartDate, setLedgerStartDate] = useState('');
   const [ledgerEndDate, setLedgerEndDate] = useState('');
 

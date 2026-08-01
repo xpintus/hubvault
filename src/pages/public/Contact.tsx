@@ -1,10 +1,10 @@
+import SEO from '@/components/SEO';
+import AdSlot from '@/components/ui/AdSlot';
+import { Button,Input,Spinner,Textarea } from '@/components/ui/primitives';
+import { supabase } from '@/lib/supabase';
+import { AlertCircle,Briefcase,Building2,CheckCircle2,Headphones,Mail,Send } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, Building2, Headphones, Briefcase, Send, CheckCircle2, AlertCircle } from 'lucide-react';
-import SEO from '@/components/SEO';
-import { Button, Input, Textarea, Spinner } from '@/components/ui/primitives';
-import AdSlot from '@/components/ui/AdSlot';
-import { supabase } from '@/lib/supabase';
 
 interface FormErrors {
   name?: string;

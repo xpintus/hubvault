@@ -1,10 +1,10 @@
-import React from 'react';
 import StatusBadge from '@/components/StatusBadge';
-import { CollectionEntry } from '@/types';
 import { formatINR } from '@/lib/format';
-import { Eye, Pencil, Trash2 } from 'lucide-react';
-import { RowHoverPopup } from './StaffActivityTable';
+import { CollectionEntry } from '@/types';
 import { clsx } from 'clsx';
+import { Eye,Pencil,Trash2 } from 'lucide-react';
+import React from 'react';
+import { RowHoverPopup } from './StaffActivityTable';
 
 export interface StaffActivityMobileProps {
   entries: CollectionEntry[];

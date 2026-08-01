@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { KeyRound, ShieldCheck, Clock, AlertTriangle, CheckCircle2, Gift } from 'lucide-react';
-import { supabase, SUPABASE_URL } from '@/lib/supabase';
-import { Button, Input } from '@/components/ui/primitives';
 import Modal from '@/components/ui/Modal';
+import { Button,Input } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/Toast';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
 import { Profile } from '@/types';
+import { AlertTriangle,CheckCircle2,Clock,Gift,KeyRound,ShieldCheck } from 'lucide-react';
+import { useEffect,useState } from 'react';
 import RequestLicenseModal from './RequestLicenseModal';
 
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/manage-user`;

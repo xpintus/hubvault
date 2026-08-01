@@ -1,13 +1,18 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import {
-  Wallet, ArrowLeft, ArrowRight, Mail, ShieldCheck, KeyRound,
-  Eye, EyeOff, CheckCircle2, AlertCircle,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Input } from '@/components/ui/primitives';
+import { Button,Input } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useToast } from '@/components/ui/Toast';
+import { supabase } from '@/lib/supabase';
+import {
+AlertCircle,
+ArrowLeft,ArrowRight,
+CheckCircle2,
+Eye,EyeOff,
+KeyRound,
+Mail,ShieldCheck,
+Wallet,
+} from 'lucide-react';
+import { useEffect,useRef,useState } from 'react';
+import { Link,useNavigate } from 'react-router-dom';
 
 type Step = 'email' | 'otp' | 'reset' | 'done';
 

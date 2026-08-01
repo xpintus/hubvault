@@ -1,5 +1,5 @@
-import { ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { ReactNode,useEffect } from 'react';
 
 interface ModalProps {
   open: boolean;

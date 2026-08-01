@@ -1,15 +1,28 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  UserPlus, Eye, EyeOff, ArrowRight, ShieldAlert, Phone, Mail, Building2,
-  KeyRound, User, MapPin, CheckCircle2, AlertTriangle, Lock, Unlock, Loader2,
-} from 'lucide-react';
-import { supabase, SUPABASE_URL } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, Input, Select, EmptyState, Badge, Skeleton } from '@/components/ui/primitives';
-import { Profile } from '@/types';
+import { Badge,Button,Card,EmptyState,Input,Select,Skeleton } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
+import { Profile } from '@/types';
+import {
+AlertTriangle,
+ArrowRight,
+Building2,
+CheckCircle2,
+Eye,EyeOff,
+KeyRound,
+Loader2,
+Lock,
+Mail,
+MapPin,
+Phone,
+ShieldAlert,
+Unlock,
+User,
+UserPlus,
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const COMPANIES = ['Valmo', 'Amazon', 'Flipkart', 'Shadowfax', 'Delhivery'];
 

@@ -1,9 +1,9 @@
-import React from 'react';
-import { Card, Button } from '@/components/ui/primitives';
-import { formatINR, formatDate } from '@/lib/format';
-import { BookOpen, ArrowRight } from 'lucide-react';
+import { Button,Card } from '@/components/ui/primitives';
+import { formatDate,formatINR } from '@/lib/format';
+import { Collector,Due } from '@/types';
 import { clsx } from 'clsx';
-import { Collector, Due } from '@/types';
+import { BookOpen } from 'lucide-react';
+import React from 'react';
 
 export interface EmployeeSummaryRow {
   collectorId: string;

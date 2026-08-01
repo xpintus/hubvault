@@ -1,36 +1,47 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  RotateCcw, Search, Plus, Download, TrendingUp, Banknote, Smartphone,
-  Wallet, Calendar, Trash2, FileBarChart, Users, ChevronDown, BookOpen, Eye, Filter, CheckCircle2, AlertCircle
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Select, Skeleton, Spinner, Input } from '@/components/ui/primitives';
 import Modal from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { Button,Card,EmptyState,Input,Select,Skeleton,Spinner } from '@/components/ui/primitives';
+import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
-import {
-  Due, Recovery, RecoveryPaymentMode, RECOVERY_PAYMENT_MODE_LABELS,
-  Collector, DueStatus, DUE_STATUS_LABELS,
-} from '@/types';
-import { formatINR, formatDate, toISODate } from '@/lib/format';
-import { subDays } from 'date-fns';
-import { clsx } from 'clsx';
+import { formatDate,formatINR,toISODate } from '@/lib/format';
+import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { addToQueue } from '@/lib/offline/syncQueue';
 import {
-  safeAmount,
-  getEmployeeOutstanding,
-  getActiveEmployeeDues,
-  allocateRecoveryFIFO,
-  executeEmployeeRecovery,
+allocateRecoveryFIFO,
+executeEmployeeRecovery,
+getActiveEmployeeDues,
+getEmployeeOutstanding,
+safeAmount,
 } from '@/lib/recoveryService';
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
+import {
+Collector,
+Due,
+DueStatus,
+Recovery,RecoveryPaymentMode
+} from '@/types';
+import { clsx } from 'clsx';
+import { subDays } from 'date-fns';
+import {
+Banknote,
+BookOpen,
+Calendar,
+Download,
+FileBarChart,
+Plus,
+RotateCcw,Search,
+Smartphone,
+Trash2,
+TrendingUp,
+Users,
+Wallet
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
 import * as XLSX from 'xlsx';
-import { logAudit } from '@/lib/audit';
 
-const modeConfig: Record<RecoveryPaymentMode, { icon: typeof Banknote; color: string; badge: string }> = {
+const _modeConfig: Record<RecoveryPaymentMode, { icon: typeof Banknote; color: string; badge: string }> = {
   cash: { icon: Banknote, color: 'text-brand-600', badge: 'bg-brand-600/15 text-brand-600 ring-brand-600/30' },
   online: { icon: Smartphone, color: 'text-blue-400', badge: 'bg-blue-500/10 text-blue-400 ring-blue-200/60' },
   other: { icon: Wallet, color: 'text-neutral-500 dark:text-neutral-400', badge: 'bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 ring-neutral-200 dark:ring-neutral-700/60' },

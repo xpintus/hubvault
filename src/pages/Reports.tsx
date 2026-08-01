@@ -1,20 +1,29 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Area, AreaChart,
-} from 'recharts';
-import { FileBarChart, TrendingUp, Banknote, Smartphone, Wallet, TrendingDown, TrendingUp as TrendingUpIcon, Percent, Download, Calendar } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useHub } from '@/lib/hubContext';
-import { useTheme } from '@/lib/theme';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Select, Spinner, Skeleton } from '@/components/ui/primitives';
-import { CollectionEntry, Collector, EntryStatus, Hub, STATUS_LABELS } from '@/types';
-import { formatINR, formatDate, toISODate } from '@/lib/format';
+import { Button,Card,EmptyState,Select,Skeleton } from '@/components/ui/primitives';
+import { useAuth } from '@/lib/auth';
 import { exportEntriesToExcel } from '@/lib/excel';
-import { subDays, format, parseISO, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth } from 'date-fns';
+import { formatDate,formatINR,toISODate } from '@/lib/format';
+import { useHub } from '@/lib/hubContext';
+import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
+import { CollectionEntry,Collector,EntryStatus,Hub,STATUS_LABELS } from '@/types';
 import { clsx } from 'clsx';
+import { eachDayOfInterval,endOfMonth,format,isSameDay,parseISO,startOfMonth,subDays } from 'date-fns';
+import { Banknote,Calendar,Download,FileBarChart,Percent,Smartphone,TrendingDown,TrendingUp,TrendingUp as TrendingUpIcon,Wallet } from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
+import {
+Area,AreaChart,
+Bar,
+BarChart,
+CartesianGrid,
+Cell,
+Legend,
+Pie,
+PieChart,
+ResponsiveContainer,
+Tooltip,
+XAxis,YAxis
+} from 'recharts';
 
 const STATUS_COLORS: Record<EntryStatus, string> = {
   reconciled: '#10B981',
@@ -41,7 +50,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<CollectionEntry[]>([]);
   const [collectors, setCollectors] = useState<Collector[]>([]);
-  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [_hubs, setHubs] = useState<Hub[]>([]);
   const [from, setFrom] = useState(toISODate(subDays(new Date(), 29)));
   const [to, setTo] = useState(toISODate(new Date()));
   const [activePreset, setActivePreset] = useState('last30');

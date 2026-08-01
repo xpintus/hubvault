@@ -1,10 +1,16 @@
-import { Link } from 'react-router-dom';
-import {
-  Target, Eye, ShieldCheck, BarChart3, Building2, Users,
-  ArrowRight, CheckCircle2, Scale, TrendingUp, Wallet,
-} from 'lucide-react';
 import SEO from '@/components/SEO';
 import AdSlot from '@/components/ui/AdSlot';
+import {
+ArrowRight,
+BarChart3,Building2,
+Eye,
+Scale,
+Target,
+TrendingUp,
+Users,
+Wallet
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const BENEFITS = [
   { icon: BarChart3, title: 'Real-Time Visibility', desc: 'See exactly where each hub stands — total collections, shortages, excesses, and reconciliation rates — at any moment.' },

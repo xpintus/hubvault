@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { Party, PartyTransaction } from '@/types';
 import {
-  calculateRunningLedger,
-  calculatePartyCardData,
-  calculateKhataBookSummary,
+calculateKhataBookSummary,
+calculatePartyCardData,
+calculateRunningLedger,
 } from '@/lib/khatabook';
+import { Party,PartyTransaction } from '@/types';
+import { describe,expect,it } from 'vitest';
 
 describe('KhataBook FIFO Settlement & Running Balance Logic', () => {
   const sampleParty: Party = {

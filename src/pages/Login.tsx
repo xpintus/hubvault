@@ -1,15 +1,31 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import {
-  Wallet, Eye, EyeOff, ArrowRight, ShieldCheck, UserPlus, LogIn,
-  BarChart3, Banknote, Smartphone, Scale, RotateCcw,
-  Building2, Users, FileText, ShieldAlert, Mail, Coins, User,
-  ArrowLeft, Sparkles,
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { useToast } from '@/components/ui/Toast';
-import { Button, Input } from '@/components/ui/primitives';
+import { Button,Input } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import {
+ArrowLeft,
+ArrowRight,
+Banknote,
+BarChart3,
+Building2,
+Coins,
+Eye,EyeOff,
+FileText,
+LogIn,
+Mail,
+RotateCcw,
+Scale,
+ShieldAlert,
+ShieldCheck,
+Smartphone,
+Sparkles,
+User,
+UserPlus,
+Users,
+Wallet,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link,useNavigate } from 'react-router-dom';
 
 const SERVICES = [
   { icon: BarChart3, label: 'Real-Time Dashboards', desc: 'Live collection trends' },

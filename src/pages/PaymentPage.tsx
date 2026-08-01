@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React,{ useState } from "react";
 
 const UPI_ID = "BHARATPE09899107906@yesbankltd";
 const PAYMENT_AMOUNT = "999.00";

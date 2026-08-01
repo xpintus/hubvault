@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { Card, EmptyState } from '@/components/ui/primitives';
 import DenominationPanel from '@/components/DenominationPanel';
+import { Card,EmptyState } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/Toast';
-import { CollectionEntry, DenominationInput, DENOMINATIONS, EMPTY_DENOMINATIONS } from '@/types';
-import { Banknote, CheckCircle2, Copy } from 'lucide-react';
+import { CollectionEntry,DenominationInput,DENOMINATIONS,EMPTY_DENOMINATIONS } from '@/types';
 import { clsx } from 'clsx';
+import { Banknote,CheckCircle2,Copy } from 'lucide-react';
+import React,{ useMemo,useState } from 'react';
 
 export function denominationToText(d: DenominationInput): string {
   const lines = DENOMINATIONS.map((item) => {

@@ -1,19 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  getUserDB,
-  setActiveUserId,
-  getActiveUserId,
-  resetAllUserDBs,
-  SyncQueueItem,
+getActiveUserId,
+getUserDB,
+resetAllUserDBs,
+setActiveUserId,
+SyncQueueItem,
 } from '@/lib/offline/db';
+import { resolveConflict,SyncConflict } from '@/lib/offline/syncEngine';
 import {
-  addToQueue,
-  getPendingQueue,
-  getQueueCount,
-  removeFromQueue,
-  clearQueue,
+addToQueue,
+getPendingQueue,
+getQueueCount
 } from '@/lib/offline/syncQueue';
-import { resolveConflict, SyncConflict } from '@/lib/offline/syncEngine';
+import { beforeEach,describe,expect,it } from 'vitest';
 
 describe('Offline Data Isolation & Multi-User Partitioning', () => {
   beforeEach(() => {

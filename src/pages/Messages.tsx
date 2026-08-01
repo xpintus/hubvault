@@ -1,15 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Mail, Search, Trash2, MailOpen, Circle, User, Building2,
-  Calendar, Phone, ArrowLeft, Inbox,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
-import { Button, Card, EmptyState, Skeleton } from '@/components/ui/primitives';
-import { ContactMessage } from '@/types';
-import { formatDateTime } from '@/lib/format';
+import { Button,Card,EmptyState,Skeleton } from '@/components/ui/primitives';
 import { confirm } from '@/lib/confirm';
+import { formatDateTime } from '@/lib/format';
+import { supabase } from '@/lib/supabase';
+import { ContactMessage } from '@/types';
 import { clsx } from 'clsx';
+import {
+ArrowLeft,
+Building2,
+Calendar,
+Circle,
+Inbox,
+Mail,
+MailOpen,
+Phone,
+Search,Trash2,
+User,
+} from 'lucide-react';
+import { useCallback,useEffect,useMemo,useState } from 'react';
 
 export default function Messages() {
   const toast = useToast();

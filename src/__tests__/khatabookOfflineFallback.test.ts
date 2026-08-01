@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { isOfflineFallbackError } from '@/lib/khatabook';
+import { describe,expect,it } from 'vitest';
 
 describe('KhataBook offline fallback classification', () => {
   it('does not hide PostgREST schema errors as offline writes', () => {
