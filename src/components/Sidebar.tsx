@@ -66,7 +66,7 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const { profile, signOut } = useAuth();
-  const { pendingPayments, unreadHubNotifications, pendingPayouts } = useNotifications();
+  const { pendingPayments, unreadHubNotifications, unreadBuyerNotifications, pendingPayouts } = useNotifications();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -162,6 +162,11 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
                   {item.to === '/licenses' && pendingPayments > 0 && (
                     <span className={clsx('inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse', collapsed && 'lg:absolute lg:top-1 lg:right-1')}>
                       {pendingPayments}
+                    </span>
+                  )}
+                  {item.to === '/purchases' && unreadBuyerNotifications > 0 && (
+                    <span className={clsx('inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-violet-500 text-white text-[10px] font-bold animate-pulse', collapsed && 'lg:absolute lg:top-1 lg:right-1')}>
+                      {unreadBuyerNotifications}
                     </span>
                   )}
                   {item.to === '/hubs' && unreadHubNotifications > 0 && (

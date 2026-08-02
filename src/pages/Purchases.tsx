@@ -1,4 +1,5 @@
 import { useToast } from '@/components/ui/Toast';
+import { useNotifications } from '@/lib/notifications';
 import { Badge,Button,Card,EmptyState,Skeleton } from '@/components/ui/primitives';
 import { confirm } from '@/lib/confirm';
 import { formatDateTime } from '@/lib/format';
@@ -28,6 +29,7 @@ const STATUS_COLORS: Record<PurchaseStatus, string> = {
 };
 
 export default function Purchases() {
+  const { markBuyerNotificationsRead } = useNotifications();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
@@ -54,6 +56,9 @@ export default function Purchases() {
   }, [toast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void markBuyerNotificationsRead();
+  }, [markBuyerNotificationsRead]);
 
   const pendingCount = useMemo(() => requests.filter((r) => r.status === 'pending').length, [requests]);
 

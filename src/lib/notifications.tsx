@@ -5,11 +5,13 @@ import { supabase } from './supabase';
 interface NotificationContextValue {
   pendingPayments: number;
   unreadHubNotifications: number;
+  unreadBuyerNotifications: number;
   pendingPayouts: number;
   totalUnread: number;
   refreshPayments: () => Promise<void>;
   refreshHubNotifications: () => Promise<void>;
   markHubNotificationsRead: () => Promise<void>;
+  markBuyerNotificationsRead: () => Promise<void>;
   refreshPayouts: () => Promise<void>;
 }
 
@@ -26,6 +28,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const isSuperAdmin = profile?.role === 'super_admin';
   const [pendingPayments, setPendingPayments] = useState(0);
   const [unreadHubNotifications, setUnreadHubNotifications] = useState(0);
+  const [unreadBuyerNotifications, setUnreadBuyerNotifications] = useState(0);
   const [pendingPayouts, setPendingPayouts] = useState(0);
 
   const refreshPayments = useCallback(async () => {
@@ -71,6 +74,29 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [isSuperAdmin]);
 
+  const refreshBuyerNotifications = useCallback(async () => {
+    if (!isSuperAdmin) {
+      setUnreadBuyerNotifications(0);
+      return;
+    }
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false)
+      .eq('type', 'buyer_registered');
+    if (!error && count !== null) setUnreadBuyerNotifications(count);
+  }, [isSuperAdmin]);
+
+  const markBuyerNotificationsRead = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('is_read', false)
+      .eq('type', 'buyer_registered');
+    if (!error) setUnreadBuyerNotifications(0);
+  }, [isSuperAdmin]);
+
   const markHubNotificationsRead = useCallback(async () => {
     if (!isSuperAdmin) return;
     const { error } = await supabase
@@ -80,6 +106,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       .eq('type', 'hub_created');
     if (!error) {
       setUnreadHubNotifications(0);
+      setUnreadBuyerNotifications(0);
     }
   }, [isSuperAdmin]);
 
@@ -93,6 +120,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     refreshPayments();
     refreshHubNotifications();
     refreshPayouts();
+    refreshBuyerNotifications();
 
     const channel = supabase
       .channel('payment-requests-notifications')
@@ -109,12 +137,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications' },
-        () => { refreshHubNotifications(); }
+        () => { refreshHubNotifications(); refreshBuyerNotifications(); refreshPayments(); }
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'notifications' },
-        () => { refreshHubNotifications(); }
+        () => { refreshHubNotifications(); refreshBuyerNotifications(); refreshPayments(); }
       )
       .on(
         'postgres_changes',
@@ -131,12 +159,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isSuperAdmin, refreshPayments, refreshHubNotifications, refreshPayouts]);
+  }, [isSuperAdmin, refreshPayments, refreshHubNotifications, refreshPayouts, refreshBuyerNotifications]);
 
-  const totalUnread = pendingPayments + unreadHubNotifications + pendingPayouts;
+  const totalUnread = pendingPayments + unreadHubNotifications + unreadBuyerNotifications + pendingPayouts;
 
   return (
-    <NotificationContext.Provider value={{ pendingPayments, unreadHubNotifications, pendingPayouts, totalUnread, refreshPayments, refreshHubNotifications, markHubNotificationsRead, refreshPayouts }}>
+    <NotificationContext.Provider value={{ pendingPayments, unreadHubNotifications, unreadBuyerNotifications, pendingPayouts, totalUnread, refreshPayments, refreshHubNotifications, markHubNotificationsRead, markBuyerNotificationsRead, refreshPayouts }}>
       {children}
     </NotificationContext.Provider>
   );

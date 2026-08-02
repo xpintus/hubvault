@@ -34,10 +34,11 @@ const TITLES: Record<string, string> = {
 export default function AppLayout() {
   const { profile, loading, signOut, user, refreshProfile } = useAuth();
   const hub = useHub();
-  const { pendingPayments } = useNotifications();
+  const { pendingPayments, unreadBuyerNotifications } = useNotifications();
   const toast = useToast();
   const navigate = useNavigate();
-  const prevPendingRef = useRef(0);
+  const prevPendingRef = useRef<number | null>(null);
+  const prevBuyerRef = useRef<number | null>(null);
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -103,11 +104,18 @@ export default function AppLayout() {
   }, [loading, user, profile, navigate]);
 
   useEffect(() => {
-    if (prevPendingRef.current > 0 && pendingPayments > prevPendingRef.current) {
+    if (prevPendingRef.current !== null && pendingPayments > prevPendingRef.current) {
       toast.info(`New UPI payment request received! ${pendingPayments - prevPendingRef.current} new request(s) pending verification.`);
     }
     prevPendingRef.current = pendingPayments;
   }, [pendingPayments, toast]);
+
+  useEffect(() => {
+    if (prevBuyerRef.current !== null && unreadBuyerNotifications > prevBuyerRef.current) {
+      toast.info('A new buyer registered from the Buy Now page.');
+    }
+    prevBuyerRef.current = unreadBuyerNotifications;
+  }, [unreadBuyerNotifications, toast]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {

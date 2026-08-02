@@ -335,6 +335,17 @@ Deno.serve(async (req: Request) => {
         details: `Auto-created hub "${hubName}" (${hubCode}) for buyer ${body.name}`,
       });
 
+      // Notify every super admin about the newly registered buyer.
+      await adminClient.from("notifications").insert({
+        user_id: null,
+        type: "buyer_registered",
+        title: "New Buyer Registered",
+        message: `${body.name.trim()} registered from Buy Now with hub ${hubName} (${hubCode}).`,
+        link: "/purchases",
+        is_read: false,
+        metadata: { user_id: newUserId, hub_id: hubId, email: body.email.trim() },
+      });
+
       // Process referral/promo code if provided
       if (body.referral_code?.trim()) {
         const promoCode = body.referral_code.trim().toUpperCase();
@@ -1024,6 +1035,18 @@ Deno.serve(async (req: Request) => {
         });
 
         if (insertErr) return jsonError(500, "Failed to submit payment request: " + insertErr.message);
+
+        // Keep an explicit notification as a durable fallback in addition to
+        // the realtime license_payment_requests subscription.
+        await adminClient.from("notifications").insert({
+          user_id: null,
+          type: "payment_request",
+          title: requestType === "hub_add" ? "New Hub Payment" : "New License Payment",
+          message: `${myProfile.name || myProfile.email} submitted a ${requestType === "hub_add" ? "hub-add" : "license"} payment (UTR: ${body.transaction_id.trim()}).`,
+          link: "/licenses",
+          is_read: false,
+          metadata: { user_id: myProfile.id, request_type: requestType, transaction_id: body.transaction_id.trim() },
+        });
 
         await adminClient.from("audit_logs").insert({
           action: requestType === "hub_add" ? "hub_add_payment_requested" : "license_payment_requested",
