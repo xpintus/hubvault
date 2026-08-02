@@ -1,4 +1,4 @@
-import { calculateClosingVariance } from '@/lib/dailyClosing';
+import { calculateClosingVariances } from '@/lib/dailyClosing';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -9,9 +9,9 @@ const dbSource = readFileSync(resolve('src/lib/offline/db.ts'), 'utf8');
 const syncSource = readFileSync(resolve('src/lib/offline/syncQueue.ts'), 'utf8');
 
 describe('Daily Closing System', () => {
-  it('calculates combined cash and online variance', () => {
-    expect(calculateClosingVariance(2500, 4020, 2500, 4020)).toBe(0);
-    expect(calculateClosingVariance(2500, 4020, 2400, 4000)).toBe(-120);
+  it('keeps cash and online variances separate even when their total offsets', () => {
+    expect(calculateClosingVariances(2500, 4020, 2500, 4020)).toEqual({ cash: 0, online: 0, total: 0, reconciled: true });
+    expect(calculateClosingVariances(2500, 4020, 2000, 4520)).toEqual({ cash: -500, online: 500, total: 0, reconciled: false });
   });
 
   it('uses direct actual cash and online amounts without denomination verification', () => {
@@ -19,6 +19,7 @@ describe('Daily Closing System', () => {
     expect(amountMigration).toContain('p_actual_cash numeric');
     expect(amountMigration).toContain('p_actual_online numeric');
     expect(amountMigration).toContain('denomination_verified=false');
+    expect(amountMigration).toContain('cash or online mismatch requires notes');
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {

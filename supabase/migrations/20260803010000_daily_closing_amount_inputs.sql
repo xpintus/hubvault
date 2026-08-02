@@ -45,6 +45,13 @@ begin
     into v_cms_cash,v_cms_online from public.cms_deposits
     where coalesce(collection_date,deposit_date)=p_closing_date and collector_id=p_collector_id and hub_id=p_hub_id;
 
+  -- Cash and online are linked by the closing, but each channel must reconcile
+  -- independently. Opposite variances must not silently cancel each other.
+  if (p_actual_cash <> v_expected_cash or p_actual_online <> v_expected_online)
+    and nullif(trim(p_notes),'') is null then
+    raise exception 'Cash or online mismatch requires notes';
+  end if;
+
   if p_closing_id is not null then
     select * into v_existing from public.daily_closings where id=p_closing_id for update;
     if not found or v_existing.status not in ('rejected','reopened') then

@@ -4,8 +4,23 @@ import { db } from './offline/db';
 import { addToQueue } from './offline/syncQueue';
 import { supabase } from './supabase';
 
-export const calculateClosingVariance = (expectedCash: number, expectedOnline: number, actualCash: number, actualOnline: number) =>
-  actualCash + actualOnline - expectedCash - expectedOnline;
+export interface ClosingVariances {
+  cash: number;
+  online: number;
+  total: number;
+  reconciled: boolean;
+}
+
+export const calculateClosingVariances = (
+  expectedCash: number,
+  expectedOnline: number,
+  actualCash: number,
+  actualOnline: number,
+): ClosingVariances => {
+  const cash = actualCash - expectedCash;
+  const online = actualOnline - expectedOnline;
+  return { cash, online, total: cash + online, reconciled: cash === 0 && online === 0 };
+};
 
 export async function getDailyClosingSource(closingDate: string, collectorId: string, hubId: string) {
   if (!navigator.onLine) {
@@ -61,7 +76,7 @@ export async function submitDailyClosing(input: SubmitClosingInput): Promise<Dai
     id: uuidv4(), closing_date: input.closingDate, collector_id: input.collectorId, hub_id: input.hubId,
     expected_cash: source.expectedCash, expected_online_amount: source.onlineAmount,
     actual_cash: input.actualCash, online_amount: input.actualOnline,
-    denomination_total: 0, shortage_excess: calculateClosingVariance(source.expectedCash, source.onlineAmount, input.actualCash, input.actualOnline),
+    denomination_total: 0, shortage_excess: calculateClosingVariances(source.expectedCash, source.onlineAmount, input.actualCash, input.actualOnline).total,
     note_500: 0, note_200: 0, note_100: 0, note_50: 0, note_20: 0, note_10: 0, note_5: 0, note_2: 0, note_1: 0,
     denomination_verified: false,
     source_snapshot: { ...source, captured_at: now, offline: true }, notes: input.notes.trim() || null,

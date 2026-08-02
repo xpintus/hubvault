@@ -1,7 +1,7 @@
 import { useToast } from '@/components/ui/Toast';
 import { Badge,Button,Card,EmptyState,Input,Select,Spinner,Textarea } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
-import { calculateClosingVariance,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
+import { calculateClosingVariances,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
 import { exportDailyClosingsExcel,printDailyClosingsPdf } from '@/lib/dailyClosingExport';
 import { formatDate,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
@@ -35,7 +35,7 @@ export default function DailyClosingPage() {
   const hubId = hub.selectedHubId || profile?.hub_id || '';
   const actualCashAmount = Math.max(0, Number(actualCash) || 0);
   const actualOnlineAmount = Math.max(0, Number(actualOnline) || 0);
-  const variance = calculateClosingVariance(source.expectedCash, source.onlineAmount, actualCashAmount, actualOnlineAmount);
+  const variances = calculateClosingVariances(source.expectedCash, source.onlineAmount, actualCashAmount, actualOnlineAmount);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -80,6 +80,10 @@ export default function DailyClosingPage() {
 
   const submit = async () => {
     if (!profile || !collectorId || !hubId) return;
+    if (!variances.reconciled && !notes.trim()) {
+      toast.error('Cash or online mismatch requires notes');
+      return;
+    }
     setSaving(true);
     try {
       await submitDailyClosing({ closingId: existing?.id, closingDate: date, collectorId, hubId, actualCash: actualCashAmount, actualOnline: actualOnlineAmount, notes, userId: profile.id });
@@ -115,22 +119,31 @@ export default function DailyClosingPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div><h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Daily Closing</h1><p className="text-sm text-neutral-500 mt-1">Collector-wise cash verification, approval and immutable audit history.</p></div>
+        <div><h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Daily Closing</h1><p className="text-sm text-neutral-500 mt-1">Collector-wise cash and online verification, approval and immutable audit history.</p></div>
         <div className="flex gap-2"><Button variant="outline" icon={<Download className="h-4 w-4" />} disabled={!closings.length} onClick={exportExcel}>Excel</Button><Button variant="outline" icon={<FileText className="h-4 w-4" />} disabled={!closings.length} onClick={exportPdf}>PDF</Button></div>
       </div>
 
       <Card className="p-5 space-y-4">
         <div className="grid gap-3 md:grid-cols-4"><Input label="Closing Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Employee" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">Select employee</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select><div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Expected online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div></div>
-        <div className="grid gap-3 md:grid-cols-4"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Enter online amount" /><div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3"><p className="text-xs text-neutral-500">Shortage / excess</p><p className={`font-bold ${variance < 0 ? 'text-error-600' : variance > 0 ? 'text-warning-600' : 'text-success-600'}`}>{formatINR(variance)}</p><p className="text-[11px] text-neutral-400 mt-1">Actual total vs expected total</p></div><Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+        <div className="grid gap-3 md:grid-cols-2"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Enter online amount" /></div>
+        <div className="grid gap-3 md:grid-cols-4"><VarianceCard label="Cash variance" value={variances.cash} /><VarianceCard label="Online variance" value={variances.online} /><VarianceCard label="Total variance" value={variances.total} /><Textarea label={variances.reconciled ? 'Notes' : 'Notes (required for mismatch)'} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
         {existing && !canSubmit && <div className="flex items-center gap-2 text-sm text-neutral-500"><Lock className="h-4 w-4" />This employee already has a {existing.status} closing for this date.</div>}
         <div className="flex items-center justify-between gap-3"><p className="text-xs text-neutral-500">Source entries: {source.entryCount}</p><Button icon={<Send className="h-4 w-4" />} onClick={submit} loading={saving} disabled={!collectorId || !canSubmit || actualCash === '' || actualOnline === ''}>{existing ? 'Resubmit Closing' : 'Submit Closing'}</Button></div>
       </Card>
 
       <Card className="overflow-hidden">
-        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Variance</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><td className={`p-3 font-semibold ${Number(c.shortage_excess) < 0 ? 'text-error-600' : 'text-success-600'}`}>{formatINR(c.shortage_excess)}</td><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>)}</tbody></table></div>}
+        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Cash Var.</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Online Var.</th><th className="p-3">Total Var.</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => { const rowVariance = calculateClosingVariances(Number(c.expected_cash), Number(c.expected_online_amount || 0), Number(c.actual_cash), Number(c.online_amount)); return <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><VarianceCell value={rowVariance.cash} /><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><VarianceCell value={rowVariance.online} /><VarianceCell value={rowVariance.total} /><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{rowVariance.reconciled ? <Badge color="green">Reconciled</Badge> : <Badge color="amber">Mismatch</Badge>}{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>; })}</tbody></table></div>}
       </Card>
 
       {historyFor && <Card className="p-5"><div className="flex justify-between"><div><h2 className="font-bold">Audit history</h2><p className="text-xs text-neutral-500">{historyFor.collector?.name} · {formatDate(historyFor.closing_date)}</p></div><Button variant="ghost" size="sm" onClick={() => setHistoryFor(null)}>Close</Button></div><div className="mt-4 space-y-2">{history.map((h) => <div key={h.id} className="flex gap-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><RefreshCw className="h-4 w-4 mt-0.5 text-brand-600" /><div><p className="text-sm font-semibold capitalize">{h.action}</p><p className="text-xs text-neutral-500">{new Date(h.created_at).toLocaleString('en-IN')} · {h.performer?.name ?? 'User'}</p>{h.reason && <p className="text-xs mt-1">{h.reason}</p>}</div></div>)}</div></Card>}
     </div>
   );
+}
+
+function VarianceCard({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3"><p className="text-xs text-neutral-500">{label}</p><p className={`font-bold ${value < 0 ? 'text-error-600' : value > 0 ? 'text-warning-600' : 'text-success-600'}`}>{formatINR(value)}</p></div>;
+}
+
+function VarianceCell({ value }: { value: number }) {
+  return <td className={`p-3 font-semibold ${value < 0 ? 'text-error-600' : value > 0 ? 'text-warning-600' : 'text-success-600'}`}>{formatINR(value)}</td>;
 }
