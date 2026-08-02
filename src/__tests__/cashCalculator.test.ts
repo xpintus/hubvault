@@ -1,4 +1,4 @@
-import { buildCashSummary,calculateCashTotal,parseVoiceCashCommand,reconcileCash } from '@/pages/public/CashCalculator';
+import { buildCashSummary,calculateCashTotal,isVoiceTotalRequest,parseVoiceCashCommand,reconcileCash } from '@/pages/public/CashCalculator';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -38,7 +38,11 @@ describe('Public Cash Calculator', () => {
   it('parses spoken denomination commands', () => {
     expect(parseVoiceCashCommand('five hundred ten notes')).toEqual({note:500,quantity:10});
     expect(parseVoiceCashCommand('200 12 notes')).toEqual({note:200,quantity:12});
+    expect(parseVoiceCashCommand('पाँच सौ दस नोट')).toEqual({note:500,quantity:10});
+    expect(parseVoiceCashCommand('do sau bees note')).toEqual({note:200,quantity:20});
     expect(parseVoiceCashCommand('something unrelated')).toBeNull();
+    expect(isVoiceTotalRequest('total batao')).toBe(true);
+    expect(isVoiceTotalRequest('what is the total')).toBe(true);
   });
 
   it('is linked from the public route and homepage tools section', () => {
