@@ -49,6 +49,7 @@ function handleNavClick(e: React.MouseEvent, path: string) {
 
 export default function PublicLayout() {
   const location = useLocation();
+  const isMobileToolMode = location.pathname === '/tools/cash-calculator';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -81,6 +82,7 @@ export default function PublicLayout() {
       <header
         className={clsx(
           'sticky top-0 z-50 transition-all duration-200',
+          isMobileToolMode && 'hidden md:block',
           scrolled ? 'border-b border-brand-600/20 bg-[var(--page-bg)]/85 backdrop-blur-xl shadow-soft' : 'border-b border-transparent'
         )}
         style={{ background: 'color-mix(in srgb, var(--page-bg) 85%, transparent)' }}
@@ -197,7 +199,7 @@ export default function PublicLayout() {
       </main>
 
       {/* Footer */}
-      <footer className="text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800" style={{ background: 'var(--neutral-100)' }}>
+      <footer className={clsx('text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800',isMobileToolMode&&'hidden md:block')} style={{ background: 'var(--neutral-100)' }}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand */}

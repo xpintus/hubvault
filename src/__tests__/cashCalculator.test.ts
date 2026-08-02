@@ -18,8 +18,11 @@ describe('Public Cash Calculator', () => {
   it('is linked from the public route and homepage tools section', () => {
     const app = readFileSync(resolve('src/App.tsx'), 'utf8');
     const home = readFileSync(resolve('src/pages/public/Home.tsx'), 'utf8');
+    const layout = readFileSync(resolve('src/components/PublicLayout.tsx'), 'utf8');
     expect(app).toContain('/tools/cash-calculator');
     expect(home).toContain('id="tools"');
     expect(home).toContain('Open Cash Calculator');
+    expect(layout).toContain("location.pathname === '/tools/cash-calculator'");
+    expect(layout).toContain("'hidden md:block'");
   });
 });
