@@ -1,4 +1,4 @@
-import { buildCashSummary,buildDenominationAnnouncement,calculateCashTotal,isVoiceTotalRequest,parseVoiceCashCommand,reconcileCash } from '@/pages/public/CashCalculator';
+import { buildCashSummary,buildDenominationAnnouncement,calculateCashTotal,isVoiceTotalRequest,parseVoiceCashCommand,parseVoiceCashCommands,reconcileCash } from '@/pages/public/CashCalculator';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -40,6 +40,8 @@ describe('Public Cash Calculator', () => {
     expect(parseVoiceCashCommand('200 12 notes')).toEqual({note:200,quantity:12});
     expect(parseVoiceCashCommand('पाँच सौ दस नोट')).toEqual({note:500,quantity:10});
     expect(parseVoiceCashCommand('do sau bees note')).toEqual({note:200,quantity:20});
+    expect(parseVoiceCashCommands('500 ke 4 note 200 ke 10 note 100 ke 3 note')).toEqual([{note:500,quantity:4},{note:200,quantity:10},{note:100,quantity:3}]);
+    expect(parseVoiceCashCommands('पाँच सौ के चार नोट दो सौ के दस नोट सौ के तीन नोट')).toEqual([{note:500,quantity:4},{note:200,quantity:10},{note:100,quantity:3}]);
     expect(parseVoiceCashCommand('something unrelated')).toBeNull();
     expect(isVoiceTotalRequest('total batao')).toBe(true);
     expect(isVoiceTotalRequest('what is the total')).toBe(true);
