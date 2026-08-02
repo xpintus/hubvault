@@ -32,12 +32,12 @@ export default async function handler(req, res) {
 
     const accent = campaignType === 'promotion' ? '#7c3aed' : '#4f46e5';
     const badge = campaignType === 'promotion' ? 'SPECIAL OFFER' : 'HUBVAULT FOR YOUR BUSINESS';
-    const unsubscribe = `mailto:billing@hubvault.in?subject=${encodeURIComponent(`Unsubscribe ${to}`)}`;
+    const unsubscribe = `mailto:hello@hubvault.in?subject=${encodeURIComponent(`Unsubscribe ${to}`)}`;
     const cta = ctaUrl && ctaLabel ? `<a href="${escapeHtml(ctaUrl)}" style="display:inline-block;margin-top:8px;padding:14px 24px;border-radius:12px;background:${accent};color:#fff;text-decoration:none;font-weight:800">${escapeHtml(ctaLabel)}</a>` : '';
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'HubVault <billing@hubvault.in>', to: [to], reply_to: 'billing@hubvault.in', subject,
+        from: 'HubVault <hello@hubvault.in>', to: [to], reply_to: 'hello@hubvault.in', subject,
         headers: { 'List-Unsubscribe': `<${unsubscribe}>` },
         text: `Hi ${recipientName || 'there'},\n\n${message}\n\n${ctaUrl ? `${ctaLabel}: ${ctaUrl}\n\n` : ''}HubVault — Smarter Collections. Stronger Control.\nUnsubscribe: ${unsubscribe}`,
         html: `<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif"><div style="max-width:640px;margin:auto;padding:28px 14px"><div style="overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 12px 35px rgba(15,23,42,.1)"><div style="padding:28px;background:linear-gradient(135deg,#17152f,${accent});color:#fff"><b style="font-size:20px">HubVault</b><div style="margin-top:18px;font-size:11px;font-weight:800;letter-spacing:1.6px;color:#a5f3fc">${badge}</div><h1 style="margin:8px 0 0;font-size:28px">${escapeHtml(subject)}</h1></div><div style="padding:30px"><p style="font-size:17px;font-weight:700">Hi ${escapeHtml(recipientName || 'there')},</p>${paragraphs(message)}${cta}<div style="margin-top:30px;padding-top:20px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px">HubVault — Smarter Collections. Stronger Control.<br>Questions? Reply to this email.</div></div></div><p style="text-align:center;color:#94a3b8;font-size:11px">You received this business communication from HubVault.<br><a href="${unsubscribe}" style="color:#64748b">Unsubscribe</a></p></div></body></html>`,
