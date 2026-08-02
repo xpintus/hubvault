@@ -115,7 +115,7 @@ describe('Public Cash Calculator', () => {
     expect(calculatorHtml).toContain('<link rel="canonical" href="https://www.hubvault.in/tools/cash-calculator"');
     expect(calculatorHtml).not.toContain('/#/tools/cash-calculator');
     expect(vercel.rewrites).toContainEqual({source:'/tools/cash-calculator',destination:'/cash-calculator.html'});
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(6);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(7);
     expect(sitemap).toContain('<loc>https://www.hubvault.in/tools/cash-calculator</loc>');
     expect(robots).toContain('Sitemap: https://www.hubvault.in/sitemap.xml');
     expect(calculator).toContain("'@type':'WebApplication'");
@@ -141,7 +141,7 @@ describe('Public Cash Calculator', () => {
     expect((landing.match(/<h1 className=/g)??[])).toHaveLength(1);
     ['KhataBook','CMS deposition records','Daily closing'].forEach(feature=>expect(landing).toContain(feature));
     expect(sitemap).toContain('<loc>https://www.hubvault.in/collection-reconciliation-software</loc>');
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(6);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(7);
     expect(vercel.rewrites).toContainEqual({source:'/collection-reconciliation-software',destination:'/hubvault-software.html'});
   });
 
@@ -179,7 +179,7 @@ describe('Public Cash Calculator', () => {
     expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
     ['Cash and online','Supervisor approval','Approved records are locked','Excel and PDF'].forEach(feature=>expect(page).toContain(feature));
     expect(sitemap).toContain('<loc>https://www.hubvault.in/daily-closing-software</loc>');
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(6);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(7);
     expect(vercel.rewrites).toContainEqual({source:'/daily-closing-software',destination:'/daily-closing-software.html'});
   });
 
@@ -200,7 +200,7 @@ describe('Public Cash Calculator', () => {
     expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
     ['Cash and online COD tracking','CMS deposit records','Employee dues and recovery','Supervisor-approved daily closing'].forEach(feature=>expect(page).toContain(feature));
     expect(sitemap).toContain('<loc>https://www.hubvault.in/logistics-cash-collection-software</loc>');
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(6);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(7);
     expect(vercel.rewrites).toContainEqual({source:'/logistics-cash-collection-software',destination:'/logistics-cash-collection-software.html'});
   });
 
@@ -219,7 +219,27 @@ describe('Public Cash Calculator', () => {
     expect(page).toContain("const BUY_URL='/#/buy-now'");
     expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
     expect(sitemap).toContain('<loc>https://www.hubvault.in/tools/cod-reconciliation-calculator</loc>');
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(6);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(7);
     expect(vercel.rewrites).toContainEqual({source:'/tools/cod-reconciliation-calculator',destination:'/cod-reconciliation-calculator.html'});
+  });
+
+  it('serves an indexable About and Organization page', () => {
+    const app = readFileSync(resolve('src/App.tsx'), 'utf8');
+    const seo = readFileSync(resolve('src/components/SEO.tsx'), 'utf8');
+    const page = readFileSync(resolve('src/pages/public/OrganizationPage.tsx'), 'utf8');
+    const html = readFileSync(resolve('about.html'), 'utf8');
+    const sitemap = readFileSync(resolve('public/sitemap.xml'), 'utf8');
+    const vercel = JSON.parse(readFileSync(resolve('vercel.json'), 'utf8')) as {rewrites:Array<{source:string;destination:string}>};
+    expect(app).toContain("'/about'");
+    expect(seo).toContain("'/about'");
+    expect(html).toContain('<meta name="robots" content="index, follow"');
+    expect(html).toContain('<link rel="canonical" href="https://www.hubvault.in/about"');
+    expect(page).toContain("'@type':'Organization'");
+    expect(page).toContain("'@type':'AboutPage'");
+    expect(page).toContain("email:'hello@hubvault.in'");
+    expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
+    expect(sitemap).toContain('<loc>https://www.hubvault.in/about</loc>');
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(7);
+    expect(vercel.rewrites).toContainEqual({source:'/about',destination:'/about.html'});
   });
 });

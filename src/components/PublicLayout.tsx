@@ -236,7 +236,7 @@ export default function PublicLayout() {
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.path}>
-                      {['/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software'].includes(link.path) ? <a
+                      {['/about','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software'].includes(link.path) ? <a
                         href={link.path}
                         className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition"
                       >

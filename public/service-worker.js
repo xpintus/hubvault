@@ -5,6 +5,7 @@ const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/about.html',
   '/cash-calculator.html',
   '/cod-reconciliation-calculator.html',
   '/hubvault-software.html',
