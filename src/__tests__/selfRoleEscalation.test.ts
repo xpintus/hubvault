@@ -1,4 +1,6 @@
 import { Profile,UserRole } from '@/types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
 
 // Mock function simulating the update_my_profile RPC logic
@@ -164,5 +166,17 @@ describe('Self-Role Escalation Prevention & Safe Profile Update RPC', () => {
     expect(updated.role).toBe('supervisor');
 
     expect(() => adminUpdateRole(collectorUser, 'super_admin', 'hub_admin')).toThrow('Unauthorized');
+  });
+
+  it('limits guest navigation to dashboard, private KhataBook and cash calculator', () => {
+    const app = readFileSync(resolve('src/App.tsx'), 'utf8');
+    const migration = readFileSync(resolve('supabase/migrations/20260803230000_guest_private_khatabook_access.sql'), 'utf8');
+    expect(app).toContain("location.pathname !== '/dashboard' && !isKhataBookRoute");
+    expect(app).toContain('<span>KhataBook</span>');
+    expect(app).toContain('href="/tools/cash-calculator"');
+    expect(app).toContain('{isKhataBookRoute?<Outlet/>:<GuestDashboard />}');
+    expect(migration).toContain("public.user_role() in ('guest','trial_user')");
+    expect(migration).toContain('hub_id is null and created_by=auth.uid()');
+    expect(migration).toContain('p.hub_id is null and p.created_by=auth.uid()');
   });
 });
