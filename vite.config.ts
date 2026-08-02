@@ -23,6 +23,7 @@ export default defineConfig({
         hubvaultSoftware: fileURLToPath(new URL('./hubvault-software.html', import.meta.url)),
         codReconciliation: fileURLToPath(new URL('./cod-reconciliation.html', import.meta.url)),
         dailyClosingSoftware: fileURLToPath(new URL('./daily-closing-software.html', import.meta.url)),
+        logisticsCashCollectionSoftware: fileURLToPath(new URL('./logistics-cash-collection-software.html', import.meta.url)),
       },
       output: {
         manualChunks: {

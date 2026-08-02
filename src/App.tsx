@@ -25,6 +25,7 @@ import CashCalculator from '@/pages/public/CashCalculator';
 import CollectionReconciliationSoftware from '@/pages/public/CollectionReconciliationSoftware';
 import CodReconciliationSoftware from '@/pages/public/CodReconciliationSoftware';
 import DailyClosingSoftware from '@/pages/public/DailyClosingSoftware';
+import LogisticsCashCollectionSoftware from '@/pages/public/LogisticsCashCollectionSoftware';
 import Contact from '@/pages/public/Contact';
 import FAQ from '@/pages/public/FAQ';
 import Home from '@/pages/public/Home';
@@ -107,7 +108,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const isCleanPublicSeoUrl = ['/tools/cash-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software'].includes(window.location.pathname);
+  const isCleanPublicSeoUrl = ['/tools/cash-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software'].includes(window.location.pathname);
   return (
     <HelmetProvider>
       <ThemeProvider>
@@ -123,6 +124,7 @@ export default function App() {
                       <Route path="/collection-reconciliation-software" element={<CollectionReconciliationSoftware />} />
                       <Route path="/cod-reconciliation-software" element={<CodReconciliationSoftware />} />
                       <Route path="/daily-closing-software" element={<DailyClosingSoftware />} />
+                      <Route path="/logistics-cash-collection-software" element={<LogisticsCashCollectionSoftware />} />
                     </Route>
                     <Route path="*" element={<HashAppRedirect />} />
                   </Routes>

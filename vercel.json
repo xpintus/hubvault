@@ -20,6 +20,10 @@
     {
       "source": "/daily-closing-software",
       "destination": "/daily-closing-software.html"
+    },
+    {
+      "source": "/logistics-cash-collection-software",
+      "destination": "/logistics-cash-collection-software.html"
     }
   ]
 }

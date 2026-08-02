@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/hubvault-software.html',
   '/cod-reconciliation.html',
   '/daily-closing-software.html',
+  '/logistics-cash-collection-software.html',
   '/manifest.webmanifest',
   '/offline.html',
   '/favicon.ico',
