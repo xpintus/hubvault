@@ -1,4 +1,4 @@
-import { buildCashSummary,calculateCashTotal,isVoiceTotalRequest,parseVoiceCashCommand,reconcileCash } from '@/pages/public/CashCalculator';
+import { buildCashSummary,buildDenominationAnnouncement,calculateCashTotal,isVoiceTotalRequest,parseVoiceCashCommand,reconcileCash } from '@/pages/public/CashCalculator';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -43,6 +43,8 @@ describe('Public Cash Calculator', () => {
     expect(parseVoiceCashCommand('something unrelated')).toBeNull();
     expect(isVoiceTotalRequest('total batao')).toBe(true);
     expect(isVoiceTotalRequest('what is the total')).toBe(true);
+    expect(buildDenominationAnnouncement(500,4,2000,true,'hi-IN')).toBe('आपके 500 रुपये के 4 नोट ऐड हुए हैं और टोटल 2,000 रुपये हुए हैं');
+    expect(buildDenominationAnnouncement(500,4,2000,true,'en-IN')).toBe('4 notes of 500 rupees have been added. The total is two thousand rupees');
   });
 
   it('is linked from the public route and homepage tools section', () => {
