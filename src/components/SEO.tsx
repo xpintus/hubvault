@@ -15,7 +15,7 @@ interface SEOProps {
 
 export const SITE_NAME = 'HubVault';
 const SITE_URL = 'https://www.hubvault.in';
-const INDEXABLE_PATHS = new Set(['/tools/cash-calculator','/collection-reconciliation-software']);
+const INDEXABLE_PATHS = new Set(['/tools/cash-calculator','/collection-reconciliation-software','/cod-reconciliation-software']);
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image-v2.jpg`;
 
 export default function SEO({

@@ -21,6 +21,7 @@ export default defineConfig({
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         cashCalculator: fileURLToPath(new URL('./cash-calculator.html', import.meta.url)),
         hubvaultSoftware: fileURLToPath(new URL('./hubvault-software.html', import.meta.url)),
+        codReconciliation: fileURLToPath(new URL('./cod-reconciliation.html', import.meta.url)),
       },
       output: {
         manualChunks: {

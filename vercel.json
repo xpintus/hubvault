@@ -12,6 +12,10 @@
     {
       "source": "/collection-reconciliation-software",
       "destination": "/hubvault-software.html"
+    },
+    {
+      "source": "/cod-reconciliation-software",
+      "destination": "/cod-reconciliation.html"
     }
   ]
 }

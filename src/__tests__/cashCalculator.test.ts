@@ -106,7 +106,7 @@ describe('Public Cash Calculator', () => {
     const sitemap = readFileSync(resolve('public/sitemap.xml'), 'utf8');
     const robots = readFileSync(resolve('public/robots.txt'), 'utf8');
     const calculator = readFileSync(resolve('src/pages/public/CashCalculator.tsx'), 'utf8');
-    expect(app).toContain("['/tools/cash-calculator','/collection-reconciliation-software'].includes(window.location.pathname)");
+    expect(app).toContain("'/cod-reconciliation-software'");
     expect(app).toContain('<BrowserRouter>');
     expect(app).toContain('<HashRouter>');
     expect(seo).toContain("INDEXABLE_PATHS.has(path) && currentPath === path");
@@ -115,7 +115,7 @@ describe('Public Cash Calculator', () => {
     expect(calculatorHtml).toContain('<link rel="canonical" href="https://www.hubvault.in/tools/cash-calculator"');
     expect(calculatorHtml).not.toContain('/#/tools/cash-calculator');
     expect(vercel.rewrites).toContainEqual({source:'/tools/cash-calculator',destination:'/cash-calculator.html'});
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(2);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(3);
     expect(sitemap).toContain('<loc>https://www.hubvault.in/tools/cash-calculator</loc>');
     expect(robots).toContain('Sitemap: https://www.hubvault.in/sitemap.xml');
     expect(calculator).toContain("'@type':'WebApplication'");
@@ -141,7 +141,24 @@ describe('Public Cash Calculator', () => {
     expect((landing.match(/<h1 className=/g)??[])).toHaveLength(1);
     ['KhataBook','CMS deposition records','Daily closing'].forEach(feature=>expect(landing).toContain(feature));
     expect(sitemap).toContain('<loc>https://www.hubvault.in/collection-reconciliation-software</loc>');
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(2);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(3);
     expect(vercel.rewrites).toContainEqual({source:'/collection-reconciliation-software',destination:'/hubvault-software.html'});
+  });
+
+  it('serves an indexable COD reconciliation page with a direct buying path', () => {
+    const page = readFileSync(resolve('src/pages/public/CodReconciliationSoftware.tsx'), 'utf8');
+    const html = readFileSync(resolve('cod-reconciliation.html'), 'utf8');
+    const sitemap = readFileSync(resolve('public/sitemap.xml'), 'utf8');
+    const vercel = JSON.parse(readFileSync(resolve('vercel.json'), 'utf8')) as {rewrites:Array<{source:string;destination:string}>};
+    expect(html).toContain('<meta name="robots" content="index, follow"');
+    expect(html).toContain('<link rel="canonical" href="https://www.hubvault.in/cod-reconciliation-software"');
+    expect(page).toContain("const BUY_URL='/#/buy-now'");
+    expect(page).toContain("'@type':'SoftwareApplication'");
+    expect(page).toContain("'@type':'FAQPage'");
+    expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
+    expect(page).toContain('Cash and online separated');
+    expect(page).toContain('employee dues and recovery');
+    expect(sitemap).toContain('<loc>https://www.hubvault.in/cod-reconciliation-software</loc>');
+    expect(vercel.rewrites).toContainEqual({source:'/cod-reconciliation-software',destination:'/cod-reconciliation.html'});
   });
 });
