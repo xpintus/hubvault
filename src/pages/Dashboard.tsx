@@ -273,6 +273,39 @@ export default function Dashboard() {
     return { total, cash, online, expectedCod, difference };
   }, [entries, closingByCollector]);
 
+  const verifiedCollectorBreakdown = useMemo(() => {
+    const rows = new Map<string, {
+      label: string; employeeId?: string; expected: number;
+      cash: number; online: number; total: number; difference: number;
+    }>();
+    entries.forEach(e => {
+      const current = rows.get(e.collector_id) ?? {
+        label: e.collector?.name ?? '—', employeeId: e.collector?.employee_id,
+        expected: 0, cash: 0, online: 0, total: 0, difference: 0,
+      };
+      current.expected += safeAmount(e.expected_cod);
+      current.cash += safeAmount(e.cash_amount);
+      current.online += safeAmount(e.online_amount);
+      current.total = current.cash + current.online;
+      current.difference = current.total - current.expected;
+      rows.set(e.collector_id, current);
+    });
+    closingByCollector.forEach((closing, collectorId) => {
+      const collector = collectors.find(c => c.id === collectorId);
+      const current = rows.get(collectorId) ?? {
+        label: collector?.name ?? 'Employee', employeeId: collector?.employee_id,
+        expected: 0, cash: 0, online: 0, total: 0, difference: 0,
+      };
+      current.expected = safeAmount(closing.expected_cash) + safeAmount(closing.expected_online_amount);
+      current.cash = safeAmount(closing.actual_cash);
+      current.online = safeAmount(closing.online_amount);
+      current.total = current.cash + current.online;
+      current.difference = current.total - current.expected;
+      rows.set(collectorId, current);
+    });
+    return [...rows.values()];
+  }, [entries, closingByCollector, collectors]);
+
   const outstandingDues = useMemo(() => {
     return dues.filter((d) => d.status !== 'fully_recovered' && d.status !== 'cancelled').reduce((s, d) => s + safeAmount(d.remaining_amount), 0);
   }, [dues]);
@@ -466,7 +499,7 @@ export default function Dashboard() {
       accent: 'slate',
       sub: `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} today`,
       openModal: () => {
-        const breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.expected_cod), sub: e.collector?.employee_id }));
+        const breakdown = verifiedCollectorBreakdown.map(e => ({ label: e.label, amount: e.expected, sub: e.employeeId }));
         breakdown.sort((a, b) => b.amount - a.amount);
         setKpiDetail({ title: 'Expected COD', label: 'Expected COD Breakdown', icon: Target, accent: 'slate', value: summary.expectedCod, breakdown });
       }
@@ -479,7 +512,7 @@ export default function Dashboard() {
       accent: 'brand',
       sub: `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} collected`,
       openModal: () => {
-        const breakdown = entries.map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.total_collection), sub: e.collector?.employee_id }));
+        const breakdown = verifiedCollectorBreakdown.map(e => ({ label: e.label, amount: e.total, sub: e.employeeId }));
         breakdown.sort((a, b) => b.amount - a.amount);
         setKpiDetail({ title: 'Total Collection', label: 'Total Collection Breakdown', icon: Wallet, accent: 'brand', value: summary.total, breakdown });
       }
@@ -507,8 +540,8 @@ export default function Dashboard() {
       badgeClass: diffInfo.badgeClass,
       stateClass: diffInfo.stateClass,
       openModal: () => {
-        const breakdown = entries
-          .map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.total_collection) - safeAmount(e.expected_cod), sub: e.collector?.employee_id }))
+        const breakdown = verifiedCollectorBreakdown
+          .map(e => ({ label: e.label, amount: e.difference, sub: e.employeeId }))
           .filter(b => b.amount !== 0);
         breakdown.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
         setKpiDetail({ title: diffInfo.title, label: `${diffInfo.title} Breakdown`, icon: diffInfo.icon, accent: diffInfo.accent, value: summary.difference, isGap: true, breakdown });
@@ -525,7 +558,7 @@ export default function Dashboard() {
       accent: 'emerald',
       sub: summary.total > 0 ? `${Math.round((summary.cash / summary.total) * 100)}% of total` : '0% of total',
       openModal: () => {
-        const breakdown = entries.filter(e => safeAmount(e.cash_amount) > 0).map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.cash_amount), sub: e.collector?.employee_id }));
+        const breakdown = verifiedCollectorBreakdown.filter(e => e.cash > 0).map(e => ({ label: e.label, amount: e.cash, sub: e.employeeId }));
         breakdown.sort((a, b) => b.amount - a.amount);
         setKpiDetail({ title: 'Cash Collected', label: 'Cash Collection Breakdown', icon: Banknote, accent: 'emerald', value: summary.cash, breakdown });
       }
@@ -538,7 +571,7 @@ export default function Dashboard() {
       accent: 'blue',
       sub: summary.total > 0 ? `${Math.round((summary.online / summary.total) * 100)}% of total` : '0% of total',
       openModal: () => {
-        const breakdown = entries.filter(e => safeAmount(e.online_amount) > 0).map(e => ({ label: e.collector?.name ?? '—', amount: safeAmount(e.online_amount), sub: e.collector?.employee_id }));
+        const breakdown = verifiedCollectorBreakdown.filter(e => e.online > 0).map(e => ({ label: e.label, amount: e.online, sub: e.employeeId }));
         breakdown.sort((a, b) => b.amount - a.amount);
         setKpiDetail({ title: 'Online Collected', label: 'Online Collection Breakdown', icon: Smartphone, accent: 'blue', value: summary.online, breakdown });
       }

@@ -49,6 +49,7 @@ describe('Daily Closing System', () => {
     expect(dashboardSource).toContain('closing.actual_cash');
     expect(dashboardSource).toContain('closing.expected_online_amount');
     expect(dashboardSource).toContain('dashboardEntries');
+    expect(dashboardSource).toContain('verifiedCollectorBreakdown');
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {
