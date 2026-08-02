@@ -44,12 +44,14 @@ export default function Collectors() {
     if (!profile) return;
     setLoading(true);
     try {
+      let availableHubs: Hub[];
       if (isSuperAdmin) {
         const { data: h } = await supabase.from('hubs').select('*').order('name');
-        setHubs(h ?? []);
+        availableHubs = h ?? [];
       } else {
-        setHubs(hubCtx.accessibleHubs);
+        availableHubs = hubCtx.accessibleHubs;
       }
+      setHubs(availableHubs);
 
       if (!navigator.onLine) {
         let cols = await db.collectors.toArray();
@@ -59,7 +61,7 @@ export default function Collectors() {
         // Mock the hub relation for offline list
         const hydrated = cols.map(c => ({
             ...c,
-            hub: hubs.find(h => h.id === c.hub_id) || { id: c.hub_id, name: 'Offline Hub', code: '' }
+            hub: availableHubs.find(h => h.id === c.hub_id) || { id: c.hub_id, name: 'Offline Hub', code: '' }
         }));
 
         setCollectors(hydrated.sort((a, b) => a.name.localeCompare(b.name)) as any[]);
@@ -85,7 +87,7 @@ export default function Collectors() {
     } finally {
       setLoading(false);
     }
-  }, [profile, isSuperAdmin, hubCtx.selectedHubId, hubCtx.accessibleHubs, hubs, toast]);
+  }, [profile, isSuperAdmin, hubCtx.selectedHubId, hubCtx.accessibleHubs, toast]);
 
   useEffect(() => { load(); }, [load]);
 
