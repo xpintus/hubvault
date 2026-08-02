@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -200,12 +200,12 @@
         var theme = localStorage.getItem("hubvault_theme");
         var root = document.documentElement;
 
-        if (theme === "light") {
-          root.classList.add("light");
-          root.classList.remove("dark");
-        } else {
+        if (theme === "dark") {
           root.classList.add("dark");
           root.classList.remove("light");
+        } else {
+          root.classList.add("light");
+          root.classList.remove("dark");
         }
       })();
     </script>
