@@ -175,12 +175,19 @@ describe('Supervisor Data Privacy & User Management Access', () => {
     expect(edgeFunction).toContain('Deleted user ${target.name} (${body.user_id})');
   });
 
-  it('deactivates hubs with financial history instead of deleting it', () => {
+  it('allows only Super Admin to permanently delete a hub transactionally', () => {
     const hubsPage = readFileSync(resolve('src/pages/Hubs.tsx'), 'utf8');
-    expect(hubsPage).toContain("const hasOperationalHistory = (stats[h.id]?.entries ?? 0) > 0");
+    const migration = readFileSync(resolve('supabase/migrations/20260803220000_super_admin_permanent_hub_delete.sql'), 'utf8');
+    expect(hubsPage).toContain('const permanentlyDelete = isSuperAdmin');
+    expect(hubsPage).toContain("supabase.rpc('permanently_delete_hub'");
     expect(hubsPage).toContain("update({ status: 'inactive' })");
-    expect(hubsPage).toContain("error?.code === '23503'");
-    expect(hubsPage).toContain('collection and closing history was retained');
-    expect(hubsPage).not.toContain('will also remove all its collectors and collection entries');
+    expect(hubsPage).toContain("isSuperAdmin ? 'Delete permanently' : 'Deactivate'");
+    expect(migration).toContain("public.user_role() <> 'super_admin'");
+    expect(migration).toContain("if tg_op = 'DELETE' then");
+    expect(migration).toContain('return old');
+    expect(migration).toContain('delete from public.daily_closing_finalizations');
+    expect(migration).toContain('delete from public.daily_closings');
+    expect(migration).toContain('delete from public.audit_logs where target_hub_id = p_hub_id');
+    expect(migration).toContain('delete from public.hubs where id = p_hub_id');
   });
 });

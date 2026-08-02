@@ -242,17 +242,20 @@ export default function Hubs() {
 
   const handleDelete = async (h: Hub) => {
     const hasOperationalHistory = (stats[h.id]?.entries ?? 0) > 0;
+    const permanentlyDelete = isSuperAdmin;
     const ok = await confirm({
-      title: hasOperationalHistory ? 'Deactivate hub?' : 'Delete hub?',
-      message: hasOperationalHistory
+      title: permanentlyDelete ? 'Permanently delete hub?' : 'Deactivate hub?',
+      message: permanentlyDelete
+        ? `This will permanently delete "${h.name}" and all of its collections, daily closings, deposits, dues, recoveries, collectors and hub audit history. User accounts will remain, but lose access to this hub. This cannot be undone.`
+        : hasOperationalHistory
         ? `"${h.name}" has collection or closing history. It will be marked inactive so financial records and audit history remain available.`
-        : `Delete "${h.name}"? This is only possible when the hub has no operational history.`,
-      confirmLabel: hasOperationalHistory ? 'Deactivate Hub' : 'Delete Hub',
+        : `"${h.name}" will be marked inactive. Only a Super Admin can permanently delete a hub.`,
+      confirmLabel: permanentlyDelete ? 'Permanently Delete' : 'Deactivate Hub',
       danger: true,
     });
     if (!ok) return;
 
-    if (hasOperationalHistory) {
+    if (!permanentlyDelete) {
       const { error } = await supabase.from('hubs').update({ status: 'inactive' }).eq('id', h.id);
       if (error) toast.error(error.message);
       else {
@@ -264,20 +267,11 @@ export default function Hubs() {
       return;
     }
 
-    const { error } = await supabase.from('hubs').delete().eq('id', h.id);
-    if (error?.code === '23503') {
-      const { error: deactivateError } = await supabase.from('hubs').update({ status: 'inactive' }).eq('id', h.id);
-      if (deactivateError) toast.error(deactivateError.message);
-      else {
-        await logAudit('hub_deactivated', profile?.id ?? null, `Deactivated hub ${h.name}; linked history prevented deletion`, null, h.id);
-        toast.success('Hub has linked records, so it was safely deactivated instead');
-        hubCtx.refresh();
-        load();
-      }
-    } else if (error) {
+    const { error } = await supabase.rpc('permanently_delete_hub', { p_hub_id: h.id });
+    if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Unused hub deleted');
+      toast.success('Hub and all linked operational history permanently deleted');
       hubCtx.refresh();
       load();
     }
@@ -374,7 +368,7 @@ export default function Hubs() {
                     <Button variant="outline" size="sm" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => openEdit(h)} className="flex-1">Edit</Button>
                   )}
                   {isSuperAdmin && (
-                    <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-500/10" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => handleDelete(h)}>{(stats[h.id]?.entries ?? 0) > 0 ? 'Deactivate' : 'Delete'}</Button>
+                    <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-500/10" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => handleDelete(h)}>{isSuperAdmin ? 'Delete permanently' : 'Deactivate'}</Button>
                   )}
                 </div>
               </Card>
