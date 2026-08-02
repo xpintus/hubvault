@@ -15,7 +15,7 @@ interface SEOProps {
 
 export const SITE_NAME = 'HubVault';
 const SITE_URL = 'https://www.hubvault.in';
-const INDEXABLE_PATH = '/tools/cash-calculator';
+const INDEXABLE_PATHS = new Set(['/tools/cash-calculator','/collection-reconciliation-software']);
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image-v2.jpg`;
 
 export default function SEO({
@@ -34,7 +34,7 @@ export default function SEO({
   const canonicalUrl = `${SITE_URL}${path}`;
   const ogImage = image || DEFAULT_OG_IMAGE;
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isIndexableCashCalculator = !noindex && path === INDEXABLE_PATH && currentPath === INDEXABLE_PATH;
+  const isIndexablePublicPage = !noindex && INDEXABLE_PATHS.has(path) && currentPath === path;
 
   return (
     <Helmet>
@@ -42,8 +42,8 @@ export default function SEO({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={canonicalUrl} />
-      <meta name="robots" content={isIndexableCashCalculator ? 'index, follow' : 'noindex, nofollow'} />
-      <meta name="googlebot" content={isIndexableCashCalculator ? 'index, follow, max-image-preview:large' : 'noindex, nofollow'} />
+      <meta name="robots" content={isIndexablePublicPage ? 'index, follow' : 'noindex, nofollow'} />
+      <meta name="googlebot" content={isIndexablePublicPage ? 'index, follow, max-image-preview:large' : 'noindex, nofollow'} />
 
       {/* Open Graph */}
       <meta property="og:type" content={type} />

@@ -22,6 +22,7 @@ import BlogList from '@/pages/public/BlogList';
 import BlogPost from '@/pages/public/BlogPost';
 import BuyNow from '@/pages/public/BuyNow';
 import CashCalculator from '@/pages/public/CashCalculator';
+import CollectionReconciliationSoftware from '@/pages/public/CollectionReconciliationSoftware';
 import Contact from '@/pages/public/Contact';
 import FAQ from '@/pages/public/FAQ';
 import Home from '@/pages/public/Home';
@@ -104,7 +105,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const isCleanCashCalculatorUrl = window.location.pathname === '/tools/cash-calculator';
+  const isCleanPublicSeoUrl = ['/tools/cash-calculator','/collection-reconciliation-software'].includes(window.location.pathname);
   return (
     <HelmetProvider>
       <ThemeProvider>
@@ -113,10 +114,11 @@ export default function App() {
             <NotificationProvider>
               <SettingsProvider>
                 <SyncProvider>
-                {isCleanCashCalculatorUrl ? <BrowserRouter>
+                {isCleanPublicSeoUrl ? <BrowserRouter>
                   <Routes>
                     <Route element={<PublicLayout />}>
                       <Route path="/tools/cash-calculator" element={<CashCalculator />} />
+                      <Route path="/collection-reconciliation-software" element={<CollectionReconciliationSoftware />} />
                     </Route>
                     <Route path="*" element={<HashAppRedirect />} />
                   </Routes>

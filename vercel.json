@@ -8,6 +8,10 @@
     {
       "source": "/tools/cash-calculator",
       "destination": "/cash-calculator.html"
+    },
+    {
+      "source": "/collection-reconciliation-software",
+      "destination": "/hubvault-software.html"
     }
   ]
 }
