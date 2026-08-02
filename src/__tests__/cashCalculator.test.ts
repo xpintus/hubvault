@@ -90,6 +90,9 @@ describe('Public Cash Calculator', () => {
     expect(tools).toContain("import('xlsx')");
     expect(tools).toContain('Shareable calculation link copied');
     expect(tools).toContain('Estimate only—not counterfeit detection');
+    expect(tools).toContain("import('tesseract.js')");
+    expect(tools).toContain('Apply verified estimate');
+    expect(tools).not.toContain('TextDetector');
     expect(tools).toContain('beforeinstallprompt');
     expect(manifest).toContain('/#/tools/cash-calculator');
   });
