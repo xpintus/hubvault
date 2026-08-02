@@ -199,7 +199,7 @@ export default function PublicLayout() {
       </main>
 
       {/* Footer */}
-      <footer className={clsx('text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800',isMobileToolMode&&'hidden md:block')} style={{ background: 'var(--neutral-100)' }}>
+      <footer className={clsx('text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800',isMobileToolMode&&'hidden')} style={{ background: 'var(--neutral-100)' }}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand */}

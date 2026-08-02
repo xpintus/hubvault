@@ -1,4 +1,4 @@
-import { buildCashSummary,calculateCashTotal,reconcileCash } from '@/pages/public/CashCalculator';
+import { buildCashSummary,calculateCashTotal,parseVoiceCashCommand,reconcileCash } from '@/pages/public/CashCalculator';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -35,6 +35,12 @@ describe('Public Cash Calculator', () => {
     expect(summary).toContain('Status: SHORTAGE');
   });
 
+  it('parses spoken denomination commands', () => {
+    expect(parseVoiceCashCommand('five hundred ten notes')).toEqual({note:500,quantity:10});
+    expect(parseVoiceCashCommand('200 12 notes')).toEqual({note:200,quantity:12});
+    expect(parseVoiceCashCommand('something unrelated')).toBeNull();
+  });
+
   it('is linked from the public route and homepage tools section', () => {
     const app = readFileSync(resolve('src/App.tsx'), 'utf8');
     const home = readFileSync(resolve('src/pages/public/Home.tsx'), 'utf8');
@@ -43,6 +49,6 @@ describe('Public Cash Calculator', () => {
     expect(home).toContain('id="tools"');
     expect(home).toContain('Open Cash Calculator');
     expect(layout).toContain("location.pathname === '/tools/cash-calculator'");
-    expect(layout).toContain("'hidden md:block'");
+    expect(layout).toContain("isMobileToolMode&&'hidden'");
   });
 });
