@@ -41,6 +41,7 @@ interface BuyFormErrors {
   phone?: string;
   password?: string;
   hubName?: string;
+  hubCode?: string;
 }
 
 export default function BuyNow() {
@@ -49,7 +50,7 @@ export default function BuyNow() {
   const { settings } = useSettings();
   const PRICE = settings.license_price;
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', password: '', hubName: '', message: '', promoCode: '',
+    name: '', email: '', phone: '', password: '', hubName: '', hubCode: '', message: '', promoCode: '',
   });
   const [errors, setErrors] = useState<BuyFormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -66,6 +67,8 @@ export default function BuyNow() {
     if (!form.password) e.password = 'Password is required';
     else if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
     if (!form.hubName.trim()) e.hubName = 'Hub name is required';
+    if (!form.hubCode.trim()) e.hubCode = 'Hub code is required';
+    else if (!/^[A-Z0-9-]{3,16}$/.test(form.hubCode.trim().toUpperCase())) e.hubCode = 'Use 3–16 letters, numbers or hyphens';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -89,6 +92,7 @@ export default function BuyNow() {
           password: form.password,
           phone: form.phone.trim(),
           hub_name: form.hubName.trim(),
+          hub_code: form.hubCode.trim().toUpperCase(),
           referral_code: form.promoCode.trim() || undefined,
         }),
       });
@@ -355,6 +359,20 @@ export default function BuyNow() {
                       error={errors.hubName}
                       required
                       className="pl-10"
+                    />
+                    <Building2 className="absolute left-3 top-[38px] h-4 w-4 text-neutral-400" />
+                  </div>
+
+                  <div className="relative">
+                    <Input
+                      label="Unique Hub Code"
+                      name="hubCode"
+                      value={form.hubCode}
+                      onChange={(e) => handleChange('hubCode', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0,16))}
+                      placeholder="e.g. MUM-CENTRAL"
+                      error={errors.hubCode}
+                      required
+                      className="pl-10 font-mono uppercase"
                     />
                     <Building2 className="absolute left-3 top-[38px] h-4 w-4 text-neutral-400" />
                   </div>

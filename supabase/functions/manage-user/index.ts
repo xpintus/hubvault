@@ -33,6 +33,7 @@ interface CreateBuyerBody {
   phone: string;
   company?: string;
   hub_name?: string;
+  hub_code?: string;
   hub_location?: string;
   referral_code?: string;
 }
@@ -214,8 +215,8 @@ Deno.serve(async (req: Request) => {
     try {
       const body = await req.json() as CreateBuyerBody;
 
-      if (!body.name || !body.email || !body.password || !body.phone) {
-        return jsonError(400, "Name, email, password, and phone are required");
+      if (!body.name || !body.email || !body.password || !body.phone || !body.hub_name || !body.hub_code) {
+        return jsonError(400, "Name, email, password, phone, hub name, and hub code are required");
       }
       if (body.name.trim().length < 2) {
         return jsonError(400, "Name must be at least 2 characters");
@@ -230,6 +231,11 @@ Deno.serve(async (req: Request) => {
         return jsonError(400, "Please enter a valid phone number");
       }
 
+      const requestedHubCode = body.hub_code.trim().toUpperCase();
+      if (!/^[A-Z0-9-]{3,16}$/.test(requestedHubCode)) {
+        return jsonError(400, "Hub code must contain 3–16 letters, numbers, or hyphens");
+      }
+
       // Check if email already exists
       const { data: existing } = await adminClient
         .from("profiles")
@@ -238,6 +244,15 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (existing) {
         return jsonError(409, "An account with this email already exists");
+      }
+
+      const { data: existingHub } = await adminClient
+        .from("hubs")
+        .select("id")
+        .eq("code", requestedHubCode)
+        .maybeSingle();
+      if (existingHub) {
+        return jsonError(409, "This hub code is already in use. Please choose another code");
       }
 
       const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
@@ -282,8 +297,8 @@ Deno.serve(async (req: Request) => {
         .eq("email", body.email.trim());
 
       // Create the buyer's first hub and auto-assign them
-      const hubName = body.hub_name?.trim() || body.company?.trim() || `${body.name.trim()}'s Hub`;
-      const hubCode = hubName.slice(0, 3).toUpperCase().padEnd(3, "X") + "-01";
+      const hubName = body.hub_name.trim();
+      const hubCode = requestedHubCode;
       const hubLocation = body.hub_location?.trim() || null;
 
       const { data: newHub, error: hubErr } = await adminClient.from("hubs").insert({
@@ -294,27 +309,31 @@ Deno.serve(async (req: Request) => {
         created_by: newUserId,
       }).select().single();
 
-      let hubId: string | null = null;
-      if (!hubErr && newHub) {
-        hubId = newHub.id;
-
-        // Assign the buyer to their new hub
-        await adminClient.from("user_hub_access").insert({
-          user_id: newUserId,
-          hub_id: hubId,
-        });
-
-        // Set hub_id on the profile
-        await adminClient.from("profiles").update({ hub_id: hubId }).eq("id", newUserId);
-
-        await adminClient.from("audit_logs").insert({
-          action: "hub_created",
-          performed_by: null,
-          target_user_id: newUserId,
-          target_hub_id: hubId,
-          details: `Auto-created hub "${hubName}" for buyer ${body.name}`,
-        });
+      if (hubErr || !newHub) {
+        await adminClient.auth.admin.deleteUser(newUserId);
+        const duplicateCode = hubErr?.code === "23505";
+        return jsonError(duplicateCode ? 409 : 500, duplicateCode ? "This hub code is already in use. Please choose another code" : `Account was not created because the hub could not be created: ${hubErr?.message || "Unknown hub error"}`);
       }
+      const hubId = newHub.id;
+
+      const { error: accessErr } = await adminClient.from("user_hub_access").upsert({
+        user_id: newUserId,
+        hub_id: hubId,
+      }, { onConflict: "user_id,hub_id" });
+      const { error: profileHubErr } = await adminClient.from("profiles").update({ hub_id: hubId }).eq("id", newUserId);
+      if (accessErr || profileHubErr) {
+        await adminClient.from("hubs").delete().eq("id", hubId);
+        await adminClient.auth.admin.deleteUser(newUserId);
+        return jsonError(500, `Account was not created because hub assignment failed: ${accessErr?.message || profileHubErr?.message}`);
+      }
+
+      await adminClient.from("audit_logs").insert({
+        action: "hub_created",
+        performed_by: null,
+        target_user_id: newUserId,
+        target_hub_id: hubId,
+        details: `Auto-created hub "${hubName}" (${hubCode}) for buyer ${body.name}`,
+      });
 
       // Process referral/promo code if provided
       if (body.referral_code?.trim()) {
