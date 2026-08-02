@@ -39,6 +39,8 @@ const FOOTER_LINKS = {
   ],
 };
 
+const CLEAN_PUBLIC_LINKS = new Set(['/buy-hubvault','/about','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software']);
+
 function isHashLink(path: string) {
   return path.includes('#');
 }
@@ -107,11 +109,10 @@ export default function PublicLayout() {
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-0.5">
-              {NAV_LINKS.map((link) => (
-                <Link
+              {NAV_LINKS.map((link) => CLEAN_PUBLIC_LINKS.has(link.path) ? (
+                <a
                   key={link.path}
-                  to={link.path}
-                  onClick={(e) => handleNavClick(e, link.path)}
+                  href={link.path}
                   className={clsx(
                     'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     location.pathname === link.path.split('#')[0]
@@ -120,8 +121,8 @@ export default function PublicLayout() {
                   )}
                 >
                   {link.label}
-                </Link>
-              ))}
+                </a>
+              ) : <Link key={link.path} to={link.path} onClick={(e) => handleNavClick(e, link.path)} className={clsx('rounded-lg px-3 py-2 text-sm font-medium transition-colors',location.pathname === link.path.split('#')[0]?'text-brand-600 dark:text-brand-400':'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800')}>{link.label}</Link>)}
             </nav>
 
             {/* Desktop CTAs */}
@@ -157,11 +158,10 @@ export default function PublicLayout() {
         {mobileOpen && (
           <div className="lg:hidden border-t border-neutral-200 dark:border-neutral-800 animate-slide-down" style={{ background: 'var(--page-bg)' }}>
             <nav className="mx-auto max-w-7xl px-4 py-4 space-y-1">
-              {NAV_LINKS.map((link) => (
-                <Link
+              {NAV_LINKS.map((link) => CLEAN_PUBLIC_LINKS.has(link.path) ? (
+                <a
                   key={link.path}
-                  to={link.path}
-                  onClick={(e) => { handleNavClick(e, link.path); setMobileOpen(false); }}
+                  href={link.path}
                   className={clsx(
                     'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-colors',
                     location.pathname === link.path.split('#')[0]
@@ -171,8 +171,8 @@ export default function PublicLayout() {
                 >
                   {link.label}
                   <ChevronRight className="h-4 w-4 text-neutral-400" />
-                </Link>
-              ))}
+                </a>
+              ) : <Link key={link.path} to={link.path} onClick={(e) => { handleNavClick(e, link.path); setMobileOpen(false); }} className={clsx('flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-colors',location.pathname === link.path.split('#')[0]?'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-600/10':'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800')}>{link.label}<ChevronRight className="h-4 w-4 text-neutral-400" /></Link>)}
               <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
                 <div className="flex justify-center pb-1">
                   <ThemeToggle />
@@ -236,7 +236,7 @@ export default function PublicLayout() {
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.path}>
-                      {['/about','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software'].includes(link.path) ? <a
+                      {CLEAN_PUBLIC_LINKS.has(link.path) ? <a
                         href={link.path}
                         className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition"
                       >
