@@ -116,8 +116,8 @@ export default function BuyNow() {
       if (signInErr) throw new Error('Account created but sign-in failed. Please log in manually.');
 
       setStatus('success');
-      toast.success('Account created! Redirecting to your dashboard...');
-      setTimeout(() => navigate('/dashboard'), 1500);
+      toast.success('Account created! Redirecting to secure payment...');
+      setTimeout(() => navigate('/payment', { replace: true }), 1500);
     } catch (err) {
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong');
@@ -142,7 +142,7 @@ export default function BuyNow() {
             </div>
             <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Account Created Successfully!</h1>
             <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mx-auto">
-              Your Hub Admin account is ready with full hub creation access. Redirecting to your dashboard...
+              Your Hub Admin account is ready. Redirecting to the secure UPI payment page...
             </p>
             <div className="mt-6 flex justify-center">
               <Spinner className="h-6 w-6 text-brand-600" />
