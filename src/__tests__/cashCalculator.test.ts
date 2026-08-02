@@ -115,7 +115,7 @@ describe('Public Cash Calculator', () => {
     expect(calculatorHtml).toContain('<link rel="canonical" href="https://www.hubvault.in/tools/cash-calculator"');
     expect(calculatorHtml).not.toContain('/#/tools/cash-calculator');
     expect(vercel.rewrites).toContainEqual({source:'/tools/cash-calculator',destination:'/cash-calculator.html'});
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(3);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(4);
     expect(sitemap).toContain('<loc>https://www.hubvault.in/tools/cash-calculator</loc>');
     expect(robots).toContain('Sitemap: https://www.hubvault.in/sitemap.xml');
     expect(calculator).toContain("'@type':'WebApplication'");
@@ -141,7 +141,7 @@ describe('Public Cash Calculator', () => {
     expect((landing.match(/<h1 className=/g)??[])).toHaveLength(1);
     ['KhataBook','CMS deposition records','Daily closing'].forEach(feature=>expect(landing).toContain(feature));
     expect(sitemap).toContain('<loc>https://www.hubvault.in/collection-reconciliation-software</loc>');
-    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(3);
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(4);
     expect(vercel.rewrites).toContainEqual({source:'/collection-reconciliation-software',destination:'/hubvault-software.html'});
   });
 
@@ -160,5 +160,26 @@ describe('Public Cash Calculator', () => {
     expect(page).toContain('employee dues and recovery');
     expect(sitemap).toContain('<loc>https://www.hubvault.in/cod-reconciliation-software</loc>');
     expect(vercel.rewrites).toContainEqual({source:'/cod-reconciliation-software',destination:'/cod-reconciliation.html'});
+  });
+
+  it('serves an indexable daily closing software page with approval and reporting content', () => {
+    const app = readFileSync(resolve('src/App.tsx'), 'utf8');
+    const seo = readFileSync(resolve('src/components/SEO.tsx'), 'utf8');
+    const page = readFileSync(resolve('src/pages/public/DailyClosingSoftware.tsx'), 'utf8');
+    const html = readFileSync(resolve('daily-closing-software.html'), 'utf8');
+    const sitemap = readFileSync(resolve('public/sitemap.xml'), 'utf8');
+    const vercel = JSON.parse(readFileSync(resolve('vercel.json'), 'utf8')) as {rewrites:Array<{source:string;destination:string}>};
+    expect(app).toContain("'/daily-closing-software'");
+    expect(seo).toContain("'/daily-closing-software'");
+    expect(html).toContain('<meta name="robots" content="index, follow"');
+    expect(html).toContain('<link rel="canonical" href="https://www.hubvault.in/daily-closing-software"');
+    expect(page).toContain("const BUY_URL='/#/buy-now'");
+    expect(page).toContain("'@type':'SoftwareApplication'");
+    expect(page).toContain("'@type':'FAQPage'");
+    expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
+    ['Cash and online','Supervisor approval','Approved records are locked','Excel and PDF'].forEach(feature=>expect(page).toContain(feature));
+    expect(sitemap).toContain('<loc>https://www.hubvault.in/daily-closing-software</loc>');
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(4);
+    expect(vercel.rewrites).toContainEqual({source:'/daily-closing-software',destination:'/daily-closing-software.html'});
   });
 });

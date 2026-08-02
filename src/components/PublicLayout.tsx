@@ -20,6 +20,7 @@ const FOOTER_LINKS = {
   Product: [
     { label: 'HubVault Software', path: '/collection-reconciliation-software' },
     { label: 'COD Reconciliation', path: '/cod-reconciliation-software' },
+    { label: 'Daily Closing Software', path: '/daily-closing-software' },
     { label: 'Features', path: '/#features' },
     { label: 'Pricing', path: '/#pricing' },
     { label: 'Blog', path: '/blog' },
@@ -233,7 +234,7 @@ export default function PublicLayout() {
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.path}>
-                      {['/tools/cash-calculator','/collection-reconciliation-software','/cod-reconciliation-software'].includes(link.path) ? <a
+                      {['/tools/cash-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software'].includes(link.path) ? <a
                         href={link.path}
                         className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition"
                       >

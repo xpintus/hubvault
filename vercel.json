@@ -16,6 +16,10 @@
     {
       "source": "/cod-reconciliation-software",
       "destination": "/cod-reconciliation.html"
+    },
+    {
+      "source": "/daily-closing-software",
+      "destination": "/daily-closing-software.html"
     }
   ]
 }
