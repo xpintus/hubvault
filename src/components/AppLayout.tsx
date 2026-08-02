@@ -29,6 +29,7 @@ const TITLES: Record<string, string> = {
   '/purchases': 'Purchase Requests',
   '/audit-logs': 'Audit Logs',
   '/licenses': 'License Management',
+  '/mail-campaigns': 'Mail Campaigns',
 };
 
 export default function AppLayout() {

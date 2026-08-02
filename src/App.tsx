@@ -54,6 +54,7 @@ const Licenses = lazy(() => import('@/pages/Licenses'));
 const ReferEarn = lazy(() => import('@/pages/ReferEarn'));
 const Payouts = lazy(() => import('@/pages/Payouts'));
 const SettingsPage = lazy(() => import('@/pages/Settings'));
+const MailCampaigns = lazy(() => import('@/pages/MailCampaigns'));
 
 const KhataBookLayout = lazy(() => import('@/pages/khatabook/KhataBookLayout'));
 const KhataBookDashboard = lazy(() => import('@/pages/khatabook/Dashboard'));
@@ -180,6 +181,7 @@ export default function App() {
                   <Route path="/purchases" element={<Suspense fallback={<FullPageSpinner message="Loading purchases…" />}><Purchases /></Suspense>} />
                   <Route path="/audit-logs" element={<Suspense fallback={<FullPageSpinner message="Loading audit logs…" />}><AuditLogs /></Suspense>} />
                   <Route path="/licenses" element={<Suspense fallback={<FullPageSpinner message="Loading licenses…" />}><Licenses /></Suspense>} />
+                  <Route path="/mail-campaigns" element={<Suspense fallback={<FullPageSpinner message="Loading mail campaigns…" />}><MailCampaigns /></Suspense>} />
                   <Route path="/refer-earn" element={<Suspense fallback={<FullPageSpinner message="Loading referrals…" />}><ReferEarn /></Suspense>} />
                   <Route path="/payouts" element={<Suspense fallback={<FullPageSpinner message="Loading payouts…" />}><Payouts /></Suspense>} />
                   <Route path="/settings" element={<Suspense fallback={<FullPageSpinner message="Loading settings…" />}><SettingsPage /></Suspense>} />
