@@ -10,6 +10,10 @@
       "destination": "/about.html"
     },
     {
+      "source": "/buy-hubvault",
+      "destination": "/buy-hubvault.html"
+    },
+    {
       "source": "/tools/cash-calculator",
       "destination": "/cash-calculator.html"
     },

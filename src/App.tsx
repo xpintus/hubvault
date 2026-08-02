@@ -18,6 +18,7 @@ import { BrowserRouter,HashRouter,Link,Navigate,Outlet,Route,Routes,useLocation,
 
 import PaymentPage from '@/pages/PaymentPage';
 import About from '@/pages/public/About';
+import BuyHubVault from '@/pages/public/BuyHubVault';
 import BlogList from '@/pages/public/BlogList';
 import BlogPost from '@/pages/public/BlogPost';
 import BuyNow from '@/pages/public/BuyNow';
@@ -112,7 +113,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const isCleanPublicSeoUrl = ['/about','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software'].includes(window.location.pathname);
+  const isCleanPublicSeoUrl = ['/buy-hubvault','/about','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software'].includes(window.location.pathname);
   return (
     <HelmetProvider>
       <ThemeProvider>
@@ -124,6 +125,7 @@ export default function App() {
                 {isCleanPublicSeoUrl ? <BrowserRouter>
                   <Routes>
                     <Route element={<PublicLayout />}>
+                      <Route path="/buy-hubvault" element={<BuyHubVault />} />
                       <Route path="/about" element={<OrganizationPage />} />
                       <Route path="/tools/cash-calculator" element={<CashCalculator />} />
                       <Route path="/tools/cod-reconciliation-calculator" element={<CodReconciliationCalculator />} />

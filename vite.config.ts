@@ -20,6 +20,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         about: fileURLToPath(new URL('./about.html', import.meta.url)),
+        buyHubVault: fileURLToPath(new URL('./buy-hubvault.html', import.meta.url)),
         cashCalculator: fileURLToPath(new URL('./cash-calculator.html', import.meta.url)),
         codReconciliationCalculator: fileURLToPath(new URL('./cod-reconciliation-calculator.html', import.meta.url)),
         hubvaultSoftware: fileURLToPath(new URL('./hubvault-software.html', import.meta.url)),
