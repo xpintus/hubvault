@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/cash-calculator.html',
+  '/hubvault-software.html',
   '/manifest.webmanifest',
   '/offline.html',
   '/favicon.ico',
