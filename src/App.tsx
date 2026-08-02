@@ -21,6 +21,7 @@ import About from '@/pages/public/About';
 import BlogList from '@/pages/public/BlogList';
 import BlogPost from '@/pages/public/BlogPost';
 import BuyNow from '@/pages/public/BuyNow';
+import CashCalculator from '@/pages/public/CashCalculator';
 import Contact from '@/pages/public/Contact';
 import FAQ from '@/pages/public/FAQ';
 import Home from '@/pages/public/Home';
@@ -126,6 +127,7 @@ export default function App() {
                   <Route path="/terms" element={<Terms />} />
                   <Route path="/blog" element={<BlogList />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
+                  <Route path="/tools/cash-calculator" element={<CashCalculator />} />
                 </Route>
 
                 {/* Login */}

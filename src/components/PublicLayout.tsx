@@ -8,6 +8,7 @@ import { ThemeToggle } from './ui/ThemeToggle';
 const NAV_LINKS = [
   { label: 'Home', path: '/' },
   { label: 'Features', path: '/#features' },
+  { label: 'Tools', path: '/#tools' },
   { label: 'Pricing', path: '/#pricing' },
   { label: 'Blog', path: '/blog' },
   { label: 'About Us', path: '/about' },
@@ -20,6 +21,7 @@ const FOOTER_LINKS = {
     { label: 'Features', path: '/#features' },
     { label: 'Pricing', path: '/#pricing' },
     { label: 'Blog', path: '/blog' },
+    { label: 'Cash Calculator', path: '/tools/cash-calculator' },
   ],
   Company: [
     { label: 'About Us', path: '/about' },

@@ -254,6 +254,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ===== FREE TOOLS ===== */}
+      <section id="tools" className="py-20 lg:py-24 bg-[#F8FAFC] dark:bg-[#0F172A]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-3xl border border-brand-600/15 bg-gradient-to-br from-white to-brand-50 p-7 shadow-soft dark:from-neutral-900 dark:to-brand-950/30 dark:border-brand-500/20 sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
+            <div className="max-w-2xl">
+              <span className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Free Tools</span>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Count cash without calculation mistakes</h2>
+              <p className="mt-3 text-neutral-500 dark:text-neutral-400">Use our free Cash Denomination Calculator to count ₹500 to ₹1 notes, see the live total, and copy or print the summary. No login required.</p>
+            </div>
+            <Link to="/tools/cash-calculator" className="mt-6 inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3 text-sm font-bold text-white shadow-glow transition active:scale-95 lg:mt-0"><Banknote className="h-5 w-5" />Open Cash Calculator<ArrowRight className="h-4 w-4" /></Link>
+          </div>
+        </div>
+      </section>
+
       {/* ===== HOW IT WORKS ===== */}
       <section className="py-20 lg:py-28 bg-[#F8FAFC] dark:bg-[#0F172A]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
