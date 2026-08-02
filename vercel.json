@@ -10,6 +10,10 @@
       "destination": "/cash-calculator.html"
     },
     {
+      "source": "/tools/cod-reconciliation-calculator",
+      "destination": "/cod-reconciliation-calculator.html"
+    },
+    {
       "source": "/collection-reconciliation-software",
       "destination": "/hubvault-software.html"
     },
