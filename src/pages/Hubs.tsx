@@ -241,18 +241,43 @@ export default function Hubs() {
   };
 
   const handleDelete = async (h: Hub) => {
+    const hasOperationalHistory = (stats[h.id]?.entries ?? 0) > 0;
     const ok = await confirm({
-      title: 'Delete hub?',
-      message: `Deleting "${h.name}" will also remove all its collectors and collection entries. This cannot be undone.`,
-      confirmLabel: 'Delete Hub',
+      title: hasOperationalHistory ? 'Deactivate hub?' : 'Delete hub?',
+      message: hasOperationalHistory
+        ? `"${h.name}" has collection or closing history. It will be marked inactive so financial records and audit history remain available.`
+        : `Delete "${h.name}"? This is only possible when the hub has no operational history.`,
+      confirmLabel: hasOperationalHistory ? 'Deactivate Hub' : 'Delete Hub',
       danger: true,
     });
     if (!ok) return;
+
+    if (hasOperationalHistory) {
+      const { error } = await supabase.from('hubs').update({ status: 'inactive' }).eq('id', h.id);
+      if (error) toast.error(error.message);
+      else {
+        await logAudit('hub_deactivated', profile?.id ?? null, `Deactivated hub ${h.name}; operational history retained`, null, h.id);
+        toast.success('Hub deactivated; collection and closing history was retained');
+        hubCtx.refresh();
+        load();
+      }
+      return;
+    }
+
     const { error } = await supabase.from('hubs').delete().eq('id', h.id);
-    if (error) toast.error(error.message);
-    else {
-      await logAudit('hub_created', profile?.id ?? null, `Deleted hub ${h.name}`, null, h.id);
-      toast.success('Hub deleted');
+    if (error?.code === '23503') {
+      const { error: deactivateError } = await supabase.from('hubs').update({ status: 'inactive' }).eq('id', h.id);
+      if (deactivateError) toast.error(deactivateError.message);
+      else {
+        await logAudit('hub_deactivated', profile?.id ?? null, `Deactivated hub ${h.name}; linked history prevented deletion`, null, h.id);
+        toast.success('Hub has linked records, so it was safely deactivated instead');
+        hubCtx.refresh();
+        load();
+      }
+    } else if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Unused hub deleted');
       hubCtx.refresh();
       load();
     }
@@ -349,7 +374,7 @@ export default function Hubs() {
                     <Button variant="outline" size="sm" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => openEdit(h)} className="flex-1">Edit</Button>
                   )}
                   {isSuperAdmin && (
-                    <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-500/10" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => handleDelete(h)}>Delete</Button>
+                    <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-500/10" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => handleDelete(h)}>{(stats[h.id]?.entries ?? 0) > 0 ? 'Deactivate' : 'Delete'}</Button>
                   )}
                 </div>
               </Card>

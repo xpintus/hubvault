@@ -174,4 +174,13 @@ describe('Supervisor Data Privacy & User Management Access', () => {
     expect(edgeFunction).toContain('target_user_id: null');
     expect(edgeFunction).toContain('Deleted user ${target.name} (${body.user_id})');
   });
+
+  it('deactivates hubs with financial history instead of deleting it', () => {
+    const hubsPage = readFileSync(resolve('src/pages/Hubs.tsx'), 'utf8');
+    expect(hubsPage).toContain("const hasOperationalHistory = (stats[h.id]?.entries ?? 0) > 0");
+    expect(hubsPage).toContain("update({ status: 'inactive' })");
+    expect(hubsPage).toContain("error?.code === '23503'");
+    expect(hubsPage).toContain('collection and closing history was retained');
+    expect(hubsPage).not.toContain('will also remove all its collectors and collection entries');
+  });
 });
