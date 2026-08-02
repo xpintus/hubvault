@@ -1,4 +1,4 @@
-import { DailyClosing,DailyClosingHistory } from '@/types';
+import { DailyClosing,DailyClosingFinalization,DailyClosingHistory } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './offline/db';
 import { addToQueue } from './offline/syncQueue';
@@ -125,4 +125,14 @@ export async function loadClosingHistory(id: string): Promise<DailyClosingHistor
     .select('*, performer:profiles!performed_by(*)').eq('daily_closing_id', id).order('created_at');
   if (error) throw error;
   return (data ?? []) as DailyClosingHistory[];
+}
+
+export async function finalizeDailyClosingDay(closingDate: string, hubId: string): Promise<DailyClosingFinalization> {
+  if (!navigator.onLine) throw new Error('Final Daily Close requires an internet connection');
+  const { data, error } = await supabase.rpc('finalize_daily_closing_day', {
+    p_closing_date: closingDate,
+    p_hub_id: hubId,
+  }).single();
+  if (error) throw error;
+  return data as DailyClosingFinalization;
 }

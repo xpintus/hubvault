@@ -1,14 +1,14 @@
 import { useToast } from '@/components/ui/Toast';
 import { Badge,Button,Card,EmptyState,Input,Select,Spinner,Textarea } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
-import { buildClosingVarianceRemark,calculateClosingVariances,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
+import { buildClosingVarianceRemark,calculateClosingVariances,finalizeDailyClosingDay,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
 import { exportDailyClosingsExcel,printDailyClosingsPdf } from '@/lib/dailyClosingExport';
 import { formatDate,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { supabase } from '@/lib/supabase';
-import { Collector,DailyClosing,DailyClosingHistory,DailyClosingStatus } from '@/types';
-import { ArchiveRestore,CheckCircle2,Download,FileText,History,Lock,RefreshCw,Send,XCircle } from 'lucide-react';
+import { Collector,DailyClosing,DailyClosingFinalization,DailyClosingHistory,DailyClosingStatus } from '@/types';
+import { ArchiveRestore,CheckCircle2,Download,FileText,History,Lock,RefreshCw,Send,ShieldCheck,XCircle } from 'lucide-react';
 import { useCallback,useEffect,useMemo,useState } from 'react';
 
 const statusColor: Record<DailyClosingStatus, string> = { submitted: 'blue', approved: 'green', rejected: 'red', reopened: 'amber' };
@@ -21,12 +21,15 @@ export default function DailyClosingPage() {
   const [collectorId, setCollectorId] = useState('');
   const [collectors, setCollectors] = useState<Collector[]>([]);
   const [closings, setClosings] = useState<DailyClosing[]>([]);
+  const [finalization, setFinalization] = useState<DailyClosingFinalization | null>(null);
+  const [requiredCollectorIds, setRequiredCollectorIds] = useState<string[]>([]);
   const [actualCash, setActualCash] = useState('');
   const [actualOnline, setActualOnline] = useState('');
   const [notes, setNotes] = useState('');
   const [source, setSource] = useState({ expectedCash: 0, onlineAmount: 0, entryCount: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
   const [history, setHistory] = useState<DailyClosingHistory[]>([]);
   const [historyFor, setHistoryFor] = useState<DailyClosing | null>(null);
 
@@ -58,10 +61,26 @@ export default function DailyClosingPage() {
         if (error) throw error;
         setClosings((data ?? []) as DailyClosing[]);
         await Promise.all((data ?? []).map((row) => db.daily_closings.put(row as DailyClosing)));
+
+        let eq = supabase.from('collection_entries').select('collector_id').eq('collection_date', date);
+        if (hubId) eq = eq.eq('hub_id', hubId);
+        const { data: entryCollectors, error: entryError } = await eq;
+        if (entryError) throw entryError;
+        setRequiredCollectorIds([...new Set((entryCollectors ?? []).map(row => row.collector_id))]);
+
+        let fq = supabase.from('daily_closing_finalizations')
+          .select('*, finalizer:profiles!finalized_by(*), hub:hubs(*)').eq('closing_date', date);
+        if (hubId) fq = fq.eq('hub_id', hubId);
+        const { data: finalized, error: finalError } = await fq.maybeSingle();
+        if (finalError) throw finalError;
+        setFinalization(finalized as DailyClosingFinalization | null);
       } else {
         availableCollectors = (await db.collectors.toArray()).filter((c) => (!hubId || c.hub_id === hubId) && (profile.role !== 'collector' || c.profile_id === profile.id));
         const local = (await db.daily_closings.toArray()).filter((c) => c.closing_date === date && (!hubId || c.hub_id === hubId));
         setClosings(local);
+        const localEntries = (await db.collection_entries.toArray()).filter(e => e.collection_date === date && (!hubId || e.hub_id === hubId));
+        setRequiredCollectorIds([...new Set(localEntries.map(e => e.collector_id))]);
+        setFinalization(null);
       }
       setCollectors(availableCollectors);
       setCollectorId((current) => availableCollectors.some((c) => c.id === current) ? current : availableCollectors[0]?.id ?? '');
@@ -77,7 +96,9 @@ export default function DailyClosingPage() {
   }, [date, collectorId, hubId, toast]);
 
   const existing = useMemo(() => closings.find((c) => c.collector_id === collectorId), [closings, collectorId]);
-  const canSubmit = !existing || existing.status === 'submitted' || existing.status === 'rejected' || existing.status === 'reopened';
+  const canSubmit = !finalization && (!existing || existing.status === 'submitted' || existing.status === 'rejected' || existing.status === 'reopened');
+  const approvedCollectorIds = useMemo(() => new Set(closings.filter(c => c.status === 'approved').map(c => c.collector_id)), [closings]);
+  const allApproved = requiredCollectorIds.length > 0 && requiredCollectorIds.every(id => approvedCollectorIds.has(id));
 
   const submit = async () => {
     if (!profile || !collectorId || !hubId) return;
@@ -111,7 +132,21 @@ export default function DailyClosingPage() {
   };
 
   const exportExcel = async () => { await exportDailyClosingsExcel(closings, `daily-closing-${date}.xlsx`); toast.success('Excel report exported'); };
-  const exportPdf = () => { try { printDailyClosingsPdf(closings, `Daily Closing Report - ${formatDate(date)}`); } catch (e) { toast.error(e instanceof Error ? e.message : 'PDF report failed'); } };
+  const exportPdf = () => { try { printDailyClosingsPdf(closings, `Daily Closing Report - ${formatDate(date)}`, finalization); } catch (e) { toast.error(e instanceof Error ? e.message : 'PDF report failed'); } };
+
+  const finalizeDay = async () => {
+    if (!hubId || !profile || !allApproved) return;
+    setFinalizing(true);
+    try {
+      const result = await finalizeDailyClosingDay(date, hubId);
+      const verified = { ...result, finalizer: profile } as DailyClosingFinalization;
+      setFinalization(verified);
+      toast.success(`Daily Closing verified by ${profile.name}`);
+      printDailyClosingsPdf(closings, `Final Daily Closing Report - ${formatDate(date)}`, verified);
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Final Daily Close failed'); }
+    finally { setFinalizing(false); }
+  };
 
   return (
     <div className="space-y-5">
@@ -129,8 +164,10 @@ export default function DailyClosingPage() {
       </Card>
 
       <Card className="overflow-hidden">
-        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Cash Var.</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Online Var.</th><th className="p-3">Total Var.</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => { const rowVariance = calculateClosingVariances(Number(c.expected_cash), Number(c.expected_online_amount || 0), Number(c.actual_cash), Number(c.online_amount)); return <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><VarianceCell value={rowVariance.cash} /><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><VarianceCell value={rowVariance.online} /><VarianceCell value={rowVariance.total} /><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{rowVariance.reconciled ? <Badge color="green">Reconciled</Badge> : <Badge color="amber">Mismatch</Badge>}{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>; })}</tbody></table></div>}
+        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Cash Var.</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Online Var.</th><th className="p-3">Total Var.</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => { const rowVariance = calculateClosingVariances(Number(c.expected_cash), Number(c.expected_online_amount || 0), Number(c.actual_cash), Number(c.online_amount)); return <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><VarianceCell value={rowVariance.cash} /><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><VarianceCell value={rowVariance.online} /><VarianceCell value={rowVariance.total} /><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{rowVariance.reconciled ? <Badge color="green">Reconciled</Badge> : <Badge color="amber">Mismatch</Badge>}{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{!finalization && canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{!finalization && profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>; })}</tbody></table></div>}
       </Card>
+
+      {isManager && <Card className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-3"><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><ShieldCheck className="h-5 w-5 text-brand-600" /></div><div><h2 className="font-bold">Final Daily Close</h2>{finalization ? <><p className="text-sm text-success-600">Daily Closing verified by {finalization.finalizer?.name ?? 'Authorized user'}</p><p className="text-xs text-neutral-500">{finalization.finalizer?.role?.replace('_', ' ')} · {new Date(finalization.finalized_at).toLocaleString('en-IN')}</p></> : <p className="text-sm text-neutral-500">Approved: {requiredCollectorIds.filter(id => approvedCollectorIds.has(id)).length}/{requiredCollectorIds.length} employees</p>}</div></div>{finalization ? <Button variant="outline" icon={<FileText className="h-4 w-4" />} onClick={exportPdf}>Final Report</Button> : <Button icon={<ShieldCheck className="h-4 w-4" />} loading={finalizing} disabled={!allApproved || !navigator.onLine} onClick={finalizeDay}>Final Submit & Generate Report</Button>}</div>{!finalization && !allApproved && <p className="mt-3 text-xs text-warning-600">All employees with collection entries must be approved before final submission.</p>}</Card>}
 
       {historyFor && <Card className="p-5"><div className="flex justify-between"><div><h2 className="font-bold">Audit history</h2><p className="text-xs text-neutral-500">{historyFor.collector?.name} · {formatDate(historyFor.closing_date)}</p></div><Button variant="ghost" size="sm" onClick={() => setHistoryFor(null)}>Close</Button></div><div className="mt-4 space-y-2">{history.map((h) => <div key={h.id} className="flex gap-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><RefreshCw className="h-4 w-4 mt-0.5 text-brand-600" /><div><p className="text-sm font-semibold capitalize">{h.action}</p><p className="text-xs text-neutral-500">{new Date(h.created_at).toLocaleString('en-IN')} · {h.performer?.name ?? 'User'}</p>{h.reason && <p className="text-xs mt-1">{h.reason}</p>}</div></div>)}</div></Card>}
     </div>

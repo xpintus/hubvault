@@ -140,6 +140,18 @@ export interface DailyClosingHistory {
   performer?: Profile | null;
 }
 
+export interface DailyClosingFinalization {
+  id: string;
+  closing_date: string;
+  hub_id: string;
+  finalized_by: string;
+  finalized_at: string;
+  closing_count: number;
+  report_snapshot: Record<string, unknown>;
+  finalizer?: Profile | null;
+  hub?: Hub | null;
+}
+
 export interface Denomination {
   id: string;
   collection_entry_id: string;

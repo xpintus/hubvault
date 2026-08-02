@@ -7,6 +7,8 @@ const migration = readFileSync(resolve('supabase/migrations/20260803000000_daily
 const amountMigration = readFileSync(resolve('supabase/migrations/20260803010000_daily_closing_amount_inputs.sql'), 'utf8').toLowerCase();
 const revisionMigration = readFileSync(resolve('supabase/migrations/20260803020000_revise_submitted_daily_closing.sql'), 'utf8').toLowerCase();
 const duesMigration = readFileSync(resolve('supabase/migrations/20260803030000_daily_closing_dues_match.sql'), 'utf8').toLowerCase();
+const finalizationMigration = readFileSync(resolve('supabase/migrations/20260803040000_finalize_daily_closing_day.sql'), 'utf8').toLowerCase();
+const exportSource = readFileSync(resolve('src/lib/dailyClosingExport.ts'), 'utf8');
 const dbSource = readFileSync(resolve('src/lib/offline/db.ts'), 'utf8');
 const syncSource = readFileSync(resolve('src/lib/offline/syncQueue.ts'), 'utf8');
 const dashboardSource = readFileSync(resolve('src/pages/Dashboard.tsx'), 'utf8');
@@ -50,6 +52,15 @@ describe('Daily Closing System', () => {
     expect(dashboardSource).toContain('closing.expected_online_amount');
     expect(dashboardSource).toContain('dashboardEntries');
     expect(dashboardSource).toContain('verifiedCollectorBreakdown');
+  });
+
+  it('finalizes only when every employee closing is approved and stores verifier identity', () => {
+    expect(finalizationMigration).toContain('finalize_daily_closing_day');
+    expect(finalizationMigration).toContain('v_approved<>v_required');
+    expect(finalizationMigration).toContain('finalized_by');
+    expect(finalizationMigration).toContain('report_snapshot');
+    expect(finalizationMigration).toContain('finalized daily closing records are locked');
+    expect(exportSource).toContain('Daily Closing verified by');
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {
