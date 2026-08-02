@@ -59,5 +59,8 @@ describe('Public Cash Calculator', () => {
     expect(home).toContain('Open Cash Calculator');
     expect(layout).toContain("location.pathname === '/tools/cash-calculator'");
     expect(layout).toContain("isMobileToolMode&&'hidden'");
+    const calculator = readFileSync(resolve('src/pages/public/CashCalculator.tsx'), 'utf8');
+    expect(calculator).toContain('<ThemeToggle');
+    expect(calculator).toContain('lg:hidden');
   });
 });

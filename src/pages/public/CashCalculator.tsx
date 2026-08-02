@@ -1,4 +1,5 @@
 import SEO from '@/components/SEO';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { CalendarDays,Check,Clipboard,FileDown,Mic,MicOff,Minus,Printer,RotateCcw,Share2,Sparkles,Target,UserRound,Volume2 } from 'lucide-react';
 import { KeyboardEvent,useCallback,useEffect,useMemo,useRef,useState } from 'react';
 
@@ -114,7 +115,7 @@ export default function CashCalculator() {
     <section className="relative min-h-screen overflow-hidden bg-[#f5f7ff] pb-28 dark:bg-[#080b16] md:pb-12">
       <div className="pointer-events-none absolute -left-32 top-20 h-80 w-80 rounded-full bg-violet-400/20 blur-3xl"/><div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-cyan-300/20 blur-3xl"/>
       <div className="relative mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
-        <header className="overflow-hidden rounded-[28px] bg-gradient-to-br from-[#17152f] via-[#2f2370] to-[#5145cd] p-5 text-white shadow-2xl shadow-indigo-900/20 sm:p-8">
+        <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#17152f] via-[#2f2370] to-[#5145cd] p-5 pt-16 text-white shadow-2xl shadow-indigo-900/20 sm:p-8 lg:pt-8"><div className="absolute right-4 top-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/10 p-1.5 backdrop-blur lg:hidden"><span className="pl-2 text-[10px] font-black uppercase tracking-wider text-white/60">Theme</span><ThemeToggle className="border-white/20 !bg-white/10 !text-white hover:!border-cyan-300 hover:!text-cyan-300"/></div>
           <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-violet-100"><Sparkles className="h-3.5 w-3.5"/>Smart cash tool</span><h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Count cash.<br/><span className="text-cyan-300">Close with confidence.</span></h1><p className="mt-3 max-w-xl text-sm leading-6 text-white/65 sm:text-base">Count denominations, optionally match an expected amount, and instantly share a clear cash summary.</p></div>
             <div className="rounded-3xl border border-white/15 bg-white/10 p-4 backdrop-blur-md sm:min-w-72"><p className="text-xs font-bold uppercase tracking-[0.18em] text-white/50">Live cash total</p><p className="mt-2 text-4xl font-black tracking-tight tabular-nums sm:text-5xl">{money(collected)}</p><div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-sm"><span className="text-white/55">Notes counted</span><span className="font-bold">{totalNotes}</span></div></div>
           </div>
