@@ -231,13 +231,18 @@ export default function PublicLayout() {
                 <ul className="space-y-2.5">
                   {links.map((link) => (
                     <li key={link.path}>
-                      <Link
+                      {link.path === '/tools/cash-calculator' ? <a
+                        href={link.path}
+                        className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition"
+                      >
+                        {link.label}
+                      </a> : <Link
                         to={link.path}
                         onClick={(e) => handleNavClick(e, link.path)}
                         className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition"
                       >
                         {link.label}
-                      </Link>
+                      </Link>}
                     </li>
                   ))}
                 </ul>

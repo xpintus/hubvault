@@ -5,6 +5,7 @@ const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/cash-calculator.html',
   '/manifest.webmanifest',
   '/offline.html',
   '/favicon.ico',

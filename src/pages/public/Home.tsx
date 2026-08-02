@@ -263,7 +263,7 @@ export default function Home() {
               <h2 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Count cash without calculation mistakes</h2>
               <p className="mt-3 text-neutral-500 dark:text-neutral-400">Use our free Cash Denomination Calculator to count ₹500 to ₹1 notes, see the live total, and copy or print the summary. No login required.</p>
             </div>
-            <Link to="/tools/cash-calculator" className="mt-6 inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3 text-sm font-bold text-white shadow-glow transition active:scale-95 lg:mt-0"><Banknote className="h-5 w-5" />Open Cash Calculator<ArrowRight className="h-4 w-4" /></Link>
+            <a href="/tools/cash-calculator" className="mt-6 inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3 text-sm font-bold text-white shadow-glow transition active:scale-95 lg:mt-0"><Banknote className="h-5 w-5" />Open Cash Calculator<ArrowRight className="h-4 w-4" /></a>
           </div>
         </div>
       </section>

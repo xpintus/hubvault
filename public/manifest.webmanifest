@@ -13,7 +13,7 @@
       "name": "Smart Cash Calculator",
       "short_name": "Cash Calculator",
       "description": "Count and reconcile Indian cash denominations offline.",
-      "url": "/#/tools/cash-calculator",
+      "url": "/tools/cash-calculator",
       "icons": [
         {
           "src": "/icon-192x192.png",

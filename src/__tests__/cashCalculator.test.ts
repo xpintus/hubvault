@@ -94,6 +94,33 @@ describe('Public Cash Calculator', () => {
     expect(tools).toContain('Apply verified estimate');
     expect(tools).not.toContain('TextDetector');
     expect(tools).toContain('beforeinstallprompt');
-    expect(manifest).toContain('/#/tools/cash-calculator');
+    expect(manifest).toContain('/tools/cash-calculator');
+  });
+
+  it('isolates the indexable clean URL from the noindex hash application', () => {
+    const app = readFileSync(resolve('src/App.tsx'), 'utf8');
+    const seo = readFileSync(resolve('src/components/SEO.tsx'), 'utf8');
+    const mainHtml = readFileSync(resolve('index.html'), 'utf8');
+    const calculatorHtml = readFileSync(resolve('cash-calculator.html'), 'utf8');
+    const vercel = JSON.parse(readFileSync(resolve('vercel.json'), 'utf8')) as {rewrites:Array<{source:string;destination:string}>};
+    const sitemap = readFileSync(resolve('public/sitemap.xml'), 'utf8');
+    const robots = readFileSync(resolve('public/robots.txt'), 'utf8');
+    const calculator = readFileSync(resolve('src/pages/public/CashCalculator.tsx'), 'utf8');
+    expect(app).toContain("window.location.pathname === '/tools/cash-calculator'");
+    expect(app).toContain('<BrowserRouter>');
+    expect(app).toContain('<HashRouter>');
+    expect(seo).toContain("currentPath === INDEXABLE_PATH");
+    expect(mainHtml).toContain('<meta name="robots" content="noindex, nofollow"');
+    expect(calculatorHtml).toContain('<meta name="robots" content="index, follow"');
+    expect(calculatorHtml).toContain('<link rel="canonical" href="https://www.hubvault.in/tools/cash-calculator"');
+    expect(calculatorHtml).not.toContain('/#/tools/cash-calculator');
+    expect(vercel.rewrites).toContainEqual({source:'/tools/cash-calculator',destination:'/cash-calculator.html'});
+    expect((sitemap.match(/<loc>/g)??[])).toHaveLength(1);
+    expect(sitemap).toContain('<loc>https://www.hubvault.in/tools/cash-calculator</loc>');
+    expect(robots).toContain('Sitemap: https://www.hubvault.in/sitemap.xml');
+    expect(calculator).toContain("'@type':'WebApplication'");
+    expect(calculator).toContain("'@type':'FAQPage'");
+    expect((calculator.match(/<h1 className=/g)??[])).toHaveLength(1);
+    expect(calculator).toContain('COD and logistics cash reconciliation');
   });
 });

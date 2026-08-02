@@ -10,11 +10,13 @@ interface SEOProps {
   modifiedTime?: string;
   author?: string;
   noindex?: boolean;
+  structuredData?: object[];
 }
 
 export const SITE_NAME = 'HubVault';
-const SITE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://hubvault.in';
-const DEFAULT_OG_IMAGE = `${typeof window !== 'undefined' ? window.location.origin : ''}/og-image.jpg`;
+const SITE_URL = 'https://www.hubvault.in';
+const INDEXABLE_PATH = '/tools/cash-calculator';
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image-v2.jpg`;
 
 export default function SEO({
   title,
@@ -26,10 +28,13 @@ export default function SEO({
   modifiedTime,
   author,
   noindex = false,
+  structuredData = [],
 }: SEOProps) {
   const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
   const canonicalUrl = `${SITE_URL}${path}`;
   const ogImage = image || DEFAULT_OG_IMAGE;
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isIndexableCashCalculator = !noindex && path === INDEXABLE_PATH && currentPath === INDEXABLE_PATH;
 
   return (
     <Helmet>
@@ -37,8 +42,8 @@ export default function SEO({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={canonicalUrl} />
-      {noindex && <meta name="robots" content="noindex, nofollow" />}
-      {!noindex && <meta name="robots" content="index, follow" />}
+      <meta name="robots" content={isIndexableCashCalculator ? 'index, follow' : 'noindex, nofollow'} />
+      <meta name="googlebot" content={isIndexableCashCalculator ? 'index, follow, max-image-preview:large' : 'noindex, nofollow'} />
 
       {/* Open Graph */}
       <meta property="og:type" content={type} />
@@ -58,6 +63,7 @@ export default function SEO({
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
+      {structuredData.map((data,index)=><script key={index} type="application/ld+json">{JSON.stringify(data)}</script>)}
     </Helmet>
   );
 }

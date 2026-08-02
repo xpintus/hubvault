@@ -14,7 +14,7 @@ import GuestDashboard from '@/pages/GuestDashboard';
 import Login from '@/pages/Login';
 import { lazy,Suspense,useEffect,useState } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
-import { HashRouter,Link,Navigate,Route,Routes,useLocation,useNavigate } from 'react-router-dom';
+import { BrowserRouter,HashRouter,Link,Navigate,Route,Routes,useLocation,useNavigate } from 'react-router-dom';
 
 import PaymentPage from '@/pages/PaymentPage';
 import About from '@/pages/public/About';
@@ -104,6 +104,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const isCleanCashCalculatorUrl = window.location.pathname === '/tools/cash-calculator';
   return (
     <HelmetProvider>
       <ThemeProvider>
@@ -112,7 +113,14 @@ export default function App() {
             <NotificationProvider>
               <SettingsProvider>
                 <SyncProvider>
-                <HashRouter>
+                {isCleanCashCalculatorUrl ? <BrowserRouter>
+                  <Routes>
+                    <Route element={<PublicLayout />}>
+                      <Route path="/tools/cash-calculator" element={<CashCalculator />} />
+                    </Route>
+                    <Route path="*" element={<HashAppRedirect />} />
+                  </Routes>
+                </BrowserRouter> : <HashRouter>
               <Routes>
                 {/* Public routes */}
                 <Route element={<PublicLayout />}>
@@ -165,7 +173,7 @@ export default function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-                </HashRouter>
+                </HashRouter>}
                 </SyncProvider>
               </SettingsProvider>
             </NotificationProvider>
@@ -174,6 +182,14 @@ export default function App() {
       </ThemeProvider>
     </HelmetProvider>
   );
+}
+
+function HashAppRedirect() {
+  const location = useLocation();
+  useEffect(() => {
+    window.location.replace(`/#${location.pathname}${location.search}${location.hash}`);
+  }, [location]);
+  return <FullPageSpinner message="Opening HubVault…" />;
 }
 
 function GuestAppLayout() {
