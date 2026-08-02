@@ -1,363 +1,42 @@
-import React,{ useState } from "react";
+import SEO from '@/components/SEO';
+import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import { useSettings } from '@/lib/settings';
+import { supabase,SUPABASE_URL } from '@/lib/supabase';
+import { Check,CheckCircle2,Clock3,Copy,ExternalLink,ImagePlus,Loader2,LockKeyhole,ShieldCheck,Smartphone,UploadCloud,X } from 'lucide-react';
+import { ChangeEvent,useMemo,useState } from 'react';
+import { Link } from 'react-router-dom';
 
-const UPI_ID = "BHARATPE09899107906@yesbankltd";
-const PAYMENT_AMOUNT = "999.00";
-const PAYEE_NAME = "HubVault Billing";
-const TRANSACTION_NOTE = "HubVault License Payment";
+const FUNCTION_URL=`${SUPABASE_URL}/functions/v1/manage-user`;
+type SubmitState='idle'|'submitting'|'submitted';
 
-export default function PaymentPage() {
-  const [message, setMessage] = useState(
-    "Tap the button on your mobile device to open a UPI application."
-  );
-  const [copied, setCopied] = useState(false);
+export default function PaymentPage(){
+  const {user,profile}=useAuth();
+  const {settings,loading:settingsLoading}=useSettings();
+  const toast=useToast();
+  const [copied,setCopied]=useState(false);
+  const [utr,setUtr]=useState('');
+  const [payerName,setPayerName]=useState(profile?.name??'');
+  const [payerUpi,setPayerUpi]=useState('');
+  const [proof,setProof]=useState<File|null>(null);
+  const [preview,setPreview]=useState('');
+  const [state,setState]=useState<SubmitState>('idle');
+  const [error,setError]=useState('');
+  const amount=settings.license_price;
+  const upiUrl=useMemo(()=>`upi://pay?pa=${encodeURIComponent(settings.upi_id)}&pn=${encodeURIComponent(settings.payee_name)}&am=${encodeURIComponent(String(amount))}&cu=INR&tn=${encodeURIComponent('HubVault Lifetime License')}`,[settings.upi_id,settings.payee_name,amount]);
 
-  const upiUrl =
-    "upi://pay" +
-    `?pa=${encodeURIComponent(UPI_ID)}` +
-    `&pn=${encodeURIComponent(PAYEE_NAME)}` +
-    `&am=${encodeURIComponent(PAYMENT_AMOUNT)}` +
-    "&cu=INR" +
-    `&tn=${encodeURIComponent(TRANSACTION_NOTE)}`;
+  const copyUpi=async()=>{await navigator.clipboard.writeText(settings.upi_id);setCopied(true);toast.success('UPI ID copied');setTimeout(()=>setCopied(false),1800);};
+  const selectProof=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){setError('Payment proof must be an image.');return;}if(file.size>5*1024*1024){setError('Screenshot must be smaller than 5MB.');return;}setProof(file);setPreview(URL.createObjectURL(file));setError('');};
+  const uploadProof=async()=>{if(!proof||!user)return null;const extension=proof.name.split('.').pop()||'jpg';const fileName=`${user.id}/${Date.now()}.${extension}`;const {error:uploadError}=await supabase.storage.from('payment-screenshots').upload(fileName,proof,{contentType:proof.type,upsert:false});if(uploadError)throw new Error(`Screenshot upload failed: ${uploadError.message}`);return supabase.storage.from('payment-screenshots').getPublicUrl(fileName).data.publicUrl;};
+  const submit=async()=>{setError('');const cleanUtr=utr.trim().replace(/\s/g,'');if(!user){setError('Please log in with your Hub Admin account before submitting payment proof.');return;}if(cleanUtr.length<8||cleanUtr.length>40||!/^[A-Za-z0-9-]+$/.test(cleanUtr)){setError('Enter a valid 8–40 character Transaction ID / UTR.');return;}setState('submitting');try{const screenshotUrl=await uploadProof();let token=(await supabase.auth.getSession()).data.session?.access_token;if(!token)token=(await supabase.auth.refreshSession()).data.session?.access_token;if(!token)throw new Error('Your session expired. Please log in again.');const response=await fetch(`${FUNCTION_URL}?action=request-license-upi`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({transaction_id:cleanUtr,payment_method:'upi',payer_name:payerName.trim()||profile?.name,payer_upi:payerUpi.trim()||undefined,amount,request_type:'license',payment_screenshot_url:screenshotUrl||undefined})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not submit payment request.');setState('submitted');toast.success('Payment proof submitted for verification');}catch(reason){setError(reason instanceof Error?reason.message:'Submission failed. Please try again.');setState('idle');}};
 
-  const isMobileDevice = () =>
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const handlePayment = () => {
-    if (!isMobileDevice()) {
-      setMessage(
-        "UPI applications open only on supported mobile devices. Please scan the QR code using your phone."
-      );
-      return;
-    }
-
-    setMessage("Opening your UPI application...");
-    window.location.href = upiUrl;
-
-    window.setTimeout(() => {
-      setMessage(
-        "If the UPI application did not open, scan the QR code or enter the UPI ID manually."
-      );
-    }, 2500);
-  };
-
-  const handleCopyUpi = async () => {
-    try {
-      await navigator.clipboard.writeText(UPI_ID);
-      setCopied(true);
-      setMessage("UPI ID copied successfully.");
-
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setMessage("Could not copy the UPI ID. Please copy it manually.");
-    }
-  };
-
-  return (
-    <div style={styles.page}>
-      <main style={styles.card}>
-        <section style={styles.header}>
-          <img
-            src="/logo.png"
-            alt="HubVault"
-            style={styles.logo}
-          />
-
-          <h1 style={styles.title}>Complete Your Payment</h1>
-
-          <p style={styles.subtitle}>
-            Pay securely using any supported UPI application.
-          </p>
-        </section>
-
-        <section style={styles.content}>
-          <div style={styles.amountBox}>
-            <div style={styles.amountLabel}>Total Payable Amount</div>
-            <div style={styles.amount}>₹999</div>
-            <div style={styles.planName}>HubVault License Activation</div>
-          </div>
-
-          <div style={styles.upiSection}>
-            <div style={styles.sectionLabel}>UPI ID</div>
-
-            <div style={styles.upiBox}>
-              <span style={styles.upiText}>{UPI_ID}</span>
-
-              <button
-                type="button"
-                onClick={handleCopyUpi}
-                style={styles.copyButton}
-              >
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handlePayment}
-            style={styles.payButton}
-          >
-            Pay ₹999 via UPI
-          </button>
-
-          <p style={styles.message}>{message}</p>
-
-          <div style={styles.divider} />
-
-          <h2 style={styles.qrTitle}>Scan and Pay</h2>
-
-          <p style={styles.qrText}>
-            Scan the QR code using Google Pay, PhonePe, Paytm, BHIM,
-            or another supported UPI application.
-          </p>
-
-          <div style={styles.qrWrapper}>
-            <img
-              src="/ChatGPT_Image_Jul_28,_2026,_11_30_59_PM.png"
-              alt="HubVault Payment QR Code"
-              style={styles.qrImage}
-            />
-          </div>
-
-          <div style={styles.steps}>
-            <h3 style={styles.stepsTitle}>After Payment</h3>
-
-            <p style={styles.stepText}>
-              1. Take a screenshot of the successful payment.
-            </p>
-
-            <p style={styles.stepText}>
-              2. Reply to the payment email with the screenshot or UTR number.
-            </p>
-
-            <p style={styles.stepText}>
-              3. Your HubVault license code will be issued after verification.
-            </p>
-          </div>
-
-          <div style={styles.support}>
-            Need help?{" "}
-            <a href="mailto:billing@hubvault.in" style={styles.supportLink}>
-              Contact HubVault Billing
-            </a>
-          </div>
-        </section>
-
-        <footer style={styles.footer}>
-          <strong style={styles.footerStrong}>
-            Smarter Collections. Stronger Control.
-          </strong>
-
-          <span>© 2026 HubVault. All Rights Reserved.</span>
-        </footer>
-      </main>
-    </div>
-  );
+  return <>
+    <SEO title="Secure UPI Payment" description="Pay for your HubVault license through UPI and submit the transaction for manual verification." noindex/>
+    <section className="relative min-h-screen overflow-hidden bg-slate-50 px-3 py-8 dark:bg-[#080b16] sm:px-6 sm:py-12"><div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(99,102,241,.16),transparent_32%),radial-gradient(circle_at_88%_18%,rgba(34,211,238,.12),transparent_28%)]"/><div className="relative mx-auto max-w-6xl"><div className="mb-6 flex items-center justify-center gap-2 text-sm font-black text-slate-900 dark:text-white"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white"><LockKeyhole className="h-5 w-5"/></span>HubVault Secure Payment</div>
+      <div className="grid overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-300/40 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/30 lg:grid-cols-[.88fr_1.12fr]">
+        <aside className="bg-gradient-to-br from-[#17152f] via-[#30216f] to-[#4f46e5] p-6 text-white sm:p-9"><p className="text-xs font-black uppercase tracking-[.2em] text-cyan-300">Lifetime license</p><h1 className="mt-3 text-3xl font-black sm:text-4xl">Complete your HubVault payment</h1><p className="mt-3 leading-7 text-white/65">Pay once through any UPI app, then submit your transaction details for manual verification.</p><div className="mt-7 rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"><p className="text-xs font-bold uppercase tracking-wider text-white/50">Total payable</p><p className="mt-1 text-5xl font-black tabular-nums">₹{amount.toLocaleString('en-IN')}</p><p className="mt-2 text-sm text-cyan-200">HubVault lifetime access</p></div><div className="mt-7 space-y-3">{['No card details collected by HubVault','Pay using Google Pay, PhonePe, Paytm or BHIM','Manually verified by the HubVault administrator'].map(item=><div key={item} className="flex items-center gap-3 text-sm font-semibold text-white/80"><CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300"/>{item}</div>)}</div><div className="mt-8 flex items-start gap-3 rounded-2xl bg-black/15 p-4 text-xs leading-5 text-white/60"><ShieldCheck className="h-5 w-5 shrink-0 text-cyan-300"/>Never share your UPI PIN, OTP or banking password. HubVault only asks for the public transaction reference after payment.</div></aside>
+        <main className="p-5 sm:p-8">{state==='submitted'?<div className="flex min-h-[560px] flex-col items-center justify-center text-center"><span className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"><Check className="h-10 w-10"/></span><h2 className="mt-6 text-2xl font-black text-slate-900 dark:text-white">Payment submitted</h2><p className="mt-3 max-w-md leading-7 text-slate-500 dark:text-slate-300">Your transaction is waiting for administrator verification. You will receive the license code after approval.</p><Link to="/dashboard" className="mt-7 rounded-2xl bg-brand-600 px-6 py-3 text-sm font-black text-white">Return to dashboard</Link></div>:<div><div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-brand-600">Step 1</p><h2 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Scan or open your UPI app</h2></div><Smartphone className="h-7 w-7 text-brand-600"/></div><div className="mt-5 grid gap-5 rounded-3xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-500/20 dark:bg-brand-500/[.06] sm:grid-cols-[160px_1fr] sm:items-center"><div className="rounded-2xl bg-white p-2 shadow-sm"><img src={settings.qr_image_url||'/ChatGPT_Image_Jul_28,_2026,_11_30_59_PM.png'} alt="HubVault UPI payment QR code" className="aspect-square w-full rounded-xl object-contain"/></div><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pay to</p><p className="mt-1 font-black text-slate-900 dark:text-white">{settings.payee_name}</p><button onClick={copyUpi} className="mt-3 flex w-full items-center justify-between gap-2 rounded-xl bg-white px-3 py-3 text-left shadow-sm dark:bg-white/10"><code className="min-w-0 truncate text-xs font-bold text-brand-700 dark:text-cyan-300">{settings.upi_id}</code>{copied?<Check className="h-4 w-4 text-emerald-500"/>:<Copy className="h-4 w-4 text-slate-400"/>}</button><a href={upiUrl} className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-black text-white shadow-lg shadow-brand-600/20">Pay ₹{amount.toLocaleString('en-IN')} via UPI <ExternalLink className="h-4 w-4"/></a></div></div>
+          <div className="my-7 h-px bg-slate-200 dark:bg-white/10"/><p className="text-xs font-black uppercase tracking-[.16em] text-brand-600">Step 2</p><h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Submit payment details</h2>{!user&&<div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">Please <Link to="/login" className="font-black underline">log in</Link> with the Hub Admin account that should receive this license.</div>}<div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="sm:col-span-2"><span className="text-xs font-bold text-slate-600 dark:text-slate-300">Transaction ID / UTR *</span><input value={utr} onChange={event=>setUtr(event.target.value)} maxLength={40} placeholder="Enter UPI transaction reference" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-white/10"/></label><label><span className="text-xs font-bold text-slate-600 dark:text-slate-300">Payer name</span><input value={payerName} onChange={event=>setPayerName(event.target.value)} placeholder="Name used for payment" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-white/10"/></label><label><span className="text-xs font-bold text-slate-600 dark:text-slate-300">Payer UPI ID (optional)</span><input value={payerUpi} onChange={event=>setPayerUpi(event.target.value)} placeholder="name@bank" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-white/10"/></label></div><div className="mt-4"><p className="text-xs font-bold text-slate-600 dark:text-slate-300">Payment screenshot (optional, max 5MB)</p>{preview?<div className="relative mt-2 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10"><img src={preview} alt="Selected payment proof" className="max-h-48 w-full object-contain"/><button onClick={()=>{setProof(null);setPreview('');}} className="absolute right-2 top-2 rounded-full bg-slate-950/80 p-2 text-white"><X className="h-4 w-4"/></button></div>:<label className="mt-2 flex cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 p-5 text-sm font-bold text-slate-500 hover:border-brand-400 hover:text-brand-600 dark:border-white/10"><ImagePlus className="h-5 w-5"/>Choose payment screenshot<input type="file" accept="image/*" onChange={selectProof} className="hidden"/></label>}</div>{error&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-600 dark:bg-red-500/10 dark:text-red-300">{error}</p>}<button disabled={!user||state==='submitting'||settingsLoading} onClick={submit} className="mt-5 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-violet-600 px-5 text-sm font-black text-white shadow-xl shadow-brand-600/20 disabled:cursor-not-allowed disabled:opacity-50">{state==='submitting'?<><Loader2 className="h-5 w-5 animate-spin"/>Submitting payment proof…</>:<><UploadCloud className="h-5 w-5"/>Submit for verification</>}</button><p className="mt-3 flex items-center justify-center gap-2 text-center text-xs text-slate-400"><Clock3 className="h-4 w-4"/>Manual verification may take a few hours.</p></div>}</main>
+      </div></div></section>
+  </>;
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    padding: "24px 14px",
-    background:
-      "linear-gradient(135deg, #eff6ff 0%, #f8fafc 45%, #ecfdf5 100%)",
-    fontFamily: "Arial, Helvetica, sans-serif",
-    color: "#334155",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "460px",
-    margin: "20px auto",
-    overflow: "hidden",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "24px",
-    boxShadow: "0 20px 50px rgba(15, 23, 42, 0.12)",
-  },
-  header: {
-    padding: "28px 24px 22px",
-    textAlign: "center",
-    background: "linear-gradient(135deg, #eff6ff, #ffffff)",
-  },
-  logo: {
-    display: "block",
-    width: "210px",
-    maxWidth: "82%",
-    height: "auto",
-    margin: "0 auto 18px",
-  },
-  title: {
-    margin: 0,
-    color: "#0f172a",
-    fontSize: "27px",
-    lineHeight: 1.25,
-  },
-  subtitle: {
-    margin: "10px 0 0",
-    color: "#64748b",
-    fontSize: "15px",
-    lineHeight: "24px",
-  },
-  content: {
-    padding: "26px 24px 30px",
-  },
-  amountBox: {
-    padding: "22px",
-    textAlign: "center",
-    background: "#f0fdf4",
-    border: "1px solid #bbf7d0",
-    borderRadius: "16px",
-  },
-  amountLabel: {
-    color: "#64748b",
-    fontSize: "14px",
-  },
-  amount: {
-    marginTop: "5px",
-    color: "#16a34a",
-    fontSize: "44px",
-    fontWeight: 800,
-    lineHeight: 1.2,
-  },
-  planName: {
-    marginTop: "5px",
-    color: "#475569",
-    fontSize: "14px",
-  },
-  upiSection: {
-    marginTop: "22px",
-  },
-  sectionLabel: {
-    marginBottom: "8px",
-    color: "#64748b",
-    fontSize: "14px",
-    fontWeight: 600,
-  },
-  upiBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "12px",
-    background: "#eff6ff",
-    border: "1px solid #bfdbfe",
-    borderRadius: "12px",
-  },
-  upiText: {
-    flex: 1,
-    color: "#1d4ed8",
-    fontSize: "15px",
-    fontWeight: 700,
-    lineHeight: "22px",
-    wordBreak: "break-all",
-  },
-  copyButton: {
-    flexShrink: 0,
-    padding: "9px 13px",
-    border: 0,
-    borderRadius: "9px",
-    background: "#dbeafe",
-    color: "#1d4ed8",
-    fontSize: "13px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  payButton: {
-    display: "block",
-    width: "100%",
-    marginTop: "22px",
-    padding: "17px 18px",
-    border: 0,
-    borderRadius: "13px",
-    background: "#2563eb",
-    color: "#ffffff",
-    fontSize: "18px",
-    fontWeight: 700,
-    textAlign: "center",
-    cursor: "pointer",
-    boxShadow: "0 8px 20px rgba(37, 99, 235, 0.28)",
-  },
-  message: {
-    minHeight: "22px",
-    margin: "12px 0 0",
-    textAlign: "center",
-    color: "#64748b",
-    fontSize: "13px",
-    lineHeight: "21px",
-  },
-  divider: {
-    height: "1px",
-    margin: "26px 0",
-    background: "#e2e8f0",
-  },
-  qrTitle: {
-    margin: 0,
-    textAlign: "center",
-    color: "#0f172a",
-    fontSize: "18px",
-  },
-  qrText: {
-    margin: "8px 0 18px",
-    textAlign: "center",
-    color: "#64748b",
-    fontSize: "14px",
-    lineHeight: "22px",
-  },
-  qrWrapper: {
-    textAlign: "center",
-  },
-  qrImage: {
-    display: "inline-block",
-    width: "230px",
-    maxWidth: "85%",
-    height: "auto",
-    padding: "8px",
-    background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    borderRadius: "16px",
-  },
-  steps: {
-    marginTop: "26px",
-    padding: "18px",
-    background: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: "14px",
-  },
-  stepsTitle: {
-    margin: "0 0 12px",
-    color: "#0f172a",
-    fontSize: "16px",
-  },
-  stepText: {
-    margin: "8px 0",
-    color: "#475569",
-    fontSize: "14px",
-    lineHeight: "22px",
-  },
-  support: {
-    marginTop: "22px",
-    textAlign: "center",
-    color: "#64748b",
-    fontSize: "13px",
-    lineHeight: "21px",
-  },
-  supportLink: {
-    color: "#2563eb",
-    fontWeight: 700,
-    textDecoration: "none",
-  },
-  footer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
-    padding: "20px",
-    background: "#0f172a",
-    textAlign: "center",
-    color: "#cbd5e1",
-    fontSize: "12px",
-    lineHeight: "20px",
-  },
-  footerStrong: {
-    color: "#ffffff",
-    fontSize: "14px",
-  },
-};
