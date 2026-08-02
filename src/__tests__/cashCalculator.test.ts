@@ -214,6 +214,7 @@ describe('Public Cash Calculator', () => {
     expect(page).toContain("'@type':'WebApplication'");
     expect(page).toContain("'@type':'FAQPage'");
     expect(page).toContain('Copy WhatsApp summary');
+    expect(page).toContain('label="Collector name (optional)" value={name} onChange={setName} placeholder="Enter name" type="text"');
     expect(page).toContain('window.print()');
     expect(page).toContain("const BUY_URL='/#/buy-now'");
     expect((page.match(/<h1 className=/g)??[])).toHaveLength(1);
