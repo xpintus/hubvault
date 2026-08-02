@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import {
 CollectionEntry,Collector,DenominationInput,DENOMINATIONS,
 Due,
+DailyClosing,
 EMPTY_DENOMINATIONS,EntryStatus,
 Recovery,
 } from '@/types';
@@ -79,6 +80,7 @@ export default function Dashboard() {
   const [availableModalSearch, setAvailableModalSearch] = useState('');
   const [canManage, setCanManage] = useState(false);
   const [dues, setDues] = useState<Due[]>([]);
+  const [dailyClosings, setDailyClosings] = useState<DailyClosing[]>([]);
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
 
   const dateStr = toISODate(date);
@@ -127,6 +129,10 @@ export default function Dashboard() {
           return { ...d, collector };
         }));
         setDues(hydratedDues.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()) as any[]);
+
+        let localClosings = (await db.daily_closings.toArray()).filter(c => c.closing_date === dateStr);
+        if (effectiveHubId) localClosings = localClosings.filter(c => c.hub_id === effectiveHubId);
+        setDailyClosings(localClosings);
 
         // Offline recoveries for the selected date's calendar month
         let recData = await db.recoveries
@@ -179,6 +185,13 @@ export default function Dashboard() {
         });
         await db.dues.bulkPut(pureDues);
 
+        let closingQuery = supabase.from('daily_closings').select('*').eq('closing_date', dateStr);
+        if (effectiveHubId) closingQuery = closingQuery.eq('hub_id', effectiveHubId);
+        const { data: closingData, error: closingErr } = await closingQuery;
+        if (closingErr) throw closingErr;
+        setDailyClosings((closingData ?? []) as DailyClosing[]);
+        await db.daily_closings.bulkPut((closingData ?? []) as DailyClosing[]);
+
         // Fetch all recoveries whose recovery_date is in the selected date's calendar month
         let recQuery = supabase
           .from('recoveries')
@@ -208,15 +221,57 @@ export default function Dashboard() {
     loadData();
   }, [loadData]);
 
-  // Summary Metrics
+  const closingByCollector = useMemo(() => new Map(
+    dailyClosings
+      .filter(c => c.status !== 'rejected')
+      .map(c => [c.collector_id, c]),
+  ), [dailyClosings]);
+
+  const entryCountByCollector = useMemo(() => {
+    const counts = new Map<string, number>();
+    entries.forEach(e => counts.set(e.collector_id, (counts.get(e.collector_id) ?? 0) + 1));
+    return counts;
+  }, [entries]);
+
+  const dashboardEntries = useMemo(() => entries.map(e => {
+    const closing = closingByCollector.get(e.collector_id);
+    if (!closing || entryCountByCollector.get(e.collector_id) !== 1) return e;
+    const cash = safeAmount(closing.actual_cash);
+    const online = safeAmount(closing.online_amount);
+    const total = cash + online;
+    const expected = safeAmount(closing.expected_cash) + safeAmount(closing.expected_online_amount);
+    const cashVariance = cash - safeAmount(closing.expected_cash);
+    const onlineVariance = online - safeAmount(closing.expected_online_amount);
+    const status: EntryStatus = cashVariance < 0 || onlineVariance < 0
+      ? 'shortage'
+      : cashVariance > 0 || onlineVariance > 0 ? 'excess' : 'reconciled';
+    return { ...e, cash_amount: cash, online_amount: online, total_collection: total, gap: total - expected, status };
+  }), [entries, closingByCollector, entryCountByCollector]);
+
+  // Summary Metrics use verified Daily Closing totals when available.
   const summary = useMemo(() => {
-    const total = entries.reduce((s, e) => s + safeAmount(e.total_collection), 0);
-    const cash = entries.reduce((s, e) => s + safeAmount(e.cash_amount), 0);
-    const online = entries.reduce((s, e) => s + safeAmount(e.online_amount), 0);
-    const expectedCod = entries.reduce((s, e) => s + safeAmount(e.expected_cod), 0);
+    let cash = 0;
+    let online = 0;
+    let expectedCod = 0;
+    const countedClosings = new Set<string>();
+    entries.forEach(e => {
+      const closing = closingByCollector.get(e.collector_id);
+      if (closing) {
+        if (countedClosings.has(closing.id)) return;
+        countedClosings.add(closing.id);
+        cash += safeAmount(closing.actual_cash);
+        online += safeAmount(closing.online_amount);
+        expectedCod += safeAmount(closing.expected_cash) + safeAmount(closing.expected_online_amount);
+        return;
+      }
+      cash += safeAmount(e.cash_amount);
+      online += safeAmount(e.online_amount);
+      expectedCod += safeAmount(e.expected_cod);
+    });
+    const total = cash + online;
     const difference = total - expectedCod;
     return { total, cash, online, expectedCod, difference };
-  }, [entries]);
+  }, [entries, closingByCollector]);
 
   const outstandingDues = useMemo(() => {
     return dues.filter((d) => d.status !== 'fully_recovered' && d.status !== 'cancelled').reduce((s, d) => s + safeAmount(d.remaining_amount), 0);
@@ -283,7 +338,7 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return entries.filter((e) => {
+    return dashboardEntries.filter((e) => {
       if (filter !== 'all' && e.status !== filter) return false;
       if (!q) return true;
       const name = e.collector?.name?.toLowerCase() ?? '';
@@ -291,18 +346,18 @@ export default function Dashboard() {
       const phone = e.collector?.phone?.toLowerCase() ?? '';
       return name.includes(q) || empId.includes(q) || phone.includes(q);
     });
-  }, [entries, search, filter]);
+  }, [dashboardEntries, search, filter]);
 
   const counts = useMemo(() => {
     const c = { reconciled: 0, pending: 0, shortage: 0, excess: 0 };
-    entries.forEach((e) => {
+    dashboardEntries.forEach((e) => {
       if (e.status in c) c[e.status] += 1;
     });
     return c;
-  }, [entries]);
+  }, [dashboardEntries]);
 
-  const reconciledRate = entries.length > 0
-    ? Math.round((counts.reconciled / entries.length) * 100)
+  const reconciledRate = dashboardEntries.length > 0
+    ? Math.round((counts.reconciled / dashboardEntries.length) * 100)
     : 0;
 
   const handleDelete = async (entry: CollectionEntry) => {

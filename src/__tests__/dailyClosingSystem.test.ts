@@ -9,6 +9,7 @@ const revisionMigration = readFileSync(resolve('supabase/migrations/202608030200
 const duesMigration = readFileSync(resolve('supabase/migrations/20260803030000_daily_closing_dues_match.sql'), 'utf8').toLowerCase();
 const dbSource = readFileSync(resolve('src/lib/offline/db.ts'), 'utf8');
 const syncSource = readFileSync(resolve('src/lib/offline/syncQueue.ts'), 'utf8');
+const dashboardSource = readFileSync(resolve('src/pages/Dashboard.tsx'), 'utf8');
 
 describe('Daily Closing System', () => {
   it('keeps cash and online variances separate even when their total offsets', () => {
@@ -41,6 +42,13 @@ describe('Daily Closing System', () => {
     expect(duesMigration).toContain("variance_channel='online'");
     expect(duesMigration).toContain('auto dues reconciliation:');
     expect(duesMigration).toContain("new.status = 'rejected'");
+  });
+
+  it('uses verified Daily Closing amounts and status on the dashboard', () => {
+    expect(dashboardSource).toContain("supabase.from('daily_closings')");
+    expect(dashboardSource).toContain('closing.actual_cash');
+    expect(dashboardSource).toContain('closing.expected_online_amount');
+    expect(dashboardSource).toContain('dashboardEntries');
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {
