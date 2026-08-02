@@ -1,7 +1,7 @@
 import { useToast } from '@/components/ui/Toast';
 import { Badge,Button,Card,EmptyState,Input,Select,Spinner,Textarea } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
-import { calculateClosingVariances,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
+import { buildClosingVarianceRemark,calculateClosingVariances,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
 import { exportDailyClosingsExcel,printDailyClosingsPdf } from '@/lib/dailyClosingExport';
 import { formatDate,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
@@ -36,6 +36,7 @@ export default function DailyClosingPage() {
   const actualCashAmount = Math.max(0, Number(actualCash) || 0);
   const actualOnlineAmount = Math.max(0, Number(actualOnline) || 0);
   const variances = calculateClosingVariances(source.expectedCash, source.onlineAmount, actualCashAmount, actualOnlineAmount);
+  const autoRemark = buildClosingVarianceRemark(variances);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -80,13 +81,9 @@ export default function DailyClosingPage() {
 
   const submit = async () => {
     if (!profile || !collectorId || !hubId) return;
-    if (!variances.reconciled && !notes.trim()) {
-      toast.error('Cash or online mismatch requires notes');
-      return;
-    }
     setSaving(true);
     try {
-      await submitDailyClosing({ closingId: existing?.id, closingStatus: existing?.status, closingDate: date, collectorId, hubId, actualCash: actualCashAmount, actualOnline: actualOnlineAmount, notes, userId: profile.id });
+      await submitDailyClosing({ closingId: existing?.id, closingStatus: existing?.status, closingDate: date, collectorId, hubId, actualCash: actualCashAmount, actualOnline: actualOnlineAmount, notes: notes.trim() || autoRemark, userId: profile.id });
       toast.success(navigator.onLine ? 'Daily closing submitted' : 'Daily closing queued for sync');
       setActualCash(''); setActualOnline(''); setNotes(''); await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Failed to submit daily closing'); }
@@ -126,7 +123,7 @@ export default function DailyClosingPage() {
       <Card className="p-5 space-y-4">
         <div className="grid gap-3 md:grid-cols-4"><Input label="Closing Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Employee" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">Select employee</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select><div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Expected online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div></div>
         <div className="grid gap-3 md:grid-cols-2"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount (optional)" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Blank will be submitted as ₹0" /></div>
-        <div className="grid gap-3 md:grid-cols-4"><VarianceCard label="Cash variance" value={variances.cash} /><VarianceCard label="Online variance" value={variances.online} /><VarianceCard label="Total variance" value={variances.total} /><Textarea label={variances.reconciled ? 'Notes' : 'Notes (required for mismatch)'} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+        <div className="grid gap-3 md:grid-cols-4"><VarianceCard label="Cash variance" value={variances.cash} /><VarianceCard label="Online variance" value={variances.online} /><VarianceCard label="Total variance" value={variances.total} /><Textarea label={variances.reconciled ? 'Notes' : 'Remarks (auto-filled)'} rows={2} value={notes || autoRemark} onChange={(e) => setNotes(e.target.value)} /></div>
         {existing && !canSubmit && <div className="flex items-center gap-2 text-sm text-neutral-500"><Lock className="h-4 w-4" />This employee already has a {existing.status} closing for this date.</div>}
         <div className="flex items-center justify-between gap-3"><p className="text-xs text-neutral-500">Source entries: {source.entryCount} · Blank online amount is treated as ₹0</p><Button icon={<Send className="h-4 w-4" />} onClick={submit} loading={saving} disabled={!collectorId || !canSubmit || actualCash === ''}>{existing ? 'Resubmit Closing' : 'Submit Closing'}</Button></div>
       </Card>

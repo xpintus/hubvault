@@ -245,6 +245,8 @@ export interface Due {
   collector_id: string;
   hub_id: string;
   collection_entry_id: string | null;
+  daily_closing_id?: string | null;
+  variance_channel?: 'cash' | 'online' | null;
   original_amount: number;
   recovered_amount: number;
   remaining_amount: number;

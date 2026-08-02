@@ -1,4 +1,4 @@
-import { calculateClosingVariances } from '@/lib/dailyClosing';
+import { buildClosingVarianceRemark,calculateClosingVariances } from '@/lib/dailyClosing';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -6,6 +6,7 @@ import { describe,expect,it } from 'vitest';
 const migration = readFileSync(resolve('supabase/migrations/20260803000000_daily_closing_system.sql'), 'utf8').toLowerCase();
 const amountMigration = readFileSync(resolve('supabase/migrations/20260803010000_daily_closing_amount_inputs.sql'), 'utf8').toLowerCase();
 const revisionMigration = readFileSync(resolve('supabase/migrations/20260803020000_revise_submitted_daily_closing.sql'), 'utf8').toLowerCase();
+const duesMigration = readFileSync(resolve('supabase/migrations/20260803030000_daily_closing_dues_match.sql'), 'utf8').toLowerCase();
 const dbSource = readFileSync(resolve('src/lib/offline/db.ts'), 'utf8');
 const syncSource = readFileSync(resolve('src/lib/offline/syncQueue.ts'), 'utf8');
 
@@ -13,6 +14,11 @@ describe('Daily Closing System', () => {
   it('keeps cash and online variances separate even when their total offsets', () => {
     expect(calculateClosingVariances(2500, 4020, 2500, 4020)).toEqual({ cash: 0, online: 0, total: 0, reconciled: true });
     expect(calculateClosingVariances(2500, 4020, 2000, 4520)).toEqual({ cash: -500, online: 500, total: 0, reconciled: false });
+  });
+
+  it('auto-generates a channel-specific variance remark', () => {
+    expect(buildClosingVarianceRemark(calculateClosingVariances(2900, 350, 2900, 0)))
+      .toContain('Online shortage ₹350');
   });
 
   it('uses direct actual cash and online amounts without denomination verification', () => {
@@ -27,6 +33,14 @@ describe('Daily Closing System', () => {
     expect(revisionMigration).toContain('revise_submitted_daily_closing_amounts');
     expect(revisionMigration).toContain("v_existing.status <> 'submitted'");
     expect(revisionMigration).toContain('p_actual_online < 0');
+  });
+
+  it('matches existing collection dues and creates only residual closing dues', () => {
+    expect(duesMigration).toContain("source = 'collection_shortage'");
+    expect(duesMigration).toContain("'daily_closing_shortage'");
+    expect(duesMigration).toContain("variance_channel='online'");
+    expect(duesMigration).toContain('auto dues reconciliation:');
+    expect(duesMigration).toContain("new.status = 'rejected'");
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {

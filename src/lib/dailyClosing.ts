@@ -22,6 +22,16 @@ export const calculateClosingVariances = (
   return { cash, online, total: cash + online, reconciled: cash === 0 && online === 0 };
 };
 
+export const buildClosingVarianceRemark = (variances: ClosingVariances): string => {
+  if (variances.reconciled) return '';
+  const parts: string[] = [];
+  if (variances.cash < 0) parts.push(`Cash shortage ₹${Math.abs(variances.cash).toLocaleString('en-IN')}`);
+  if (variances.cash > 0) parts.push(`Cash excess ₹${variances.cash.toLocaleString('en-IN')}`);
+  if (variances.online < 0) parts.push(`Online shortage ₹${Math.abs(variances.online).toLocaleString('en-IN')}`);
+  if (variances.online > 0) parts.push(`Online excess ₹${variances.online.toLocaleString('en-IN')}`);
+  return `Auto verification: ${parts.join('; ')}. Dues will be matched automatically.`;
+};
+
 export async function getDailyClosingSource(closingDate: string, collectorId: string, hubId: string) {
   if (!navigator.onLine) {
     const entries = (await db.collection_entries.toArray()).filter(

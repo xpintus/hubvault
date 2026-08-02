@@ -243,7 +243,7 @@ export default function Dues() {
     return dues.filter((d) => {
       if (statusFilter !== 'all' && d.status !== statusFilter) return false;
       
-      const isManual = d.source === 'manual_old_due' || d.collection_entry_id === null;
+      const isManual = d.source === 'manual_old_due';
       if (sourceFilter === 'manual_old_due' && !isManual) return false;
       if (sourceFilter === 'collection_shortage' && isManual) return false;
 
@@ -270,7 +270,7 @@ export default function Dues() {
       return s;
     }, 0);
     const totalDuesIssued = activeDues.reduce((s, d) => s + safeAmount(d.original_amount), 0);
-    const manualDuesCount = activeDues.filter(d => d.source === 'manual_old_due' || d.collection_entry_id === null).length;
+    const manualDuesCount = activeDues.filter(d => d.source === 'manual_old_due').length;
 
     return { totalOutstanding, employeesWithDues, recoveredThisMonth, totalDuesIssued, manualDuesCount };
   }, [dues]);
@@ -289,7 +289,7 @@ export default function Dues() {
     for (const due of dues) {
       if (due.status === 'cancelled') continue;
 
-      const isManual = due.source === 'manual_old_due' || due.collection_entry_id === null;
+      const isManual = due.source === 'manual_old_due';
       if (sourceFilter === 'manual_old_due' && !isManual) continue;
       if (sourceFilter === 'collection_shortage' && isManual) continue;
 
@@ -446,7 +446,7 @@ export default function Dues() {
         rawDate: new Date(d.due_date || d.created_at),
         dateStr: d.due_date || d.created_at,
         eventType: 'due_created',
-        typeLabel: d.source === 'manual_old_due' || d.collection_entry_id === null ? 'Manual Old Due' : 'Collection Shortage Due',
+        typeLabel: d.source === 'manual_old_due' ? 'Manual Old Due' : 'Collection Shortage Due',
         originalDue: safeAmount(d.original_amount),
         recovered: null,
         paymentMode: '—',
@@ -572,7 +572,7 @@ export default function Dues() {
       d.collector_id === manualForm.collector_id &&
       d.due_date === manualForm.due_date &&
       safeAmount(d.original_amount) === amount &&
-      (d.source === 'manual_old_due' || d.collection_entry_id === null) &&
+      d.source === 'manual_old_due' &&
       (!editingManualDue || d.id !== editingManualDue.id) &&
       d.status !== 'cancelled'
     );
@@ -813,7 +813,7 @@ export default function Dues() {
       'Due Date': formatDate(d.due_date),
       'Employee Name': d.collector?.name || '—',
       'Employee ID': d.collector?.employee_id || '—',
-      Source: d.source === 'manual_old_due' || d.collection_entry_id === null ? 'Manual Old Due' : 'Collection Shortage',
+      Source: d.source === 'manual_old_due' ? 'Manual Old Due' : 'Collection Shortage',
       Reason: d.due_reason || (d.collection_entry_id ? 'Collection Shortage' : 'Old Due'),
       'Original Due': safeAmount(d.original_amount),
       Recovered: safeAmount(d.recovered_amount),
@@ -1217,7 +1217,7 @@ export default function Dues() {
                 {/* Mobile View: Cards (Strictly visible on screens < 768px / md:hidden) */}
                 <div className="grid grid-cols-1 gap-3 md:hidden w-full max-w-full">
                   {filtered.map((d) => {
-                    const isManual = d.source === 'manual_old_due' || d.collection_entry_id === null;
+                    const isManual = d.source === 'manual_old_due';
                     const cfg = statusConfig[d.status] || statusConfig.outstanding;
 
                     return (
@@ -1329,7 +1329,7 @@ export default function Dues() {
                       </thead>
                       <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                         {filtered.map((d) => {
-                          const isManual = d.source === 'manual_old_due' || d.collection_entry_id === null;
+                          const isManual = d.source === 'manual_old_due';
                           const cfg = statusConfig[d.status] || statusConfig.outstanding;
 
                           return (
@@ -1607,7 +1607,7 @@ export default function Dues() {
                       <div key={item.due.id} className="p-3 flex justify-between items-center bg-neutral-50/50 dark:bg-neutral-950/50">
                         <div>
                           <p className="font-semibold text-neutral-900 dark:text-neutral-100">
-                            {item.due.source === 'manual_old_due' || item.due.collection_entry_id === null ? 'Manual Old Due' : 'Collection Shortage'} ({formatDate(item.due.due_date)})
+                            {item.due.source === 'manual_old_due' ? 'Manual Old Due' : 'Collection Shortage'} ({formatDate(item.due.due_date)})
                           </p>
                           <p className="text-[11px] text-neutral-500">
                             Original: {formatINR(item.due.original_amount)} · Was Remaining: {formatINR(item.due.remaining_amount)}
@@ -1657,7 +1657,7 @@ export default function Dues() {
               <div>
                 <p className="text-xs text-neutral-500">Source</p>
                 <p className="font-bold text-amber-500">
-                  {detailDue.source === 'manual_old_due' || detailDue.collection_entry_id === null ? 'MANUAL OLD DUE' : 'COLLECTION SHORTAGE'}
+                  {detailDue.source === 'manual_old_due' ? 'MANUAL OLD DUE' : 'COLLECTION SHORTAGE'}
                 </p>
               </div>
               <div>
