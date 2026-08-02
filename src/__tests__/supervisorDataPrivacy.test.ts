@@ -1,4 +1,6 @@
 import { Profile,UserRole } from '@/types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
 
 // Mock authorization evaluator representing RLS and Edge Function policies
@@ -159,5 +161,17 @@ describe('Supervisor Data Privacy & User Management Access', () => {
 
     const canHubAdminSelectSupervisor = canSupervisorSelectProfile(hubAdmin, supervisor, ['hub-100']);
     expect(canHubAdminSelectSupervisor).toBe(true);
+  });
+
+  it('preserves Daily Closing history when an authorized admin deletes a user', () => {
+    const migration = readFileSync(resolve('supabase/migrations/20260803210000_allow_user_delete_with_closing_history.sql'), 'utf8');
+    const edgeFunction = readFileSync(resolve('supabase/functions/manage-user/index.ts'), 'utf8');
+
+    expect(migration).toContain('alter column submitted_by drop not null');
+    expect(migration).toContain('alter column performed_by drop not null');
+    expect(migration).toContain('alter column finalized_by drop not null');
+    expect((migration.match(/on delete set null/g) ?? [])).toHaveLength(3);
+    expect(edgeFunction).toContain('target_user_id: null');
+    expect(edgeFunction).toContain('Deleted user ${target.name} (${body.user_id})');
   });
 });

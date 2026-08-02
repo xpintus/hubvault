@@ -760,7 +760,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // Delete the auth user (cascades to profiles + user_hub_access)
+        // Delete the auth user. Operational history retains a nullable actor.
         const { error: delErr } = await adminClient.auth.admin.deleteUser(body.user_id);
         if (delErr) {
           return jsonError(500, "Failed to delete user: " + delErr.message);
@@ -769,8 +769,8 @@ Deno.serve(async (req: Request) => {
         await adminClient.from("audit_logs").insert({
           action: "user_deactivated",
           performed_by: callerUser.user.id,
-          target_user_id: body.user_id,
-          details: `Deleted user ${target.name}`,
+          target_user_id: null,
+          details: `Deleted user ${target.name} (${body.user_id})`,
         });
 
         return jsonResponse(200, { message: "User deleted" });
