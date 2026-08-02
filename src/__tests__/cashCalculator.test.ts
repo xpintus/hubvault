@@ -42,6 +42,7 @@ describe('Public Cash Calculator', () => {
     expect(parseVoiceCashCommand('do sau bees note')).toEqual({note:200,quantity:20});
     expect(parseVoiceCashCommands('500 ke 4 note 200 ke 10 note 100 ke 3 note')).toEqual([{note:500,quantity:4},{note:200,quantity:10},{note:100,quantity:3}]);
     expect(parseVoiceCashCommands('पाँच सौ के चार नोट दो सौ के दस नोट सौ के तीन नोट')).toEqual([{note:500,quantity:4},{note:200,quantity:10},{note:100,quantity:3}]);
+    expect(parseVoiceCashCommands('500 ke 4 note 200 ke 10 note 100 ke 3 note 50 ke 2 note 20 ke 5 note 10 ke 8 note')).toEqual([{note:500,quantity:4},{note:200,quantity:10},{note:100,quantity:3},{note:50,quantity:2},{note:20,quantity:5},{note:10,quantity:8}]);
     expect(parseVoiceCashCommand('something unrelated')).toBeNull();
     expect(isVoiceTotalRequest('total batao')).toBe(true);
     expect(isVoiceTotalRequest('what is the total')).toBe(true);
