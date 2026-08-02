@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the payment QR large enough for phone cameras to focus reliably. */
+img[alt="HubVault UPI payment QR code"] {
+  display: block;
+  width: min(100%, 340px);
+  min-width: 300px;
+  height: auto !important;
+  aspect-ratio: auto !important;
+  margin-inline: auto;
+}
+
+div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) !important;
+}
+
+@media (max-width: 639px) {
+  img[alt="HubVault UPI payment QR code"] {
+    min-width: 0;
+    width: min(100%, 340px);
+  }
+
+  div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 /* ============================================================
    THEME TOKENS — Indigo SaaS palette
    Primary #4F46E5 · Success #10B981 · Warning #F59E0B · Error #EF4444
