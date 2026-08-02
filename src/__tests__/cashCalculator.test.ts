@@ -62,5 +62,7 @@ describe('Public Cash Calculator', () => {
     const calculator = readFileSync(resolve('src/pages/public/CashCalculator.tsx'), 'utf8');
     expect(calculator).toContain('<ThemeToggle');
     expect(calculator).toContain('lg:hidden');
+    expect(calculator).toContain('setHeroCollapsed(true),1000');
+    expect(calculator).toContain('Smart Cash Calculator');
   });
 });
