@@ -76,7 +76,7 @@ export default function DailyClosingPage() {
   }, [date, collectorId, hubId, toast]);
 
   const existing = useMemo(() => closings.find((c) => c.collector_id === collectorId), [closings, collectorId]);
-  const canSubmit = !existing || existing.status === 'rejected' || existing.status === 'reopened';
+  const canSubmit = !existing || existing.status === 'submitted' || existing.status === 'rejected' || existing.status === 'reopened';
 
   const submit = async () => {
     if (!profile || !collectorId || !hubId) return;
@@ -86,7 +86,7 @@ export default function DailyClosingPage() {
     }
     setSaving(true);
     try {
-      await submitDailyClosing({ closingId: existing?.id, closingDate: date, collectorId, hubId, actualCash: actualCashAmount, actualOnline: actualOnlineAmount, notes, userId: profile.id });
+      await submitDailyClosing({ closingId: existing?.id, closingStatus: existing?.status, closingDate: date, collectorId, hubId, actualCash: actualCashAmount, actualOnline: actualOnlineAmount, notes, userId: profile.id });
       toast.success(navigator.onLine ? 'Daily closing submitted' : 'Daily closing queued for sync');
       setActualCash(''); setActualOnline(''); setNotes(''); await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Failed to submit daily closing'); }
@@ -125,10 +125,10 @@ export default function DailyClosingPage() {
 
       <Card className="p-5 space-y-4">
         <div className="grid gap-3 md:grid-cols-4"><Input label="Closing Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Employee" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">Select employee</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select><div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Expected online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div></div>
-        <div className="grid gap-3 md:grid-cols-2"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Enter online amount" /></div>
+        <div className="grid gap-3 md:grid-cols-2"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount (optional)" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Blank will be submitted as ₹0" /></div>
         <div className="grid gap-3 md:grid-cols-4"><VarianceCard label="Cash variance" value={variances.cash} /><VarianceCard label="Online variance" value={variances.online} /><VarianceCard label="Total variance" value={variances.total} /><Textarea label={variances.reconciled ? 'Notes' : 'Notes (required for mismatch)'} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
         {existing && !canSubmit && <div className="flex items-center gap-2 text-sm text-neutral-500"><Lock className="h-4 w-4" />This employee already has a {existing.status} closing for this date.</div>}
-        <div className="flex items-center justify-between gap-3"><p className="text-xs text-neutral-500">Source entries: {source.entryCount}</p><Button icon={<Send className="h-4 w-4" />} onClick={submit} loading={saving} disabled={!collectorId || !canSubmit || actualCash === '' || actualOnline === ''}>{existing ? 'Resubmit Closing' : 'Submit Closing'}</Button></div>
+        <div className="flex items-center justify-between gap-3"><p className="text-xs text-neutral-500">Source entries: {source.entryCount} · Blank online amount is treated as ₹0</p><Button icon={<Send className="h-4 w-4" />} onClick={submit} loading={saving} disabled={!collectorId || !canSubmit || actualCash === ''}>{existing ? 'Resubmit Closing' : 'Submit Closing'}</Button></div>
       </Card>
 
       <Card className="overflow-hidden">

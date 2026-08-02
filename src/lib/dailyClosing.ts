@@ -46,6 +46,7 @@ export async function getDailyClosingSource(closingDate: string, collectorId: st
 
 interface SubmitClosingInput {
   closingId?: string | null;
+  closingStatus?: DailyClosing['status'];
   closingDate: string;
   collectorId: string;
   hubId: string;
@@ -57,7 +58,10 @@ interface SubmitClosingInput {
 
 export async function submitDailyClosing(input: SubmitClosingInput): Promise<DailyClosing> {
   if (navigator.onLine) {
-    const { data, error } = await supabase.rpc('submit_daily_closing_amounts', {
+    const rpcName = input.closingStatus === 'submitted'
+      ? 'revise_submitted_daily_closing_amounts'
+      : 'submit_daily_closing_amounts';
+    const { data, error } = await supabase.rpc(rpcName, {
       p_closing_id: input.closingId ?? null,
       p_closing_date: input.closingDate,
       p_collector_id: input.collectorId,

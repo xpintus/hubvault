@@ -5,6 +5,7 @@ import { describe,expect,it } from 'vitest';
 
 const migration = readFileSync(resolve('supabase/migrations/20260803000000_daily_closing_system.sql'), 'utf8').toLowerCase();
 const amountMigration = readFileSync(resolve('supabase/migrations/20260803010000_daily_closing_amount_inputs.sql'), 'utf8').toLowerCase();
+const revisionMigration = readFileSync(resolve('supabase/migrations/20260803020000_revise_submitted_daily_closing.sql'), 'utf8').toLowerCase();
 const dbSource = readFileSync(resolve('src/lib/offline/db.ts'), 'utf8');
 const syncSource = readFileSync(resolve('src/lib/offline/syncQueue.ts'), 'utf8');
 
@@ -20,6 +21,12 @@ describe('Daily Closing System', () => {
     expect(amountMigration).toContain('p_actual_online numeric');
     expect(amountMigration).toContain('denomination_verified=false');
     expect(amountMigration).toContain('cash or online mismatch requires notes');
+  });
+
+  it('allows an awaiting-review closing to be corrected with zero online amount', () => {
+    expect(revisionMigration).toContain('revise_submitted_daily_closing_amounts');
+    expect(revisionMigration).toContain("v_existing.status <> 'submitted'");
+    expect(revisionMigration).toContain('p_actual_online < 0');
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {
