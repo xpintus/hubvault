@@ -1,13 +1,13 @@
 import { useToast } from '@/components/ui/Toast';
 import { Badge,Button,Card,EmptyState,Input,Select,Spinner,Textarea } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
-import { closingDenominationTotal,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
+import { calculateClosingVariance,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
 import { exportDailyClosingsExcel,printDailyClosingsPdf } from '@/lib/dailyClosingExport';
 import { formatDate,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { supabase } from '@/lib/supabase';
-import { Collector,DailyClosing,DailyClosingHistory,DailyClosingStatus,DENOMINATIONS,DenominationInput,EMPTY_DENOMINATIONS } from '@/types';
+import { Collector,DailyClosing,DailyClosingHistory,DailyClosingStatus } from '@/types';
 import { ArchiveRestore,CheckCircle2,Download,FileText,History,Lock,RefreshCw,Send,XCircle } from 'lucide-react';
 import { useCallback,useEffect,useMemo,useState } from 'react';
 
@@ -21,7 +21,8 @@ export default function DailyClosingPage() {
   const [collectorId, setCollectorId] = useState('');
   const [collectors, setCollectors] = useState<Collector[]>([]);
   const [closings, setClosings] = useState<DailyClosing[]>([]);
-  const [denominations, setDenominations] = useState<DenominationInput>({ ...EMPTY_DENOMINATIONS });
+  const [actualCash, setActualCash] = useState('');
+  const [actualOnline, setActualOnline] = useState('');
   const [notes, setNotes] = useState('');
   const [source, setSource] = useState({ expectedCash: 0, onlineAmount: 0, entryCount: 0 });
   const [loading, setLoading] = useState(true);
@@ -32,8 +33,9 @@ export default function DailyClosingPage() {
   const isManager = profile?.role === 'super_admin' || profile?.role === 'hub_admin' || profile?.role === 'supervisor';
   const canReview = isManager;
   const hubId = hub.selectedHubId || profile?.hub_id || '';
-  const actualCash = closingDenominationTotal(denominations);
-  const variance = actualCash - source.expectedCash;
+  const actualCashAmount = Math.max(0, Number(actualCash) || 0);
+  const actualOnlineAmount = Math.max(0, Number(actualOnline) || 0);
+  const variance = calculateClosingVariance(source.expectedCash, source.onlineAmount, actualCashAmount, actualOnlineAmount);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -78,12 +80,11 @@ export default function DailyClosingPage() {
 
   const submit = async () => {
     if (!profile || !collectorId || !hubId) return;
-    if (actualCash < 0) return;
     setSaving(true);
     try {
-      await submitDailyClosing({ closingId: existing?.id, closingDate: date, collectorId, hubId, denominations, notes, userId: profile.id });
+      await submitDailyClosing({ closingId: existing?.id, closingDate: date, collectorId, hubId, actualCash: actualCashAmount, actualOnline: actualOnlineAmount, notes, userId: profile.id });
       toast.success(navigator.onLine ? 'Daily closing submitted' : 'Daily closing queued for sync');
-      setDenominations({ ...EMPTY_DENOMINATIONS }); setNotes(''); await load();
+      setActualCash(''); setActualOnline(''); setNotes(''); await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Failed to submit daily closing'); }
     finally { setSaving(false); }
   };
@@ -119,15 +120,14 @@ export default function DailyClosingPage() {
       </div>
 
       <Card className="p-5 space-y-4">
-        <div className="grid gap-3 md:grid-cols-3"><Input label="Closing Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Employee" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">Select employee</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select><div className="grid grid-cols-2 gap-2"><div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div></div></div>
-        <div><p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-2">Physical denomination verification</p><div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">{DENOMINATIONS.map((d) => <Input key={d.key} label={d.label} type="number" min={0} value={denominations[d.key]} onChange={(e) => setDenominations((v) => ({ ...v, [d.key]: Math.max(0, Number(e.target.value) || 0) }))} />)}</div></div>
-        <div className="grid gap-3 md:grid-cols-4"><div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3"><p className="text-xs text-neutral-500">Actual cash</p><p className="font-bold">{formatINR(actualCash)}</p></div><div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3"><p className="text-xs text-neutral-500">Shortage / excess</p><p className={`font-bold ${variance < 0 ? 'text-error-600' : variance > 0 ? 'text-warning-600' : 'text-success-600'}`}>{formatINR(variance)}</p></div><div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3"><p className="text-xs text-neutral-500">Source entries</p><p className="font-bold">{source.entryCount}</p></div><Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+        <div className="grid gap-3 md:grid-cols-4"><Input label="Closing Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Employee" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">Select employee</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select><div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Expected online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div></div>
+        <div className="grid gap-3 md:grid-cols-4"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Enter online amount" /><div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3"><p className="text-xs text-neutral-500">Shortage / excess</p><p className={`font-bold ${variance < 0 ? 'text-error-600' : variance > 0 ? 'text-warning-600' : 'text-success-600'}`}>{formatINR(variance)}</p><p className="text-[11px] text-neutral-400 mt-1">Actual total vs expected total</p></div><Textarea label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
         {existing && !canSubmit && <div className="flex items-center gap-2 text-sm text-neutral-500"><Lock className="h-4 w-4" />This employee already has a {existing.status} closing for this date.</div>}
-        <Button icon={<Send className="h-4 w-4" />} onClick={submit} loading={saving} disabled={!collectorId || !canSubmit}>{existing ? 'Resubmit Closing' : 'Submit Closing'}</Button>
+        <div className="flex items-center justify-between gap-3"><p className="text-xs text-neutral-500">Source entries: {source.entryCount}</p><Button icon={<Send className="h-4 w-4" />} onClick={submit} loading={saving} disabled={!collectorId || !canSubmit || actualCash === '' || actualOnline === ''}>{existing ? 'Resubmit Closing' : 'Submit Closing'}</Button></div>
       </Card>
 
       <Card className="overflow-hidden">
-        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected</th><th className="p-3">Actual</th><th className="p-3">Online</th><th className="p-3">Variance</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><td className="p-3">{formatINR(c.online_amount)}</td><td className={`p-3 font-semibold ${Number(c.shortage_excess) < 0 ? 'text-error-600' : 'text-success-600'}`}>{formatINR(c.shortage_excess)}</td><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>)}</tbody></table></div>}
+        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Variance</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><td className={`p-3 font-semibold ${Number(c.shortage_excess) < 0 ? 'text-error-600' : 'text-success-600'}`}>{formatINR(c.shortage_excess)}</td><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>)}</tbody></table></div>}
       </Card>
 
       {historyFor && <Card className="p-5"><div className="flex justify-between"><div><h2 className="font-bold">Audit history</h2><p className="text-xs text-neutral-500">{historyFor.collector?.name} · {formatDate(historyFor.closing_date)}</p></div><Button variant="ghost" size="sm" onClick={() => setHistoryFor(null)}>Close</Button></div><div className="mt-4 space-y-2">{history.map((h) => <div key={h.id} className="flex gap-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><RefreshCw className="h-4 w-4 mt-0.5 text-brand-600" /><div><p className="text-sm font-semibold capitalize">{h.action}</p><p className="text-xs text-neutral-500">{new Date(h.created_at).toLocaleString('en-IN')} · {h.performer?.name ?? 'User'}</p>{h.reason && <p className="text-xs mt-1">{h.reason}</p>}</div></div>)}</div></Card>}

@@ -96,6 +96,7 @@ export interface DailyClosing {
   collector_id: string;
   hub_id: string;
   expected_cash: number;
+  expected_online_amount: number;
   actual_cash: number;
   online_amount: number;
   denomination_total: number;

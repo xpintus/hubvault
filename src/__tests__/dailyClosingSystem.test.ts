@@ -1,18 +1,24 @@
-import { closingDenominationTotal } from '@/lib/dailyClosing';
-import { EMPTY_DENOMINATIONS } from '@/types';
+import { calculateClosingVariance } from '@/lib/dailyClosing';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
 
 const migration = readFileSync(resolve('supabase/migrations/20260803000000_daily_closing_system.sql'), 'utf8').toLowerCase();
+const amountMigration = readFileSync(resolve('supabase/migrations/20260803010000_daily_closing_amount_inputs.sql'), 'utf8').toLowerCase();
 const dbSource = readFileSync(resolve('src/lib/offline/db.ts'), 'utf8');
 const syncSource = readFileSync(resolve('src/lib/offline/syncQueue.ts'), 'utf8');
 
 describe('Daily Closing System', () => {
-  it('calculates the verified physical cash total from every denomination', () => {
-    expect(closingDenominationTotal({
-      ...EMPTY_DENOMINATIONS, note_500: 2, note_200: 1, note_50: 3, note_2: 4, note_1: 2,
-    })).toBe(1360);
+  it('calculates combined cash and online variance', () => {
+    expect(calculateClosingVariance(2500, 4020, 2500, 4020)).toBe(0);
+    expect(calculateClosingVariance(2500, 4020, 2400, 4000)).toBe(-120);
+  });
+
+  it('uses direct actual cash and online amounts without denomination verification', () => {
+    expect(amountMigration).toContain('submit_daily_closing_amounts');
+    expect(amountMigration).toContain('p_actual_cash numeric');
+    expect(amountMigration).toContain('p_actual_online numeric');
+    expect(amountMigration).toContain('denomination_verified=false');
   });
 
   it('defines unique collector/day closings and immutable approved records', () => {

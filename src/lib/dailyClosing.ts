@@ -1,12 +1,11 @@
-import { DailyClosing,DailyClosingHistory,DenominationInput } from '@/types';
+import { DailyClosing,DailyClosingHistory } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './offline/db';
 import { addToQueue } from './offline/syncQueue';
 import { supabase } from './supabase';
 
-export const closingDenominationTotal = (d: DenominationInput) =>
-  d.note_500 * 500 + d.note_200 * 200 + d.note_100 * 100 + d.note_50 * 50 +
-  d.note_20 * 20 + d.note_10 * 10 + d.note_5 * 5 + d.note_2 * 2 + d.note_1;
+export const calculateClosingVariance = (expectedCash: number, expectedOnline: number, actualCash: number, actualOnline: number) =>
+  actualCash + actualOnline - expectedCash - expectedOnline;
 
 export async function getDailyClosingSource(closingDate: string, collectorId: string, hubId: string) {
   if (!navigator.onLine) {
@@ -35,19 +34,21 @@ interface SubmitClosingInput {
   closingDate: string;
   collectorId: string;
   hubId: string;
-  denominations: DenominationInput;
+  actualCash: number;
+  actualOnline: number;
   notes: string;
   userId: string;
 }
 
 export async function submitDailyClosing(input: SubmitClosingInput): Promise<DailyClosing> {
   if (navigator.onLine) {
-    const { data, error } = await supabase.rpc('submit_daily_closing', {
+    const { data, error } = await supabase.rpc('submit_daily_closing_amounts', {
       p_closing_id: input.closingId ?? null,
       p_closing_date: input.closingDate,
       p_collector_id: input.collectorId,
       p_hub_id: input.hubId,
-      p_denominations: input.denominations,
+      p_actual_cash: input.actualCash,
+      p_actual_online: input.actualOnline,
       p_notes: input.notes.trim() || null,
     }).single();
     if (error) throw error;
@@ -55,13 +56,14 @@ export async function submitDailyClosing(input: SubmitClosingInput): Promise<Dai
   }
   if (input.closingId) throw new Error('Rejected or reopened closings must be resubmitted online');
   const source = await getDailyClosingSource(input.closingDate, input.collectorId, input.hubId);
-  const actualCash = closingDenominationTotal(input.denominations);
   const now = new Date().toISOString();
   const closing: DailyClosing = {
     id: uuidv4(), closing_date: input.closingDate, collector_id: input.collectorId, hub_id: input.hubId,
-    expected_cash: source.expectedCash, actual_cash: actualCash, online_amount: source.onlineAmount,
-    denomination_total: actualCash, shortage_excess: actualCash - source.expectedCash,
-    ...input.denominations, denomination_verified: true,
+    expected_cash: source.expectedCash, expected_online_amount: source.onlineAmount,
+    actual_cash: input.actualCash, online_amount: input.actualOnline,
+    denomination_total: 0, shortage_excess: calculateClosingVariance(source.expectedCash, source.onlineAmount, input.actualCash, input.actualOnline),
+    note_500: 0, note_200: 0, note_100: 0, note_50: 0, note_20: 0, note_10: 0, note_5: 0, note_2: 0, note_1: 0,
+    denomination_verified: false,
     source_snapshot: { ...source, captured_at: now, offline: true }, notes: input.notes.trim() || null,
     rejection_reason: null, status: 'submitted', submitted_by: input.userId, submitted_at: now,
     reviewed_by: null, reviewed_at: null, reopened_by: null, reopened_at: null, created_at: now, updated_at: now,

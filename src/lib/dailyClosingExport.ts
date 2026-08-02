@@ -6,7 +6,7 @@ export async function exportDailyClosingsExcel(rows: DailyClosing[], filename: s
   const data = rows.map((r) => ({
     Date: r.closing_date, Employee: r.collector?.name ?? '', 'Employee ID': r.collector?.employee_id ?? '',
     Hub: r.hub?.name ?? '', 'Expected Cash': Number(r.expected_cash), 'Actual Cash': Number(r.actual_cash),
-    'Online Amount': Number(r.online_amount), 'Shortage / Excess': Number(r.shortage_excess),
+    'Expected Online': Number(r.expected_online_amount || 0), 'Actual Online': Number(r.online_amount), 'Shortage / Excess': Number(r.shortage_excess),
     Status: r.status, Notes: r.notes ?? '', 'Rejection Reason': r.rejection_reason ?? '',
     Submitted: r.submitted_at, Reviewed: r.reviewed_at ?? '',
   }));
