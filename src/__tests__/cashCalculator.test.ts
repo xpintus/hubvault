@@ -65,4 +65,32 @@ describe('Public Cash Calculator', () => {
     expect(calculator).toContain('setHeroCollapsed(true),1000');
     expect(calculator).toContain('Smart Cash Calculator');
   });
+
+  it('includes resilient local, voice and reconciliation controls', () => {
+    const calculator = readFileSync(resolve('src/pages/public/CashCalculator.tsx'), 'utf8');
+    expect(calculator).toContain('hubvault.cash.draft.v1');
+    expect(calculator).toContain('Draft auto-saved on this device');
+    expect(calculator).toContain('Recognized voice text');
+    expect(calculator).toContain('Continuous voice session');
+    expect(calculator).toContain('Sound announcements');
+    expect(calculator).toContain('Cash Count Mode');
+    expect(calculator).toContain('Reconciliation Mode');
+    expect(calculator).toContain('Calculation reset');
+    expect(calculator).toContain("dark:!bg-[#282052]");
+    expect(calculator).not.toContain('Indian note');
+  });
+
+  it('includes offline tools, history, bags, exports and guarded camera estimates', () => {
+    const tools = readFileSync(resolve('src/components/cash-calculator/CashCalculatorTools.tsx'), 'utf8');
+    const manifest = readFileSync(resolve('public/manifest.webmanifest'), 'utf8');
+    expect(tools).toContain('hubvault.cash.history.v1');
+    expect(tools).toContain('Multi-bag counting');
+    expect(tools).toContain('Save current preset');
+    expect(tools).toContain("import('qrcode')");
+    expect(tools).toContain("import('xlsx')");
+    expect(tools).toContain('Shareable calculation link copied');
+    expect(tools).toContain('Estimate only—not counterfeit detection');
+    expect(tools).toContain('beforeinstallprompt');
+    expect(manifest).toContain('/#/tools/cash-calculator');
+  });
 });
