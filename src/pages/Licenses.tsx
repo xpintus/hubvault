@@ -18,6 +18,7 @@ CreditCard,
 Gift,
 Image as ImageIcon,
 KeyRound,
+Mail,
 Plus,
 RefreshCw,
 Search,
@@ -94,6 +95,7 @@ export default function Licenses() {
   const [payRequestsLoading, setPayRequestsLoading] = useState(false);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [emailingRequestId, setEmailingRequestId] = useState<string | null>(null);
 
   // Main tab
   const [mainTab, setMainTab] = useState<'licenses' | 'giftcards' | 'payments'>('licenses');
@@ -333,6 +335,27 @@ export default function Licenses() {
       toast.error(err instanceof Error ? err.message : 'Failed to process request');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSendLicenseEmail = async (requestId: string) => {
+    setEmailingRequestId(requestId);
+    try {
+      let token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) token = (await supabase.auth.refreshSession()).data.session?.access_token;
+      if (!token) throw new Error('Your session expired. Please log in again.');
+      const response = await fetch('/api/send-license-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ request_id: requestId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'License email could not be sent');
+      toast.success(data.message || 'License email sent successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'License email could not be sent');
+    } finally {
+      setEmailingRequestId(null);
     }
   };
 
@@ -839,7 +862,12 @@ export default function Licenses() {
                           </>
                         )
                       ) : (
-                        <Badge color={req.status === 'verified' ? 'green' : 'red'}>{req.status === 'verified' ? 'Verified' : 'Rejected'}</Badge>
+                        <>
+                          <Badge color={req.status === 'verified' ? 'green' : 'red'}>{req.status === 'verified' ? 'Verified' : 'Rejected'}</Badge>
+                          {req.status === 'verified' && req.license_code && req.request_type !== 'hub_add' && (
+                            <Button variant="outline" onClick={() => handleSendLicenseEmail(req.id)} loading={emailingRequestId === req.id} icon={<Mail className="h-4 w-4" />}>Email License</Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
