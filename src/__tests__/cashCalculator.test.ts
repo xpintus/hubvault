@@ -1,4 +1,4 @@
-import { buildCashSummary,buildDenominationAnnouncement,calculateCashTotal,isVoiceTotalRequest,parseVoiceCashCommand,parseVoiceCashCommands,reconcileCash } from '@/pages/public/CashCalculator';
+import { buildCashSummary,buildDenominationAnnouncement,calculateCashTotal,isVoiceTotalRequest,mergeVoiceCashCommands,parseVoiceCashCommand,parseVoiceCashCommands,reconcileCash } from '@/pages/public/CashCalculator';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe,expect,it } from 'vitest';
@@ -48,6 +48,17 @@ describe('Public Cash Calculator', () => {
     expect(isVoiceTotalRequest('what is the total')).toBe(true);
     expect(buildDenominationAnnouncement(500,4,2000,true,'hi-IN')).toBe('आपके 500 रुपये के 4 नोट ऐड हुए हैं और टोटल 2,000 रुपये हुए हैं');
     expect(buildDenominationAnnouncement(500,4,2000,true,'en-IN')).toBe('4 notes of 500 rupees have been added. The total is two thousand rupees');
+  });
+
+  it('merges consecutive continuous voice commands without clearing earlier notes', () => {
+    const initial={1:0,2:0,5:0,10:0,20:0,50:0,100:0,200:0,500:0} as const;
+    const first=mergeVoiceCashCommands(initial,[{note:500,quantity:4}]);
+    const second=mergeVoiceCashCommands(first,[{note:200,quantity:10}]);
+    const third=mergeVoiceCashCommands(second,[{note:100,quantity:3}]);
+    expect(third[500]).toBe(4);
+    expect(third[200]).toBe(10);
+    expect(third[100]).toBe(3);
+    expect(calculateCashTotal(third)).toBe(4300);
   });
 
   it('is linked from the public route and homepage tools section', () => {
