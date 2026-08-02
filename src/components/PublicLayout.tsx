@@ -95,7 +95,7 @@ export default function PublicLayout() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
+            <a href="/" className="flex items-center gap-2.5 shrink-0 group">
               <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 p-2 text-white shadow-soft transition-transform group-hover:scale-105">
                 <Wallet className="h-5 w-5" />
               </div>
@@ -103,7 +103,7 @@ export default function PublicLayout() {
                 <span className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100 tracking-tight block leading-tight">HubVault</span>
                 <span className="text-[11px] text-brand-600 dark:text-brand-400 font-medium leading-tight">Collection Reconciliation Suite</span>
               </div>
-            </Link>
+            </a>
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-0.5">
@@ -209,7 +209,7 @@ export default function PublicLayout() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand */}
             <div className="lg:col-span-2">
-              <Link to="/" className="flex items-center gap-2.5 mb-4">
+              <a href="/" className="flex items-center gap-2.5 mb-4">
                 <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 p-2 text-white shadow-soft">
                   <Wallet className="h-5 w-5" />
                 </div>
@@ -217,7 +217,7 @@ export default function PublicLayout() {
                   <span className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100 tracking-tight block leading-tight">HubVault</span>
                   <span className="text-[11px] text-brand-600 dark:text-brand-400 font-medium leading-tight">Collection Reconciliation Suite</span>
                 </div>
-              </Link>
+              </a>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm">
                 The digital platform for daily collection reconciliation in logistics and delivery businesses. Track cash and online collections, manage dues, and close every day with confidence.
               </p>

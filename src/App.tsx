@@ -203,8 +203,9 @@ export default function App() {
 function HashAppRedirect() {
   const location = useLocation();
   useEffect(() => {
-    window.location.replace(`/#${location.pathname}${location.search}${location.hash}`);
-  }, [location]);
+    const hashRoute = location.pathname === '/' ? '/' : `${location.pathname}${location.search}`;
+    window.location.replace(`/#${hashRoute}`);
+  }, [location.pathname,location.search]);
   return <FullPageSpinner message="Opening HubVault…" />;
 }
 

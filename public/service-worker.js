@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hubvault-cache-v5';
+const CACHE_NAME = 'hubvault-cache-v6';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to cache for offline support including index.html app shell
@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/about.html',
+  '/buy-hubvault.html',
   '/cash-calculator.html',
   '/cod-reconciliation-calculator.html',
   '/hubvault-software.html',
@@ -78,7 +79,8 @@ self.addEventListener('fetch', (event) => {
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseCopy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseCopy));
+            const cacheKey = url.pathname === '/' ? '/index.html' : url.pathname;
+            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, responseCopy));
           }
           return networkResponse;
         })
