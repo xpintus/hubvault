@@ -312,19 +312,19 @@ export default function Home() {
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-600/10 border border-brand-600/20 px-4 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400">
               <Tag className="h-3.5 w-3.5" />
-              Lifetime Deal
+              Two simple plans
             </span>
             <h2 className="mt-4 text-3xl lg:text-4xl font-bold tracking-tight text-neutral-800 dark:text-neutral-200">
-              Buy HubVault for just ₹{PRICE}
+              Choose lifetime or monthly access
             </h2>
             <p className="mt-4 text-lg text-neutral-500 dark:text-neutral-400">
-              One-time payment. Lifetime access. No subscriptions, no recurring fees — pay once and use it forever.
+              Pay ₹999 once and use HubVault forever, or start with the ₹99 monthly plan.
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+          <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             {/* Price card */}
-            <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 p-8 text-white shadow-card-hover">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 p-8 text-white shadow-card-hover">
               <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
               <div className="relative">
                 <div className="flex items-center gap-2">
@@ -358,8 +358,16 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-card-hover">
+              <div className="flex items-center gap-2"><Tag className="h-5 w-5 text-cyan-300"/><span className="text-sm font-semibold uppercase tracking-wide text-white/80">Monthly Subscription</span></div>
+              <div className="mt-5 flex items-baseline gap-2"><span className="text-5xl font-bold tracking-tight">₹99</span><span className="text-white/60">/month</span></div>
+              <p className="mt-2 text-sm text-white/70">Low-cost monthly access · Renew each month</p>
+              <div className="mt-8 space-y-3">{BUY_FEATURES.map((f) => <div key={f} className="flex items-start gap-2.5"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15"><Check className="h-3.5 w-3.5"/></span><span className="text-sm text-white/90 leading-snug">{f}</span></div>)}</div>
+              <Link to="/buy-now?plan=monthly" className="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-slate-900 shadow-lg hover:bg-white/90 transition-all">Choose Monthly — ₹99<ArrowRight className="h-4 w-4"/></Link>
+            </div>
+
             {/* How it works card */}
-            <div className="lg:col-span-3 card p-8">
+            <div className="card p-8">
               <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-200">How buying works</h3>
               <p className="mt-1.5 text-sm text-neutral-400">
                 Simple, transparent, and secure — no payment gateway, no hidden charges.

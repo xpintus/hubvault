@@ -6,6 +6,7 @@ export interface AppSettings {
   payee_name: string;
   qr_image_url: string | null;
   license_price: number;
+  monthly_price: number;
   hub_add_price: number;
   adsense_client: string | null;
   adsense_enabled: boolean;
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   payee_name: 'HubVault License',
   qr_image_url: '/ChatGPT_Image_Jul_28,_2026,_11_30_59_PM.png',
   license_price: 999,
+  monthly_price: 99,
   hub_add_price: 499,
   adsense_client: null,
   adsense_enabled: false,
@@ -42,7 +44,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     const { data, error } = await supabase
       .from('app_settings')
-      .select('upi_id, payee_name, qr_image_url, license_price, hub_add_price, adsense_client, adsense_enabled')
+      .select('upi_id, payee_name, qr_image_url, license_price, monthly_price, hub_add_price, adsense_client, adsense_enabled')
       .eq('id', 1)
       .maybeSingle();
     if (!error && data) {
