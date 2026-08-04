@@ -130,6 +130,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         return { error: 'Your license has expired. Please contact your administrator for a new activation code.' };
       }
+      if (fetched.role === 'hub_admin' && fetched.license_status === 'activated' && fetched.license_expires_at && new Date(fetched.license_expires_at) < new Date()) {
+        await supabase.auth.signOut();
+        setActiveUserId(null);
+        setSession(null);
+        setProfile(null);
+        return { error: 'Your monthly subscription has expired. Renew it to continue using HubVault.' };
+      }
       if (fetched.role === 'hub_admin' && fetched.license_status === 'pending') {
         const expiresAt = fetched.license_expires_at ? new Date(fetched.license_expires_at) : null;
         if (expiresAt && expiresAt < new Date()) {
@@ -192,7 +199,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkLicenseExpired = useCallback(async (): Promise<boolean> => {
     if (!session?.user || !profile) return false;
     if (profile.role !== 'hub_admin') return false;
-    if (profile.license_status === 'activated') return false;
+    if (profile.license_status === 'activated') {
+      return Boolean(profile.license_expires_at && new Date(profile.license_expires_at) < new Date());
+    }
     if (profile.license_status === 'expired') return true;
     if (profile.license_status === 'pending' && profile.license_expires_at) {
       return new Date(profile.license_expires_at) < new Date();

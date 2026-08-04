@@ -64,6 +64,7 @@ interface PaymentRequestAdmin {
   rejection_reason: string | null;
   notes: string | null;
   request_type?: 'license' | 'hub_add';
+  plan_type?: 'lifetime' | 'monthly';
   payment_screenshot_url?: string | null;
   profiles?: { name: string; email: string; phone?: string } | null;
 }
@@ -820,6 +821,11 @@ export default function Licenses() {
                         {req.request_type === 'hub_add' && (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400 px-2 py-0.5 rounded-full">
                             <CreditCard className="h-3 w-3" /> Hub Add
+                          </span>
+                        )}
+                        {req.request_type !== 'hub_add' && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400 px-2 py-0.5 rounded-full">
+                            <CreditCard className="h-3 w-3" /> {req.plan_type === 'monthly' ? '₹99 Monthly' : '₹999 Lifetime'}
                           </span>
                         )}
                       </div>

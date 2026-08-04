@@ -36,6 +36,7 @@ interface CreateBuyerBody {
   hub_code?: string;
   hub_location?: string;
   referral_code?: string;
+  plan_type?: "lifetime" | "monthly";
 }
 
 interface ResetPasswordBody {
@@ -68,7 +69,7 @@ function generateLicenseCode(): string {
   return code;
 }
 
-async function createLicenseForUser(adminClient: ReturnType<typeof createClient>, userId: string): Promise<string> {
+async function createLicenseForUser(adminClient: ReturnType<typeof createClient>, userId: string, planType: "lifetime" | "monthly" = "lifetime"): Promise<string> {
   const licenseCode = generateLicenseCode();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
@@ -81,6 +82,7 @@ async function createLicenseForUser(adminClient: ReturnType<typeof createClient>
     status: "pending",
     generated_at: new Date().toISOString(),
     expires_at: expiresAt,
+    plan_type: planType,
   });
 
   if (insertErr) {
@@ -91,6 +93,7 @@ async function createLicenseForUser(adminClient: ReturnType<typeof createClient>
     license_status: "pending",
     license_expires_at: expiresAt,
     license_activated_at: null,
+    plan_type: planType,
   }).eq("id", userId);
 
   if (profileErr) {
@@ -381,7 +384,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Generate license key for buyer (hub_admin)
-      const buyerLicenseCode = await createLicenseForUser(adminClient, newUserId);
+      const buyerLicenseCode = await createLicenseForUser(adminClient, newUserId, body.plan_type === "monthly" ? "monthly" : "lifetime");
 
       return jsonResponse(200, { user_id: newUserId, hub_id: hubId, license_code: buyerLicenseCode, message: "Hub Admin account created with hub" });
     } catch (err) {
@@ -847,7 +850,7 @@ Deno.serve(async (req: Request) => {
         // Fetch caller's profile
         const { data: myProfile } = await userClient
           .from("profiles")
-          .select("id, role, license_status, license_expires_at")
+          .select("id, role, license_status, license_expires_at, plan_type")
           .eq("id", callerUser.user.id)
           .maybeSingle();
 
@@ -896,6 +899,7 @@ Deno.serve(async (req: Request) => {
         await adminClient.from("profiles").update({
           license_status: "activated",
           license_activated_at: now,
+          license_expires_at: myProfile.plan_type === "monthly" ? new Date(new Date(now).setMonth(new Date(now).getMonth() + 1)).toISOString() : null,
         }).eq("id", myProfile.id);
 
         await adminClient.from("audit_logs").insert({
@@ -954,7 +958,7 @@ Deno.serve(async (req: Request) => {
         if (!myProfile) return jsonError(404, "Profile not found");
 
         // Auto-expire if past deadline
-        if (myProfile.license_status === "pending" && myProfile.license_expires_at) {
+        if ((myProfile.license_status === "pending" || myProfile.license_status === "activated") && myProfile.license_expires_at) {
           if (new Date(myProfile.license_expires_at) < new Date()) {
             await adminClient.from("profiles").update({ license_status: "expired" }).eq("id", callerUser.user.id);
             await adminClient.from("license_keys").update({ status: "expired" }).eq("user_id", callerUser.user.id);
@@ -992,6 +996,7 @@ Deno.serve(async (req: Request) => {
           amount?: number;
           notes?: string;
           request_type?: "license" | "hub_add";
+          plan_type?: "lifetime" | "monthly";
           payment_screenshot_url?: string;
         };
 
@@ -1000,6 +1005,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const requestType = body.request_type === "hub_add" ? "hub_add" : "license";
+        const planType = body.plan_type === "monthly" || (requestType === "license" && Number(body.amount) === 99) ? "monthly" : "lifetime";
 
         // For hub_add requests, check if license is already activated
         if (requestType === "hub_add" && myProfile.license_status !== "activated") {
@@ -1031,6 +1037,7 @@ Deno.serve(async (req: Request) => {
           status: "pending",
           notes: body.notes?.trim() || null,
           request_type: requestType,
+          plan_type: planType,
           payment_screenshot_url: body.payment_screenshot_url?.trim() || null,
         });
 
@@ -1419,7 +1426,7 @@ Deno.serve(async (req: Request) => {
             return jsonResponse(200, { message: "Hub-add payment verified — 1 hub credit granted to user" });
           } else {
             // Generate license for the user
-            const licCode = await createLicenseForUser(adminClient, reqRow.user_id);
+            const licCode = await createLicenseForUser(adminClient, reqRow.user_id, reqRow.plan_type === "monthly" ? "monthly" : "lifetime");
 
             await adminClient.from("license_payment_requests").update({
               status: "verified",

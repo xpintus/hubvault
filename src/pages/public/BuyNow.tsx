@@ -49,6 +49,9 @@ export default function BuyNow() {
   const toast = useToast();
   const { settings } = useSettings();
   const PRICE = settings.license_price;
+  const MONTHLY_PRICE = settings.monthly_price;
+  const [plan, setPlan] = useState<'lifetime' | 'monthly'>(() => new URLSearchParams(window.location.search).get('plan') === 'monthly' ? 'monthly' : 'lifetime');
+  const selectedPrice = plan === 'lifetime' ? PRICE : MONTHLY_PRICE;
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '', hubName: '', hubCode: '', message: '', promoCode: '',
   });
@@ -94,6 +97,7 @@ export default function BuyNow() {
           hub_name: form.hubName.trim(),
           hub_code: form.hubCode.trim().toUpperCase(),
           referral_code: form.promoCode.trim() || undefined,
+          plan_type: plan,
         }),
       });
       const data = await resp.json();
@@ -107,6 +111,7 @@ export default function BuyNow() {
         message: form.message.trim() || null,
         status: 'completed',
         is_read: true,
+        plan_type: plan,
       });
 
       const { error: signInErr } = await supabase.auth.signInWithPassword({
@@ -116,6 +121,7 @@ export default function BuyNow() {
       if (signInErr) throw new Error('Account created but sign-in failed. Please log in manually.');
 
       setStatus('success');
+      sessionStorage.setItem('hubvault_checkout_plan', plan);
       toast.success('Account created! Redirecting to secure payment...');
       setTimeout(() => navigate('/payment', { replace: true }), 1500);
     } catch (err) {
@@ -156,8 +162,8 @@ export default function BuyNow() {
   return (
     <>
       <SEO
-        title="Buy HubVault — Lifetime License"
-        description="Get HubVault for ₹999 one-time. Lifetime access, unlimited hubs, real-time dashboards, and reconciliation. No subscriptions, no recurring fees."
+        title="Buy HubVault — Choose Your Plan"
+        description="Choose HubVault lifetime access for ₹999 or a monthly subscription for ₹99 per month."
         path="/buy-now"
       />
 
@@ -171,13 +177,13 @@ export default function BuyNow() {
           <div className="text-center max-w-2xl mx-auto">
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-600/10 border border-brand-600/20 px-4 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Lifetime Deal — Pay Once, Use Forever
+              Flexible plans — choose what works for you
             </span>
             <h1 className="mt-5 text-4xl sm:text-5xl font-bold tracking-tight text-neutral-800 dark:text-neutral-200">
-              Buy HubVault for <span className="gradient-text">₹{PRICE}</span>
+              Choose your <span className="gradient-text">HubVault plan</span>
             </h1>
             <p className="mt-4 text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              One-time payment. No subscriptions, no recurring fees. Get full hub creation access and start reconciling collections today.
+              Pay ₹999 once for lifetime access or get started at ₹99 per month.
             </p>
           </div>
         </div>
@@ -189,19 +195,27 @@ export default function BuyNow() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 items-start">
             {/* Left — Pricing & features */}
             <div className="lg:col-span-2 space-y-6">
+              <div className="grid grid-cols-2 gap-3">
+                {(['lifetime', 'monthly'] as const).map((item) => (
+                  <button key={item} type="button" onClick={() => setPlan(item)} className={`rounded-2xl border p-4 text-left transition ${plan === item ? 'border-brand-500 bg-brand-600/10 ring-2 ring-brand-500/20' : 'border-neutral-200 dark:border-neutral-700'}`}>
+                    <span className="block text-sm font-bold capitalize">{item}</span>
+                    <span className="mt-1 block text-xl font-black">₹{item === 'lifetime' ? PRICE : MONTHLY_PRICE}<small className="text-xs font-medium text-neutral-500">{item === 'monthly' ? '/month' : ' once'}</small></span>
+                  </button>
+                ))}
+              </div>
               {/* Price card */}
               <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 p-7 text-white shadow-card-hover">
                 <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
                 <div className="relative">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-white/70" />
-                    <span className="text-sm font-semibold uppercase tracking-wide text-white/80">Lifetime License</span>
+                    <span className="text-sm font-semibold uppercase tracking-wide text-white/80">{plan === 'lifetime' ? 'Lifetime License' : 'Monthly Subscription'}</span>
                   </div>
                   <div className="mt-5 flex items-baseline gap-2">
-                    <span className="text-5xl font-bold tracking-tight">₹{PRICE}</span>
+                    <span className="text-5xl font-bold tracking-tight">₹{selectedPrice}</span>
                     <span className="text-lg text-white/50 line-through">₹2,999</span>
                   </div>
-                  <p className="mt-2 text-sm text-white/70">One-time payment · No recurring fees</p>
+                  <p className="mt-2 text-sm text-white/70">{plan === 'lifetime' ? 'One-time payment · No recurring fees' : 'Valid for one month · Renew monthly'}</p>
 
                   <div className="mt-7 space-y-3">
                     {BUY_FEATURES.map((f) => (
@@ -270,7 +284,7 @@ export default function BuyNow() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Complete Your Purchase</h2>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Lifetime license — ₹{PRICE} one-time</p>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">{plan === 'lifetime' ? `Lifetime license — ₹${PRICE} one-time` : `Monthly subscription — ₹${MONTHLY_PRICE}/month`}</p>
                   </div>
                 </div>
 
@@ -406,7 +420,7 @@ export default function BuyNow() {
                     {status === 'submitting' ? (
                       <><Spinner className="h-4 w-4" /> Creating your account...</>
                     ) : (
-                      <>Buy Now — ₹{PRICE}</>
+                      <>Continue — ₹{selectedPrice}{plan === 'monthly' ? '/month' : ''}</>
                     )}
                   </Button>
 
