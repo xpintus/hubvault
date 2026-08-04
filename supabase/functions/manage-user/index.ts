@@ -71,7 +71,7 @@ function generateLicenseCode(): string {
 
 async function createLicenseForUser(adminClient: ReturnType<typeof createClient>, userId: string, planType: "lifetime" | "monthly" = "lifetime"): Promise<string> {
   const licenseCode = generateLicenseCode();
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Delete any existing key for this user, then insert fresh
   await adminClient.from("license_keys").delete().eq("user_id", userId);
@@ -1156,7 +1156,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // License mode: create a license key from the gift card's license_code
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         // Delete any existing key for this user, then insert fresh
         await adminClient.from("license_keys").delete().eq("user_id", myProfile.id);

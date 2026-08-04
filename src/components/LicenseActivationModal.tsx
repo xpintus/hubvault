@@ -125,7 +125,7 @@ export default function LicenseActivationModal({ open, onClose, profile, onActiv
           <AlertTriangle className="h-14 w-14 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-2">License Expired</h3>
           <p className="text-sm text-neutral-500 mb-4">
-            Your 24-hour activation window has passed. Please contact your administrator to get a new activation code.
+            Your 30-day free access period has ended. Choose a paid plan to continue using HubVault.
           </p>
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-left">
             <p className="text-xs text-red-600 dark:text-red-400 font-medium">
@@ -141,7 +141,7 @@ export default function LicenseActivationModal({ open, onClose, profile, onActiv
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100">License Activation Required</p>
-              <p className="text-xs text-neutral-500">You must activate within 24 hours of account creation.</p>
+              <p className="text-xs text-neutral-500">Your account includes 30 days of free access. Activate anytime to keep access after the trial.</p>
             </div>
           </div>
 

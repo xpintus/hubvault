@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setActiveUserId(null);
           setSession(null);
           setProfile(null);
-          return { error: 'Your 24-hour activation window has passed. Please contact your administrator for a new activation code.' };
+          return { error: 'Your 30-day free access period has ended. Choose a plan to continue using HubVault.' };
         }
         return { error: null };
       }
