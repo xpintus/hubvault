@@ -71,7 +71,7 @@ function generateLicenseCode(): string {
 
 async function createLicenseForUser(adminClient: ReturnType<typeof createClient>, userId: string, planType: "lifetime" | "monthly" = "lifetime"): Promise<string> {
   const licenseCode = generateLicenseCode();
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Delete any existing key for this user, then insert fresh
   await adminClient.from("license_keys").delete().eq("user_id", userId);
@@ -384,9 +384,9 @@ Deno.serve(async (req: Request) => {
       }
 
       // Generate license key for buyer (hub_admin)
-      const buyerLicenseCode = await createLicenseForUser(adminClient, newUserId, body.plan_type === "monthly" ? "monthly" : "lifetime");
+      await createLicenseForUser(adminClient, newUserId, body.plan_type === "monthly" ? "monthly" : "lifetime");
 
-      return jsonResponse(200, { user_id: newUserId, hub_id: hubId, license_code: buyerLicenseCode, message: "Hub Admin account created with hub" });
+      return jsonResponse(200, { user_id: newUserId, hub_id: hubId, message: "Hub Admin account created with 30 days of free access" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       return jsonError(500, msg);
@@ -1156,7 +1156,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // License mode: create a license key from the gift card's license_code
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         // Delete any existing key for this user, then insert fresh
         await adminClient.from("license_keys").delete().eq("user_id", myProfile.id);

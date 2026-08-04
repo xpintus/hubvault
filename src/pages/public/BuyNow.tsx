@@ -183,7 +183,7 @@ export default function BuyNow() {
               Choose your <span className="gradient-text">HubVault plan</span>
             </h1>
             <p className="mt-4 text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              Pay ₹999 once for lifetime access or get started at ₹99 per month.
+              Start free for 30 days, then pay ₹999 once for lifetime access or continue at ₹99 per month.
             </p>
           </div>
         </div>

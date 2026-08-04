@@ -183,6 +183,13 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
+                to="/trial-signup"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+              >
+                Start 30 Days Free
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
                 to="/buy-now"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-400 px-6 py-3.5 text-sm font-bold text-white shadow-glow hover:shadow-glow transition-all active:scale-95"
               >

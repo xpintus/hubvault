@@ -125,7 +125,7 @@ export default function ActivateLicense() {
             <AlertTriangle className="h-14 w-14 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">License Expired</h2>
             <p className="text-sm text-neutral-500 mb-6">
-              Your 24-hour activation window has passed. Please contact your administrator to get a new activation code.
+              Your 30-day free access period has ended. Choose a paid plan to continue using HubVault.
             </p>
             <Button variant="outline" onClick={handleSignOut} className="w-full">Sign Out</Button>
           </div>

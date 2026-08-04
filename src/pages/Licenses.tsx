@@ -264,8 +264,8 @@ export default function Licenses() {
     const ok = await confirm({
       title: hasKey ? 'Regenerate license?' : 'Generate license?',
       message: hasKey
-        ? `This will issue a new activation code for ${row.profile.name}. The old code will no longer work and the 24-hour clock restarts.`
-        : `This will generate a new activation code for ${row.profile.name}. They will have 24 hours to activate it.`,
+        ? `This will issue a new activation code for ${row.profile.name}. The old code will no longer work and the 30-day free-access clock restarts.`
+        : `This will generate a new activation code for ${row.profile.name}. They will have 30 days of free access to activate it.`,
       confirmLabel: hasKey ? 'Regenerate' : 'Generate',
     });
     if (!ok) return;
@@ -710,7 +710,7 @@ export default function Licenses() {
                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-600 dark:text-amber-400">
                   {detailRow.license.status === 'expired'
-                    ? "This license has expired. The Hub Admin is locked out. Regenerate to issue a new code with a fresh 24-hour window."
+                    ? "This free-access period has expired. Regenerate to issue a new code with a fresh 30-day window."
                     : "This license is still pending activation. Share the code with the Hub Admin — they must activate it before the deadline or the account will be locked."}
                 </p>
               </div>
