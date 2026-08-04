@@ -1,7 +1,7 @@
 import SEO from '@/components/SEO';
 import { useToast } from '@/components/ui/Toast';
 import { Button,Card,Input,Select } from '@/components/ui/primitives';
-import { SUPABASE_URL } from '@/lib/supabase';
+import { supabase,SUPABASE_ANON_KEY,SUPABASE_URL } from '@/lib/supabase';
 import {
 ArrowRight,
 Building2,
@@ -18,7 +18,7 @@ UserPlus,
 Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link,useNavigate } from 'react-router-dom';
 
 const COMPANIES = ['Valmo', 'Amazon', 'Flipkart', 'Shadowfax', 'Delhivery'];
 
@@ -40,6 +40,7 @@ const EMPTY_FORM: TrialForm = {
 
 export default function TrialSignup() {
   const toast = useToast();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<TrialForm>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<TrialForm>>({});
@@ -75,25 +76,30 @@ export default function TrialSignup() {
     if (!validate()) return;
     setSaving(true);
     try {
-      const response = await fetch(`${FUNCTION_URL}?action=create-trial-public`, {
+      const response = await fetch(`${FUNCTION_URL}?action=create-buyer`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({
           name: form.name.trim(),
           phone: form.phone.replace(/\D/g, ''),
           email: form.email.trim(),
           company: form.company,
-          hub_code: form.hub_code.trim(),
-          location: form.location.trim(),
+          hub_name: `${form.company} ${form.hub_code.trim()}`,
+          hub_code: form.hub_code.trim().toUpperCase(),
+          hub_location: form.location.trim(),
           password: form.password,
+          plan_type: 'lifetime',
         }),
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || `Request failed (${response.status})`);
       }
-      toast.success('Account created! Awaiting admin approval.');
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+      if (signInError) throw new Error('Account created, but automatic sign-in failed. Please log in manually.');
+      toast.success('Your 30-day free access is ready!');
       setDone(true);
+      setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
@@ -115,10 +121,9 @@ export default function TrialSignup() {
             <div className="mx-auto mb-5 rounded-2xl bg-brand-600/15 p-5 text-brand-600 ring-1 ring-brand-600/20 animate-scale-in">
               <CheckCircle2 className="h-12 w-12" />
             </div>
-            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Account Created — Pending Approval</h1>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Your 30-Day Free Access Is Ready!</h1>
             <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              Your HubVault trial account has been created. An administrator must approve your
-              account before you can sign in. You will be able to log in once approved.
+              Your HubVault account has been created with 30 days of free access. No payment or credit card is required. Redirecting you to the dashboard…
             </p>
             <div className="mt-4 rounded-xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 p-4 text-left">
               <p className="text-xs text-neutral-500 mb-1">Your login email</p>
@@ -144,26 +149,33 @@ export default function TrialSignup() {
 
   return (
     <>
-      <SEO title="Free Trial Signup" description="Create a free HubVault trial account and explore the collection reconciliation dashboard." noindex />
-      <div className="mx-auto max-w-xl px-4 py-12 sm:py-16">
+      <SEO title="30-Day Free HubVault Signup" description="Create your HubVault account and use it free for 30 days. No credit card required." path="/trial-signup" />
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 inline-flex rounded-2xl bg-gradient-to-br from-brand-600 to-brand-400 p-3 text-white shadow-glow">
             <UserPlus className="h-7 w-7" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Start Your Free Trial</h1>
+          <span className="inline-flex rounded-full bg-emerald-500/10 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-600">Free for 30 days</span>
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Start Using HubVault Free</h1>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-md mx-auto">
-            Fill in your details below to create a trial account and explore the HubVault dashboard.
-            No credit card required.
+            Create your Hub Admin account and use HubVault free for 30 days. No payment or credit card required.
           </p>
         </div>
 
+        <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr] lg:items-start">
+        <Card className="bg-gradient-to-br from-brand-700 to-violet-700 p-7 text-white">
+          <p className="text-xs font-black uppercase tracking-[.18em] text-cyan-200">30-day free access</p>
+          <p className="mt-4 text-5xl font-black">₹0</p>
+          <p className="mt-2 text-sm text-white/70">No card · No payment · Full 30 days</p>
+          <div className="mt-7 space-y-4">{['Create your first operational hub','Track daily cash and online collections','Use dashboards, dues and reconciliation','Upgrade to ₹99/month or ₹999 lifetime'].map(item=><p key={item} className="flex gap-3 text-sm font-semibold"><CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300"/>{item}</p>)}</div>
+        </Card>
         <Card className="p-6 sm:p-8">
           {/* Trial badge */}
           <div className="mb-6 flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3">
             <Lock className="h-4 w-4 text-amber-600 shrink-0" />
             <p className="text-xs text-amber-600 font-medium">
-              Trial accounts get a read-only preview of the dashboard. Upgrade to unlock full features.
+              Free access remains active for 30 days. Choose a paid plan before it ends to continue without interruption.
             </p>
           </div>
 
@@ -289,7 +301,7 @@ export default function TrialSignup() {
               disabled={saving}
               icon={!saving ? <KeyRound className="h-4 w-4" /> : undefined}
             >
-              Create Trial Account
+              Start 30 Days Free
               {!saving && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
@@ -300,13 +312,13 @@ export default function TrialSignup() {
               Sign in
             </Link>
           </p>
-        </Card>
+        </Card></div>
 
         {/* Trust indicators */}
         <div className="mt-8 flex items-center justify-center gap-6 text-xs text-neutral-500">
           <span className="flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-brand-600" />
-            No credit card
+            Free for 30 days
           </span>
           <span className="flex items-center gap-1.5">
             <Wallet className="h-3.5 w-3.5 text-brand-600" />

@@ -61,12 +61,13 @@ export default function AppLayout() {
     navigate('/login', { replace: true });
   }, [refreshProfile, signOut, navigate]);
 
-  // Auto-open activation modal on first login for pending hub_admins
+  // Only prompt near the end of the 30-day free-access period.
   useEffect(() => {
-    if (!loading && isHubAdminPending && !licenseBannerDismissed) {
+    const remaining = profile?.license_expires_at ? new Date(profile.license_expires_at).getTime() - Date.now() : Number.POSITIVE_INFINITY;
+    if (!loading && isHubAdminPending && !licenseBannerDismissed && remaining <= 3 * 24 * 60 * 60 * 1000) {
       setLicenseModalOpen(true);
     }
-  }, [loading, isHubAdminPending, licenseBannerDismissed]);
+  }, [loading, isHubAdminPending, licenseBannerDismissed, profile?.license_expires_at]);
 
   // Live countdown + periodic expiry check for pending hub_admins
   useEffect(() => {
@@ -79,10 +80,11 @@ export default function AppLayout() {
         handleLicenseExpired();
         return;
       }
-      const h = Math.floor(diff / (1000 * 60 * 60));
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const s = Math.floor((diff % (1000 * 60)) / 1000);
-      setLicenseCountdown(`${h}h ${m}m ${s}s`);
+      setLicenseCountdown(`${d}d ${h}h ${m}m ${s}s`);
     };
 
     checkExpiry();
@@ -287,13 +289,13 @@ export default function AppLayout() {
                   <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                      License activation required
+                      30-day free access active
                     </p>
                     <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
                       {licenseCountdown ? (
-                        <>Time remaining: <strong className="font-mono">{licenseCountdown}</strong> — activate now or your account will be locked.</>
+                        <>Free time remaining: <strong className="font-mono">{licenseCountdown}</strong> — choose a plan before it ends.</>
                       ) : (
-                        'Your activation window is closing soon.'
+                        'Your free-access period is ending soon.'
                       )}
                     </p>
                   </div>

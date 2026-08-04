@@ -384,9 +384,9 @@ Deno.serve(async (req: Request) => {
       }
 
       // Generate license key for buyer (hub_admin)
-      const buyerLicenseCode = await createLicenseForUser(adminClient, newUserId, body.plan_type === "monthly" ? "monthly" : "lifetime");
+      await createLicenseForUser(adminClient, newUserId, body.plan_type === "monthly" ? "monthly" : "lifetime");
 
-      return jsonResponse(200, { user_id: newUserId, hub_id: hubId, license_code: buyerLicenseCode, message: "Hub Admin account created with hub" });
+      return jsonResponse(200, { user_id: newUserId, hub_id: hubId, message: "Hub Admin account created with 30 days of free access" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       return jsonError(500, msg);

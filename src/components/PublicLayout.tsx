@@ -134,6 +134,9 @@ export default function PublicLayout() {
               >
                 Login
               </Link>
+              <Link to="/trial-signup" className="rounded-xl border border-brand-600/25 px-4 py-2 text-sm font-bold text-brand-600 dark:text-brand-400">
+                30 Days Free
+              </Link>
               <Link
                 to="/buy-now"
                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-4 py-2 text-sm font-bold text-white shadow-soft hover:shadow-soft-lg transition-all active:scale-95"
@@ -183,6 +186,9 @@ export default function PublicLayout() {
                   className="block rounded-xl px-4 py-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-center border border-neutral-200 dark:border-neutral-800"
                 >
                   Login
+                </Link>
+                <Link to="/trial-signup" onClick={() => setMobileOpen(false)} className="block rounded-xl border border-brand-600/25 px-4 py-3 text-center text-sm font-bold text-brand-600 dark:text-brand-400">
+                  Start 30 Days Free
                 </Link>
                 <Link
                   to="/buy-now"

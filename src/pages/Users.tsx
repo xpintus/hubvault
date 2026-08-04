@@ -626,7 +626,7 @@ export default function Users() {
               <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3">
                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Share this code with the Hub Admin. They must activate it within 24 hours of account creation, after which the code expires and the account locks.
+                  Share this code with the Hub Admin. Their account includes 30 days of free access; after that they must activate a paid plan to continue.
                 </p>
               </div>
             )}
