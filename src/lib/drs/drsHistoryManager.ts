@@ -227,6 +227,45 @@ export async function deleteDRSHistoryItem(id: string): Promise<DRSReportHistory
   return localHistory;
 }
 
+export const ACTIVE_REPORT_ID_KEY = 'hubvault_active_drs_report_id_v5';
+
+export function getActiveReportId(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem(ACTIVE_REPORT_ID_KEY);
+  } catch (err) {
+    return null;
+  }
+}
+
+export function setActiveReportId(id: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(ACTIVE_REPORT_ID_KEY, id);
+    }
+  } catch (err) {
+    console.error('Failed to set active DRS report ID:', err);
+  }
+}
+
+export async function loadActiveDRSReport(
+  preferredId?: string | null
+): Promise<{ activeReport: DRSReportHistoryItem | null; historyList: DRSReportHistoryItem[] }> {
+  const historyList = await fetchDRSHistoryFromDB();
+  if (historyList.length === 0) {
+    return { activeReport: null, historyList: [] };
+  }
+
+  const targetId = preferredId || getActiveReportId();
+  let activeReport = targetId ? historyList.find((h) => h.id === targetId) || historyList[0] : historyList[0];
+
+  if (activeReport && activeReport.id) {
+    setActiveReportId(activeReport.id);
+  }
+
+  return { activeReport, historyList };
+}
+
 export function compareDRSReportItems(
   reportA: DRSReportHistoryItem,
   reportB: DRSReportHistoryItem
@@ -256,3 +295,4 @@ export function compareDRSReportItems(
     codAmountChange,
   };
 }
+

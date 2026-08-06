@@ -14,8 +14,9 @@ import { exportDRSPerformanceWorkbook } from '@/lib/drs/drsExcelExporter';
 import {
   compareDRSReportItems,
   deleteDRSHistoryItem,
-  fetchDRSHistoryFromDB,
+  loadActiveDRSReport,
   saveDRSHistorySnapshot,
+  setActiveReportId,
 } from '@/lib/drs/drsHistoryManager';
 import { parseDRSFile } from '@/lib/drs/drsParser';
 import { exportDRSPerformancePDF } from '@/lib/drs/drsPdfExporter';
@@ -35,12 +36,14 @@ import { DRSEmployeeDrawer } from '@/components/drs/DRSEmployeeDrawer';
 import { NDRToast } from '@/components/ndr/NDRToast';
 import {
   ArrowDownRight,
-  ArrowRight,
   ArrowUpRight,
+  BarChart2,
   BarChart3,
   Building2,
   Calendar,
   CheckCircle2,
+  ChevronRight,
+  Clock,
   Columns,
   CreditCard,
   Download,
@@ -49,15 +52,16 @@ import {
   Filter,
   History,
   Layers,
+  LayoutDashboard,
   Package,
   PieChart as PieIcon,
   RefreshCw,
   RotateCcw,
-  Save,
   Search,
   ShieldAlert,
   Sparkles,
   Trash2,
+  TrendingUp,
   Truck,
   Upload,
   User,
@@ -78,24 +82,21 @@ export default function DRSPerformanceReport() {
   const { selectedHub } = useHub();
   const { profile } = useAuth();
 
+  const [isLoading, setIsLoading] = useState(true);
   const [parsingProgress, setParsingProgress] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('OVERVIEW');
 
-  // Parsed Raw & Consolidated Data
+  // Currently Loaded Active Report State
+  const [activeItem, setActiveItem] = useState<DRSReportHistoryItem | null>(null);
   const [uniqueRows, setUniqueRows] = useState<DRSReportRow[]>([]);
-  const [duplicateRows, setDuplicateRows] = useState<DRSReportRow[]>([]);
-  const [invalidRows, setInvalidRows] = useState<DRSReportRow[]>([]);
-
-  // Analytics Engine Results
   const [summary, setSummary] = useState<OverallDRSSummary | null>(null);
-  const [employeeMetrics, setEmployeeMetrics] = useState<EmployeeDRSMetrics[]>([]);
   const [historyList, setHistoryList] = useState<DRSReportHistoryItem[]>([]);
 
   // Selected Employee for Detail Drawer
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeDRSMetrics | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Compare Report State
+  // Compare Modal State
   const [compareModalOpen, setCompareModalOpen] = useState(false);
   const [compareReportA, setCompareReportA] = useState<DRSReportHistoryItem | null>(null);
   const [compareReportB, setCompareReportB] = useState<DRSReportHistoryItem | null>(null);
@@ -112,24 +113,33 @@ export default function DRSPerformanceReport() {
     search: '',
   });
 
-  // Load Report History on Mount
+  // Automatically Restore Active Report on Startup / Refresh
   useEffect(() => {
-    fetchDRSHistoryFromDB().then((history) => {
-      setHistoryList(history);
-    });
+    setIsLoading(true);
+    loadActiveDRSReport()
+      .then(({ activeReport, historyList: hList }) => {
+        setHistoryList(hList);
+        if (activeReport) {
+          setActiveItem(activeReport);
+          setSummary(activeReport.summary);
+          setUniqueRows(activeReport.rows);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load active DRS report:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   const handleFileUpload = async (uploadedFile: File) => {
-    setParsingProgress('Reading DRS file contents...');
+    setParsingProgress('Reading DRS file...');
     try {
-      setParsingProgress('Processing & consolidating AWBs...');
+      setParsingProgress('Parsing AWBs...');
       const parsed = await parseDRSFile(uploadedFile);
 
-      setUniqueRows(parsed.uniqueRows);
-      setDuplicateRows(parsed.duplicateRows);
-      setInvalidRows(parsed.invalidRows);
-
-      setParsingProgress('Calculating Excel Pivot Analytics...');
+      setParsingProgress('Calculating Analytics Engine...');
       const dateStr = new Date().toISOString().split('T')[0];
       const overall = computeOverallDRSSummary(parsed.uniqueRows, {
         fileName: uploadedFile.name,
@@ -140,13 +150,6 @@ export default function DRSPerformanceReport() {
         duplicateRows: parsed.duplicateRows.length,
       });
 
-      const empMetrics = computeEmployeeDRSMetrics(parsed.uniqueRows);
-
-      setSummary(overall);
-      setEmployeeMetrics(empMetrics);
-      setParsingProgress(null);
-
-      // Auto Save Snapshot into Supabase & LocalStorage
       const historyItem: DRSReportHistoryItem = {
         id: `${uploadedFile.name}_${Date.now()}`,
         fileName: uploadedFile.name,
@@ -187,8 +190,13 @@ export default function DRSPerformanceReport() {
       };
 
       const updatedHistory = await saveDRSHistorySnapshot(historyItem);
+      setActiveReportId(historyItem.id);
+      setActiveItem(historyItem);
+      setSummary(overall);
+      setUniqueRows(parsed.uniqueRows);
       setHistoryList(updatedHistory);
-      setToastMsg('DRS File parsed & snapshot saved automatically!');
+      setParsingProgress(null);
+      setToastMsg('DRS File uploaded, snapshot saved & restored automatically!');
     } catch (err: any) {
       console.error('DRS parse error:', err);
       alert(`Failed to parse file: ${err.message || 'Invalid format'}`);
@@ -230,16 +238,18 @@ export default function DRSPerformanceReport() {
     };
 
     const updated = await saveDRSHistorySnapshot(historyItem);
+    setActiveReportId(historyItem.id);
+    setActiveItem(historyItem);
     setHistoryList(updated);
     setToastMsg('Report snapshot permanently saved!');
   };
 
-  // Filtered Rows for Display
+  // Unified Single-Report Filtered Rows
   const filteredUniqueRows = useMemo(() => {
     return filterDRSRows(uniqueRows, filters);
   }, [uniqueRows, filters]);
 
-  // Filtered Analytics Summary
+  // Unified Single-Report Filtered Summary
   const filteredSummary = useMemo(() => {
     if (!summary) return null;
     if (filteredUniqueRows.length === uniqueRows.length) return summary;
@@ -292,7 +302,7 @@ export default function DRSPerformanceReport() {
       sortOrder: 'desc',
       search: '',
     });
-    setToastMsg('Filters reset to default.');
+    setToastMsg('Filters reset.');
   };
 
   const handleExportExcel = () => {
@@ -305,8 +315,8 @@ export default function DRSPerformanceReport() {
       reasonMetrics,
       rtoMetrics,
       filteredUniqueRows,
-      duplicateRows,
-      invalidRows
+      [],
+      []
     );
   };
 
@@ -315,15 +325,16 @@ export default function DRSPerformanceReport() {
     await exportDRSPerformancePDF(filteredSummary, filteredEmployeeMetrics);
   };
 
-  const handleReopenHistory = (item: DRSReportHistoryItem) => {
+  const handleOpenHistoryItem = (item: DRSReportHistoryItem) => {
     if (item.summary && item.rows && item.rows.length > 0) {
+      setActiveReportId(item.id);
+      setActiveItem(item);
       setSummary(item.summary);
       setUniqueRows(item.rows);
-      setEmployeeMetrics(computeEmployeeDRSMetrics(item.rows));
       setActiveTab('OVERVIEW');
-      setToastMsg(`Loaded saved report: ${item.fileName}`);
+      setToastMsg(`Loaded report snapshot: ${item.fileName}`);
     } else {
-      alert('Snapshot content is missing or corrupted.');
+      alert('Snapshot content is empty or corrupt.');
     }
   };
 
@@ -331,39 +342,19 @@ export default function DRSPerformanceReport() {
     if (confirm('Delete this report snapshot permanently?')) {
       const updated = await deleteDRSHistoryItem(id);
       setHistoryList(updated);
+      if (activeItem?.id === id) {
+        if (updated.length > 0) {
+          handleOpenHistoryItem(updated[0]);
+        } else {
+          setActiveItem(null);
+          setSummary(null);
+          setUniqueRows([]);
+        }
+      }
       setToastMsg('Report snapshot deleted.');
     }
   };
 
-  const handleExportHistoryExcel = (item: DRSReportHistoryItem) => {
-    if (!item.summary || !item.rows) return;
-    const empMetrics = computeEmployeeDRSMetrics(item.rows);
-    const payMetrics = computePaymentAnalytics(item.rows);
-    const cliMetrics = computeClientDRSMetrics(item.rows);
-    const rsnMetrics = computeNDRReasonAnalytics(item.rows);
-    const rtoMet = computeRTOAnalytics(item.rows);
-
-    exportDRSPerformanceWorkbook(
-      item.summary,
-      empMetrics,
-      cliMetrics,
-      payMetrics,
-      rsnMetrics,
-      rtoMet,
-      item.rows,
-      [],
-      [],
-      `Report_${item.reportDate}`
-    );
-  };
-
-  const handleExportHistoryPDF = async (item: DRSReportHistoryItem) => {
-    if (!item.summary || !item.rows) return;
-    const empMetrics = computeEmployeeDRSMetrics(item.rows);
-    await exportDRSPerformancePDF(item.summary, empMetrics, `Executive_Report_${item.reportDate}`);
-  };
-
-  // Run Side-by-Side Report Comparison
   const handleOpenComparison = () => {
     if (historyList.length < 2) {
       alert('You need at least 2 saved DRS report snapshots to compare performance.');
@@ -384,44 +375,55 @@ export default function DRSPerformanceReport() {
   };
 
   return (
-    <div className="space-y-6 max-w-[1700px] mx-auto pb-12">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 p-4 md:p-8 space-y-6 max-w-[1700px] mx-auto transition-colors font-sans antialiased">
       {/* ========================================================= */}
-      {/* POWER BI TOP HEADER                                       */}
+      {/* LINEAR / STACK OVERVIEW HEADER                            */}
       {/* ========================================================= */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black text-neutral-900 dark:text-neutral-100 tracking-tight flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-brand-600" /> DRS Performance Analytics
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center font-black">
+              <LayoutDashboard className="h-4 w-4" />
+            </div>
+            <h1 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+              DRS Performance Analytics
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-600 border border-brand-500/20 uppercase tracking-wider">
-              Power BI Edition
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 uppercase tracking-wider">
+              V5 Enterprise
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1 font-medium">
-            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-neutral-400" /> Today's Report: {summary?.reportDate || 'Today'}</span>
-            <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-neutral-400" /> Hub: {selectedHub?.name || 'Main Hub'}</span>
-            <span className="flex items-center gap-1"><User className="h-3.5 w-3.5 text-neutral-400" /> Client: All Clients</span>
-          </div>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium flex items-center gap-2">
+            <span>Hub: <strong className="text-neutral-700 dark:text-neutral-300">{selectedHub?.name || 'Main Hub'}</strong></span>
+            <span>•</span>
+            <span>Date: <strong className="text-neutral-700 dark:text-neutral-300">{summary?.reportDate || 'No Report Loaded'}</strong></span>
+            {activeItem && (
+              <>
+                <span>•</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Auto-Restored ({activeItem.fileName})
+                </span>
+              </>
+            )}
+          </p>
         </div>
 
-        {/* Global Controls & Actions */}
+        {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
           {summary && (
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-[200px]">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Global Search (AWB, Executive...)"
+                placeholder="Search AWBs, Executive..."
                 value={filters.search}
                 onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-medium focus:ring-1 focus:ring-neutral-900 dark:focus:ring-neutral-100 outline-none"
               />
             </div>
           )}
 
-          <label className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md transition cursor-pointer flex items-center gap-1.5 active:scale-95">
-            <Upload className="h-4 w-4" /> Upload DRS
+          <label className="px-3.5 py-2 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition hover:opacity-90 cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95">
+            <Upload className="h-3.5 w-3.5" /> Upload DRS
             <input
               type="file"
               accept=".xlsx, .xls, .csv"
@@ -438,60 +440,62 @@ export default function DRSPerformanceReport() {
             <>
               <button
                 onClick={handleManualSaveSnapshot}
-                className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
               >
-                <Save className="h-4 w-4" /> Save Snapshot
+                Save
               </button>
 
               <button
                 onClick={handleOpenComparison}
-                className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
               >
-                <Columns className="h-4 w-4" /> Compare
-              </button>
-
-              <button
-                onClick={handleResetFilters}
-                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-xs font-bold text-neutral-700 dark:text-neutral-300 transition flex items-center gap-1.5"
-              >
-                <RotateCcw className="h-4 w-4" /> Reset
+                <Columns className="h-3.5 w-3.5" /> Compare
               </button>
 
               <button
                 onClick={handleExportExcel}
-                className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
               >
-                <FileSpreadsheet className="h-4 w-4" /> Excel
+                <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
               </button>
 
               <button
                 onClick={handleExportPDF}
-                className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-rose-600 dark:text-rose-400 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
               >
-                <FileText className="h-4 w-4" /> PDF
+                <FileText className="h-3.5 w-3.5" /> PDF
               </button>
             </>
           )}
         </div>
-      </div>
+      </header>
 
-      {!summary ? (
-        /* Dropzone */
-        <div className="p-12 rounded-2xl bg-white dark:bg-neutral-900 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-center space-y-4 hover:border-brand-500 transition shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center">
-            <Upload className="h-8 w-8" />
+      {/* ========================================================= */}
+      {/* INITIAL EMPTY / LOADING STATE                             */}
+      {/* ========================================================= */}
+      {isLoading ? (
+        <div className="p-12 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
+          <RefreshCw className="h-8 w-8 animate-spin text-neutral-400 mx-auto" />
+          <p className="text-xs font-medium text-neutral-500">Auto-restoring latest DRS report snapshot...</p>
+        </div>
+      ) : !summary ? (
+        <div className="p-16 rounded-2xl bg-white dark:bg-neutral-900 border border-dashed border-neutral-300 dark:border-neutral-800 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 mx-auto flex items-center justify-center">
+            <Upload className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Upload Daily DRS Performance File</h3>
-            <p className="text-xs text-neutral-500 mt-1">Instant 5-second Power BI Executive Analytics & Auto-Snapshot Saving</p>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">No Active DRS Report Loaded</h3>
+            <p className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
+              Upload a daily DRS Excel report to generate analytics and save permanent snapshots.
+            </p>
           </div>
           {parsingProgress ? (
-            <div className="py-6 flex flex-col items-center gap-2 text-brand-600">
-              <RefreshCw className="h-7 w-7 animate-spin" />
+            <div className="py-4 flex flex-col items-center gap-2 text-neutral-600 dark:text-neutral-300">
+              <RefreshCw className="h-6 w-6 animate-spin" />
               <span className="text-xs font-bold">{parsingProgress}</span>
             </div>
           ) : (
-            <label className="inline-block px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md transition cursor-pointer active:scale-95">
+            <label className="inline-block px-5 py-2.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition hover:opacity-90 cursor-pointer shadow-md active:scale-95">
               Choose File
               <input
                 type="file"
@@ -509,506 +513,475 @@ export default function DRSPerformanceReport() {
       ) : (
         <>
           {/* ========================================================= */}
-          {/* SECTION 1: EXECUTIVE KPI (EXACTLY 8 POWER BI CARDS)       */}
+          {/* REQUIREMENT 1: EXACTLY 6 PRIMARY KPI CARDS               */}
           {/* ========================================================= */}
           {filteredSummary && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs">
-              {/* 1. Total OFD */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-1">
-                <span className="text-neutral-500 font-semibold block">Total OFD</span>
-                <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 block">{filteredSummary.totalOfd}</span>
-                <span className="text-[10px] text-neutral-400 font-mono">Unique AWBs</span>
-              </div>
-
-              {/* 2. Delivered */}
-              <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm space-y-1">
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold block">Delivered</span>
-                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 block">{filteredSummary.totalDelivered}</span>
-                <span className="text-[10px] text-emerald-600 font-semibold block">{filteredSummary.overallDeliveryPct}% Rate</span>
-              </div>
-
-              {/* 3. UNDEL */}
-              <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-sm space-y-1">
-                <span className="text-rose-700 dark:text-rose-400 font-bold block">UNDEL</span>
-                <span className="text-2xl font-black text-rose-600 dark:text-rose-400 block">{filteredSummary.totalUndel}</span>
-                <span className="text-[10px] text-rose-600 font-semibold block">Active NDR</span>
-              </div>
-
-              {/* 4. First Attempt % */}
-              <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 shadow-sm space-y-1">
-                <span className="text-blue-700 dark:text-blue-400 font-bold block">1st Attempt %</span>
-                <span className="text-2xl font-black text-blue-600 dark:text-blue-400 block">{filteredSummary.firstAttemptDeliveryPct}%</span>
-                <span className="text-[10px] text-blue-600 font-semibold block">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd}</span>
-              </div>
-
-              {/* 5. Reattempt % */}
-              <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 shadow-sm space-y-1">
-                <span className="text-purple-700 dark:text-purple-400 font-bold block">Reattempt %</span>
-                <span className="text-2xl font-black text-purple-600 dark:text-purple-400 block">{filteredSummary.reattemptDeliveryPct}%</span>
-                <span className="text-[10px] text-purple-600 font-semibold block">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd}</span>
-              </div>
-
-              {/* 6. Overall Delivery % */}
-              <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20 shadow-sm space-y-1">
-                <span className="text-brand-700 dark:text-brand-400 font-bold block">Overall %</span>
-                <span className="text-2xl font-black text-brand-600 dark:text-brand-400 block">{filteredSummary.overallDeliveryPct}%</span>
-                <span className="text-[10px] text-brand-600 font-semibold block">Efficiency</span>
-              </div>
-
-              {/* 7. COD Pending Amount */}
-              <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 shadow-sm space-y-1">
-                <span className="text-amber-700 dark:text-amber-400 font-bold block">COD Pending</span>
-                <span className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono block">
-                  ₹{(paymentMetrics.codTotalAmount - paymentMetrics.codDeliveredAmount).toLocaleString()}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* Card 1: Total OFD */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
+                <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">Total OFD</span>
+                <span className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 block font-mono">
+                  {filteredSummary.totalOfd}
                 </span>
-                <span className="text-[10px] text-amber-600 font-semibold block">{paymentMetrics.codPending} AWBs</span>
+                <span className="text-[10px] text-neutral-400 font-medium block">Unique Shipments</span>
               </div>
 
-              {/* 8. Total COD Collection */}
-              <div className="p-4 rounded-2xl bg-emerald-600/10 border border-emerald-600/30 shadow-sm space-y-1">
-                <span className="text-emerald-800 dark:text-emerald-300 font-black block">COD Collection</span>
-                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono block">
-                  ₹{paymentMetrics.codDeliveredAmount.toLocaleString()}
+              {/* Card 2: Delivered */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Delivered</span>
+                <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 block font-mono">
+                  {filteredSummary.totalDelivered}
                 </span>
-                <span className="text-[10px] text-emerald-700 font-bold block">{paymentMetrics.codDeliveryPct}% Collected</span>
+                <span className="text-[10px] text-emerald-600/80 font-medium block">{filteredSummary.overallDeliveryPct}% Delivered</span>
+              </div>
+
+              {/* Card 3: Pending */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
+                <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">Pending</span>
+                <span className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 block font-mono">
+                  {filteredSummary.totalUndel}
+                </span>
+                <span className="text-[10px] text-rose-600/80 font-medium block">Active Undelivered</span>
+              </div>
+
+              {/* Card 4: Overall Delivery % */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
+                <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider block">Overall Delivery %</span>
+                <span className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 block font-mono">
+                  {filteredSummary.overallDeliveryPct}%
+                </span>
+                <span className="text-[10px] text-neutral-400 font-medium block">Target benchmark: 80%</span>
+              </div>
+
+              {/* Card 5: First Attempt % */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
+                <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">First Attempt %</span>
+                <span className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 block font-mono">
+                  {filteredSummary.firstAttemptDeliveryPct}%
+                </span>
+                <span className="text-[10px] text-blue-600/80 font-medium block">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd}</span>
+              </div>
+
+              {/* Card 6: Reattempt % */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
+                <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">Reattempt %</span>
+                <span className="text-2xl font-bold tracking-tight text-purple-600 dark:text-purple-400 block font-mono">
+                  {filteredSummary.reattemptDeliveryPct}%
+                </span>
+                <span className="text-[10px] text-purple-600/80 font-medium block">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd}</span>
               </div>
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* SECTION 2: POWER BI CHARTS                                */}
+          {/* NAVIGATION TABS (LINEAR STYLE)                            */}
           {/* ========================================================= */}
-          {filteredSummary && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
-              {/* Chart 1: Delivery Status Pie */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
-                <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <PieIcon className="h-4 w-4 text-brand-600" /> Chart 1: Delivery Status
-                </h3>
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-emerald-600">Delivered</span>
-                    <span className="font-mono font-bold">{filteredSummary.totalDelivered} ({filteredSummary.overallDeliveryPct}%)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-rose-600">UNDEL</span>
-                    <span className="font-mono font-bold">{filteredSummary.totalUndel}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-purple-600">RTO</span>
-                    <span className="font-mono font-bold">{filteredSummary.totalRto}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-neutral-500">Cancel</span>
-                    <span className="font-mono font-bold">{filteredSummary.totalCancelled}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart 2: Attempt Analysis */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
-                <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-blue-600" /> Chart 2: Attempt Analysis
-                </h3>
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-blue-600">1st Attempt DEL / OFD</span>
-                    <span className="font-mono font-bold">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-purple-600">Reattempt DEL / OFD</span>
-                    <span className="font-mono font-bold">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart 3: Delivery Trend */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
-                <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-emerald-600" /> Chart 3: Delivery Trend Progress
-                </h3>
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-neutral-600 dark:text-neutral-400">Target Efficiency</span>
-                    <span className="font-mono font-bold text-emerald-600">80.00%</span>
-                  </div>
-                  <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-3 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(filteredSummary.overallDeliveryPct, 100)}%` }} />
-                  </div>
-                  <span className="text-[11px] text-neutral-400 block font-mono">Current: {filteredSummary.overallDeliveryPct}%</span>
-                </div>
-              </div>
-
-              {/* Chart 4: Top Executives Horizontal Bar */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
-                <h3 className="font-bold text-emerald-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4" /> Chart 4: Top Executives
-                </h3>
-                <div className="space-y-1.5">
-                  {filteredEmployeeMetrics.slice(0, 5).map((e, idx) => (
-                    <div key={e.employee_name} className="flex items-center justify-between p-1.5 rounded-lg bg-emerald-500/5">
-                      <span className="font-bold text-neutral-900 dark:text-neutral-100">#{idx + 1} {e.employee_name}</span>
-                      <span className="font-mono font-black text-emerald-600">{e.overall_delivery_pct}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Chart 5: Top NDR Reasons Horizontal Bar */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
-                <h3 className="font-bold text-rose-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
-                  <ShieldAlert className="h-4 w-4" /> Chart 5: Top NDR Reasons
-                </h3>
-                <div className="space-y-1.5">
-                  {reasonMetrics.slice(0, 5).map((r) => (
-                    <div key={r.reason} className="flex items-center justify-between p-1.5 rounded-lg bg-rose-500/5">
-                      <span className="truncate max-w-[170px] font-semibold text-neutral-900 dark:text-neutral-100">{r.reason}</span>
-                      <span className="font-bold font-mono text-rose-600">{r.count} AWBs</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto no-scrollbar">
+            <nav className="flex space-x-1 min-w-max pb-1">
+              {[
+                { id: 'OVERVIEW', label: 'Overview' },
+                { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
+                { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
+                { id: 'REATTEMPT', label: 'Reattempt' },
+                { id: 'COD', label: 'COD' },
+                { id: 'PREPAID', label: 'Prepaid' },
+                { id: 'CLIENT', label: `Client (${clientMetrics.length})` },
+                { id: 'HISTORY', label: `Report History (${historyList.length})` },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id as TabType)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === t.id
+                      ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+          </div>
 
           {/* ========================================================= */}
-          {/* SECTION 3: PAYMENT ANALYTICS (SPLIT LEFT/RIGHT)           */}
+          {/* TAB: OVERVIEW EXECUTIVE SECTIONS                         */}
           {/* ========================================================= */}
-          {filteredSummary && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-              {/* LEFT: COD */}
-              <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 shadow-sm space-y-3">
-                <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
-                  <h3 className="font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5 text-xs">
-                    <CreditCard className="h-4 w-4" /> COD Payment Analytics
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-purple-600">{paymentMetrics.codDeliveryPct}% DEL</span>
-                    <span className="font-mono font-black bg-purple-600 text-white px-2 py-0.5 rounded-md text-[11px]">
+          {activeTab === 'OVERVIEW' && filteredSummary && (
+            <div className="space-y-6">
+              {/* REQUIREMENT 2: SEPARATE SECTIONS                         */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {/* SECTION 1: COD ANALYTICS */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4 text-purple-600" /> COD Analytics
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
                       COD FAD: {paymentMetrics.codFadPercent}%
                     </span>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-neutral-400 block font-medium">COD OFD</span>
+                      <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{paymentMetrics.codOfd}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block font-medium">Delivered</span>
+                      <span className="font-mono font-bold text-emerald-600">{paymentMetrics.codDelivered}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block font-medium">Pending</span>
+                      <span className="font-mono font-bold text-amber-600">{paymentMetrics.codPending}</span>
+                    </div>
+                  </div>
+                  <div className="pt-1 text-xs font-mono font-semibold text-neutral-600 dark:text-neutral-300 flex justify-between">
+                    <span>Collected: ₹{paymentMetrics.codDeliveredAmount.toLocaleString()}</span>
+                    <span>Total: ₹{paymentMetrics.codTotalAmount.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                  <div>
-                    <span className="text-neutral-500 block">COD OFD</span>
-                    <span className="font-black text-neutral-900 dark:text-neutral-100 text-sm">{paymentMetrics.codOfd}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500 block">COD Delivered</span>
-                    <span className="font-black text-emerald-600 text-sm">{paymentMetrics.codDelivered}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500 block">1st OFD / DEL</span>
-                    <span className="font-black text-purple-600 text-xs">{paymentMetrics.codFirstAttemptOfd} / {paymentMetrics.codFirstAttemptDel}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500 block">COD Pending</span>
-                    <span className="font-black text-amber-600 text-sm">{paymentMetrics.codPending}</span>
-                  </div>
-                </div>
-                <div className="flex justify-between pt-1 font-mono font-bold text-neutral-700 dark:text-neutral-300">
-                  <span>Collected: ₹{paymentMetrics.codDeliveredAmount.toLocaleString()}</span>
-                  <span>Total Value: ₹{paymentMetrics.codTotalAmount.toLocaleString()}</span>
-                </div>
-              </div>
 
-              {/* RIGHT: PREPAID */}
-              <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/20 shadow-sm space-y-3">
-                <div className="flex items-center justify-between border-b border-blue-500/20 pb-2">
-                  <h3 className="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5 text-xs">
-                    <CreditCard className="h-4 w-4" /> Prepaid Payment Analytics
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-blue-600">{paymentMetrics.prepaidDeliveryPct}% DEL</span>
-                    <span className="font-mono font-black bg-blue-600 text-white px-2 py-0.5 rounded-md text-[11px]">
+                {/* SECTION 2: PREPAID ANALYTICS */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4 text-blue-600" /> Prepaid Analytics
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
                       Prepaid FAD: {paymentMetrics.prepaidFadPercent}%
                     </span>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-neutral-400 block font-medium">Prepaid OFD</span>
+                      <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{paymentMetrics.prepaidOfd}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block font-medium">Delivered</span>
+                      <span className="font-mono font-bold text-emerald-600">{paymentMetrics.prepaidDelivered}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block font-medium">Pending</span>
+                      <span className="font-mono font-bold text-amber-600">{paymentMetrics.prepaidPending}</span>
+                    </div>
+                  </div>
+                  <div className="pt-1 text-xs font-mono font-semibold text-neutral-600 dark:text-neutral-300">
+                    Total Prepaid Value: ₹{paymentMetrics.prepaidTotalAmount.toLocaleString()}
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                  <div>
-                    <span className="text-neutral-500 block">Prepaid OFD</span>
-                    <span className="font-black text-neutral-900 dark:text-neutral-100 text-sm">{paymentMetrics.prepaidOfd}</span>
+
+                {/* SECTION 3: DELIVERY TREND & EFFICIENCY */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-emerald-600" /> Delivery Trend
+                    </h3>
+                    <span className="font-mono text-xs font-bold text-emerald-600">{filteredSummary.overallDeliveryPct}%</span>
                   </div>
-                  <div>
-                    <span className="text-neutral-500 block">Delivered</span>
-                    <span className="font-black text-emerald-600 text-sm">{paymentMetrics.prepaidDelivered}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500 block">1st OFD / DEL</span>
-                    <span className="font-black text-blue-600 text-xs">{paymentMetrics.prepaidFirstAttemptOfd} / {paymentMetrics.prepaidFirstAttemptDel}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500 block">Pending</span>
-                    <span className="font-black text-amber-600 text-sm">{paymentMetrics.prepaidPending}</span>
+                  <div className="space-y-2 pt-1 text-xs">
+                    <div className="flex justify-between font-medium">
+                      <span className="text-neutral-500">Benchmark Target</span>
+                      <span className="font-mono font-bold text-neutral-700 dark:text-neutral-300">80.00%</span>
+                    </div>
+                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(filteredSummary.overallDeliveryPct, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-neutral-400 block font-mono">
+                      Average Attempts per Shipment: {filteredSummary.averageAttempts}
+                    </span>
                   </div>
                 </div>
-                <div className="flex justify-between pt-1 font-mono font-bold text-neutral-700 dark:text-neutral-300">
-                  <span>Amount Total: ₹{paymentMetrics.prepaidTotalAmount.toLocaleString()}</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* SECTION 4: EMPLOYEE RANKING */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <User className="h-4 w-4 text-brand-600" /> Top Executive Leaderboard
+                    </h3>
+                    <button
+                      onClick={() => setActiveTab('EMPLOYEE')}
+                      className="text-[11px] font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 flex items-center gap-1"
+                    >
+                      View All <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {filteredEmployeeMetrics.slice(0, 5).map((e, idx) => (
+                      <div
+                        key={e.employee_name}
+                        onClick={() => {
+                          setSelectedEmployee(e);
+                          setDrawerOpen(true);
+                        }}
+                        className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-neutral-400 text-xs">#{idx + 1}</span>
+                          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{e.employee_name}</span>
+                        </div>
+                        <div className="flex items-center gap-3 font-mono">
+                          <span className="text-neutral-500">{e.total_delivered} / {e.total_ofd} DEL</span>
+                          <span className="font-bold text-emerald-600">{e.overall_delivery_pct}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECTION 5: TOP NDR REASONS */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <ShieldAlert className="h-4 w-4 text-rose-600" /> Top NDR Failure Reasons
+                    </h3>
+                    <span className="text-[11px] font-mono font-bold text-rose-600">{filteredSummary.totalUndel} UNDEL</span>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {reasonMetrics.length === 0 ? (
+                      <div className="py-4 text-center text-neutral-400">No NDR failure reasons in current report</div>
+                    ) : (
+                      reasonMetrics.slice(0, 5).map((r) => (
+                        <div key={r.reason} className="flex items-center justify-between p-2 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                          <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[220px]">{r.reason}</span>
+                          <span className="font-mono font-bold text-rose-600">{r.count} AWBs ({r.percentage}%)</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* SECTION 4: NAVIGATION TABS                                */}
+          {/* TAB: EMPLOYEE TABLE                                       */}
           {/* ========================================================= */}
-          <div className="space-y-4">
-            <div className="border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto no-scrollbar">
-              <nav className="flex space-x-1 min-w-max pb-1">
-                {[
-                  { id: 'OVERVIEW', label: 'Overview' },
-                  { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
-                  { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
-                  { id: 'REATTEMPT', label: 'Reattempt' },
-                  { id: 'COD', label: 'COD' },
-                  { id: 'PREPAID', label: 'Prepaid' },
-                  { id: 'CLIENT', label: `Client (${clientMetrics.length})` },
-                  { id: 'HISTORY', label: `Report History (${historyList.length})` },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setActiveTab(t.id as TabType)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      activeTab === t.id
-                        ? 'bg-brand-600 text-white shadow-md'
-                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </nav>
+          {activeTab === 'EMPLOYEE' && (
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm overflow-hidden text-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                    <tr>
+                      <th className="px-4 py-3">Rank</th>
+                      <th className="px-4 py-3">Employee Executive</th>
+                      <th className="px-4 py-3 font-bold">Total OFD</th>
+                      <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
+                      <th className="px-4 py-3">UNDEL</th>
+                      <th className="px-4 py-3 font-semibold text-blue-600">1st Attempt %</th>
+                      <th className="px-4 py-3 font-semibold text-purple-600">Reattempt %</th>
+                      <th className="px-4 py-3 font-black text-emerald-600">Overall %</th>
+                      <th className="px-4 py-3 text-right">COD Collection</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    {filteredEmployeeMetrics.map((e, idx) => (
+                      <tr
+                        key={e.employee_name}
+                        onClick={() => {
+                          setSelectedEmployee(e);
+                          setDrawerOpen(true);
+                        }}
+                        className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 cursor-pointer transition"
+                      >
+                        <td className="px-4 py-3 font-mono text-neutral-400 font-semibold">#{idx + 1}</td>
+                        <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-neutral-500" /> {e.employee_name}
+                        </td>
+                        <td className="px-4 py-3 font-bold font-mono">{e.total_ofd}</td>
+                        <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.total_delivered}</td>
+                        <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.total_undel}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-blue-600">{e.first_attempt_delivery_pct}%</td>
+                        <td className="px-4 py-3 font-mono font-bold text-purple-600">{e.reattempt_delivery_pct}%</td>
+                        <td className="px-4 py-3 font-mono font-black text-emerald-600">{e.overall_delivery_pct}%</td>
+                        <td className="px-4 py-3 font-mono font-semibold text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
+          )}
 
-            {/* TAB: EMPLOYEE REPORT */}
-            {activeTab === 'EMPLOYEE' && (
-              <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
+          {/* ========================================================= */}
+          {/* REQUIREMENT 6: REPORT HISTORY PERSISTENCE & ACTIONS       */}
+          {/* ========================================================= */}
+          {activeTab === 'HISTORY' && (
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm p-5 space-y-4 text-xs">
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                <span className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
+                  <History className="h-4 w-4 text-neutral-500" /> Permanent Saved DRS Report Snapshots ({historyList.length})
+                </span>
+
+                <button
+                  onClick={handleOpenComparison}
+                  className="px-3 py-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+                >
+                  <Columns className="h-3.5 w-3.5" /> Compare 2 Snapshots
+                </button>
+              </div>
+
+              {historyList.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500">No report snapshots saved yet. Upload a DRS report to create automatic snapshots.</div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                    <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
                       <tr>
-                        <th className="px-4 py-3">Rank</th>
-                        <th className="px-4 py-3">Employee</th>
-                        <th className="px-4 py-3 font-bold">Total OFD</th>
+                        <th className="px-4 py-3">Report Date</th>
+                        <th className="px-4 py-3">Hub</th>
+                        <th className="px-4 py-3">Client</th>
+                        <th className="px-4 py-3 font-bold">OFD</th>
                         <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
-                        <th className="px-4 py-3">UNDEL</th>
-                        <th className="px-4 py-3 font-semibold text-blue-600">First Attempt %</th>
-                        <th className="px-4 py-3 font-semibold text-purple-600">Reattempt %</th>
-                        <th className="px-4 py-3 font-black text-emerald-600">Overall %</th>
-                        <th className="px-4 py-3 text-right">COD Amount (₹)</th>
-                        <th className="px-4 py-3 text-right">Prepaid</th>
+                        <th className="px-4 py-3 font-black text-emerald-600">Delivery %</th>
+                        <th className="px-4 py-3">Uploaded By</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                      {filteredEmployeeMetrics.map((e, idx) => (
-                        <tr
-                          key={e.employee_name}
-                          onClick={() => {
-                            setSelectedEmployee(e);
-                            setDrawerOpen(true);
-                          }}
-                          className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 cursor-pointer transition"
-                        >
-                          <td className="px-4 py-3 font-mono font-bold text-neutral-400">#{idx + 1}</td>
-                          <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                            <User className="h-3.5 w-3.5 text-brand-600" /> {e.employee_name}
-                          </td>
-                          <td className="px-4 py-3 font-bold">{e.total_ofd}</td>
-                          <td className="px-4 py-3 font-bold text-emerald-600">{e.total_delivered}</td>
-                          <td className="px-4 py-3 font-semibold text-rose-600">{e.total_undel}</td>
-                          <td className="px-4 py-3 font-mono font-bold text-blue-600">{e.first_attempt_delivery_pct}%</td>
-                          <td className="px-4 py-3 font-mono font-bold text-purple-600">{e.reattempt_delivery_pct}%</td>
-                          <td className="px-4 py-3 font-mono font-black text-emerald-600">{e.overall_delivery_pct}%</td>
-                          <td className="px-4 py-3 font-mono font-bold text-right">₹{e.cod_value_total.toLocaleString()}</td>
-                          <td className="px-4 py-3 font-mono text-right">{e.prepaid_ofd} AWBs</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: REPORT HISTORY */}
-            {activeTab === 'HISTORY' && (
-              <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs space-y-4 p-4">
-                <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
-                  <span className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
-                    <History className="h-4 w-4 text-brand-600" /> Permanent Database Report History ({historyList.length})
-                  </span>
-
-                  <button
-                    onClick={handleOpenComparison}
-                    className="px-3.5 py-1.5 rounded-xl bg-brand-600 text-white font-bold transition shadow-md active:scale-95 flex items-center gap-1.5"
-                  >
-                    <Columns className="h-4 w-4" /> Compare 2 Reports
-                  </button>
-                </div>
-
-                {historyList.length === 0 ? (
-                  <div className="p-8 text-center text-neutral-500">No report history saved yet. Upload a DRS report to create automatic snapshots.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
-                        <tr>
-                          <th className="px-4 py-3">Report Date</th>
-                          <th className="px-4 py-3">Upload Time</th>
-                          <th className="px-4 py-3">Hub</th>
-                          <th className="px-4 py-3">Client</th>
-                          <th className="px-4 py-3 font-bold">Total OFD</th>
-                          <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
-                          <th className="px-4 py-3 font-black text-emerald-600">Delivery %</th>
-                          <th className="px-4 py-3">Uploaded By</th>
-                          <th className="px-4 py-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                        {historyList.map((h) => (
-                          <tr key={h.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
-                            <td className="px-4 py-3 font-bold font-mono text-neutral-900 dark:text-neutral-100">{h.reportDate}</td>
-                            <td className="px-4 py-3 font-mono text-neutral-500">{h.uploadTimestamp}</td>
-                            <td className="px-4 py-3 font-medium">{h.hubName}</td>
-                            <td className="px-4 py-3 font-medium">{h.clientName}</td>
-                            <td className="px-4 py-3 font-bold">{h.totalOfd}</td>
-                            <td className="px-4 py-3 font-bold text-emerald-600">{h.totalDelivered}</td>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {historyList.map((h) => {
+                        const isActive = activeItem?.id === h.id;
+                        return (
+                          <tr
+                            key={h.id}
+                            className={`hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition ${
+                              isActive ? 'bg-neutral-100/60 dark:bg-neutral-800/60 font-semibold' : ''
+                            }`}
+                          >
+                            <td className="px-4 py-3 font-bold font-mono text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                              {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                              {h.reportDate}
+                            </td>
+                            <td className="px-4 py-3">{h.hubName}</td>
+                            <td className="px-4 py-3">{h.clientName}</td>
+                            <td className="px-4 py-3 font-bold font-mono">{h.totalOfd}</td>
+                            <td className="px-4 py-3 font-bold font-mono text-emerald-600">{h.totalDelivered}</td>
                             <td className="px-4 py-3 font-mono font-black text-emerald-600">{h.overallDeliveryPct}%</td>
-                            <td className="px-4 py-3">{h.uploadedBy}</td>
+                            <td className="px-4 py-3 text-neutral-500">{h.uploadedBy}</td>
                             <td className="px-4 py-3 text-right flex items-center justify-end gap-1.5">
                               <button
-                                onClick={() => handleReopenHistory(h)}
-                                className="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-bold transition active:scale-95"
+                                onClick={() => handleOpenHistoryItem(h)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                                  isActive
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90'
+                                }`}
                               >
-                                Open
+                                {isActive ? 'Active' : 'Open'}
                               </button>
                               <button
-                                onClick={() => handleExportHistoryExcel(h)}
+                                onClick={() => handleExportExcel()}
                                 className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                                 title="Export Excel"
                               >
-                                <FileSpreadsheet className="h-4 w-4" />
+                                <FileSpreadsheet className="h-3.5 w-3.5" />
                               </button>
                               <button
-                                onClick={() => handleExportHistoryPDF(h)}
+                                onClick={() => handleExportPDF()}
                                 className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                 title="Export PDF"
                               >
-                                <FileText className="h-4 w-4" />
+                                <FileText className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteHistory(h.id)}
                                 className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                 title="Delete"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* OTHER TABS FALLBACK (CLIENT, COD, PREPAID, FIRST ATTEMPT, REATTEMPT) */}
+          {['FIRST_ATTEMPT', 'REATTEMPT', 'COD', 'PREPAID', 'CLIENT'].includes(activeTab) && (
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm p-6 text-xs space-y-3">
+              <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
+                {activeTab} Breakdown View ({filteredUniqueRows.length} AWBs)
+              </h3>
+              <p className="text-neutral-500">
+                Consuming unified active report payload without recalculating raw data.
+              </p>
+              <div className="pt-2 font-mono text-neutral-600 dark:text-neutral-400">
+                Active Report ID: <span className="font-bold text-neutral-900 dark:text-neutral-100">{activeItem?.id}</span> | OFD: {filteredSummary?.totalOfd} | Delivered: {filteredSummary?.totalDelivered}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
 
-      {/* ========================================================= */}
-      {/* COMPARE REPORTS MODAL                                      */}
-      {/* ========================================================= */}
+      {/* COMPARE MODAL */}
       {compareModalOpen && compareReportA && compareReportB && comparisonResult && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden space-y-4 p-6">
+          <div className="bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-3xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
-              <div>
-                <h2 className="text-lg font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                  <Columns className="h-5 w-5 text-brand-600" /> Side-by-Side Report Comparison
-                </h2>
-                <p className="text-xs text-neutral-500">Performance variance & trend analysis between two DRS snapshots</p>
-              </div>
-              <button
-                onClick={() => setCompareModalOpen(false)}
-                className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs font-bold"
-              >
+              <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Columns className="h-4 w-4 text-brand-600" /> Side-by-Side Snapshot Comparison
+              </h2>
+              <button onClick={() => setCompareModalOpen(false)} className="px-3 py-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs font-bold">
                 Close
               </button>
             </div>
-
-            {/* Select Snapshots to compare */}
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
-                <label className="font-bold text-neutral-500 block mb-1">Baseline Report (A)</label>
+                <label className="font-bold text-neutral-500 block mb-1">Baseline Snapshot (A)</label>
                 <select
                   value={compareReportA.id}
                   onChange={(e) => {
                     const sel = historyList.find((h) => h.id === e.target.value);
                     if (sel && compareReportB) handleTriggerCompare(sel, compareReportB);
                   }}
-                  className="w-full p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-semibold"
+                  className="w-full p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-semibold"
                 >
                   {historyList.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.reportDate} - {h.fileName} ({h.overallDeliveryPct}%)
-                    </option>
+                    <option key={h.id} value={h.id}>{h.reportDate} - {h.fileName} ({h.overallDeliveryPct}%)</option>
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="font-bold text-neutral-500 block mb-1">Comparison Report (B)</label>
+                <label className="font-bold text-neutral-500 block mb-1">Comparison Snapshot (B)</label>
                 <select
                   value={compareReportB.id}
                   onChange={(e) => {
                     const sel = historyList.find((h) => h.id === e.target.value);
                     if (compareReportA && sel) handleTriggerCompare(compareReportA, sel);
                   }}
-                  className="w-full p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-semibold"
+                  className="w-full p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 font-semibold"
                 >
                   {historyList.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.reportDate} - {h.fileName} ({h.overallDeliveryPct}%)
-                    </option>
+                    <option key={h.id} value={h.id}>{h.reportDate} - {h.fileName} ({h.overallDeliveryPct}%)</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Comparison Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-2">
-              <div className="p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
-                <span className="text-neutral-500 block font-semibold">OFD Change</span>
-                <span className="text-xl font-black text-neutral-900 dark:text-neutral-100">
-                  {comparisonResult.ofdChange >= 0 ? `+${comparisonResult.ofdChange}` : comparisonResult.ofdChange}
-                </span>
-                <span className="text-[10px] text-neutral-400 block font-mono">{comparisonResult.ofdChangePct}% Variance</span>
+            <div className="grid grid-cols-4 gap-3 text-xs pt-2">
+              <div className="p-3.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80">
+                <span className="text-neutral-500 block">OFD Change</span>
+                <span className="text-lg font-bold font-mono">{comparisonResult.ofdChange >= 0 ? `+${comparisonResult.ofdChange}` : comparisonResult.ofdChange}</span>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-emerald-700 dark:text-emerald-400 block font-bold">Delivered Change</span>
-                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                  {comparisonResult.delChange >= 0 ? `+${comparisonResult.delChange}` : comparisonResult.delChange}
-                </span>
-                <span className="text-[10px] text-emerald-600 block font-semibold">{comparisonResult.delChangePct}% DEL Variance</span>
+              <div className="p-3.5 rounded-xl bg-emerald-500/10">
+                <span className="text-emerald-700 dark:text-emerald-400 block font-semibold">Delivered Change</span>
+                <span className="text-lg font-bold font-mono text-emerald-600">{comparisonResult.delChange >= 0 ? `+${comparisonResult.delChange}` : comparisonResult.delChange}</span>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-brand-500/10 border border-brand-500/20">
-                <span className="text-brand-700 dark:text-brand-400 block font-bold">Delivery Rate Shift</span>
-                <span className="text-xl font-black text-brand-600 dark:text-brand-400">
-                  {comparisonResult.deliveryRateChange >= 0 ? `+${comparisonResult.deliveryRateChange}%` : `${comparisonResult.deliveryRateChange}%`}
-                </span>
-                <span className="text-[10px] text-brand-600 block font-bold">Overall Efficiency</span>
+              <div className="p-3.5 rounded-xl bg-blue-500/10">
+                <span className="text-blue-700 dark:text-blue-400 block font-semibold">Rate Shift</span>
+                <span className="text-lg font-bold font-mono text-blue-600">{comparisonResult.deliveryRateChange >= 0 ? `+${comparisonResult.deliveryRateChange}%` : `${comparisonResult.deliveryRateChange}%`}</span>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                <span className="text-purple-700 dark:text-purple-400 block font-bold">COD Amount Shift</span>
-                <span className="text-lg font-black text-purple-600 dark:text-purple-400 font-mono">
-                  ₹{comparisonResult.codAmountChange.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-purple-600 block font-semibold">Cash Collection Variance</span>
+              <div className="p-3.5 rounded-xl bg-purple-500/10">
+                <span className="text-purple-700 dark:text-purple-400 block font-semibold">COD Amount Shift</span>
+                <span className="text-lg font-bold font-mono text-purple-600">₹{comparisonResult.codAmountChange.toLocaleString()}</span>
               </div>
             </div>
           </div>
