@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { exportDRSPerformanceWorkbook } from './drsExcelExporter';
-import { clearActiveReportId, fetchDRSHistoryFromDB } from './drsHistoryManager';
+import {
+  clearActiveReportId,
+  clearLocalDRSHistory,
+  fetchDRSHistoryFromDB,
+  removeLocalDRSHistoryItem,
+} from './drsHistoryManager';
 import { DRSReportHistoryItem } from '@/types/drs';
 
 export interface ResetAuditLogItem {
@@ -86,7 +91,8 @@ export async function resetCurrentDRSReport(
       })
       .eq('id', reportItem.id);
 
-    // 4. Clear active report state if this was active
+    // 4. Clear active report state and remove from local history
+    removeLocalDRSHistoryItem(reportItem.id);
     clearActiveReportId();
 
     // 5. Insert Reset Audit Log
@@ -164,6 +170,7 @@ export async function deleteSelectedDRSReports(
       })
       .in('id', reportIds);
 
+    reportIds.forEach((id) => removeLocalDRSHistoryItem(id));
     clearActiveReportId();
 
     // Insert Audit Log
@@ -229,6 +236,7 @@ export async function deleteAllDRSReports(
     const { count: histCount } = await historyQuery;
     totalReportsDeleted = histCount || 0;
 
+    clearLocalDRSHistory();
     clearActiveReportId();
 
     // Audit Log
@@ -317,6 +325,7 @@ export async function restoreReportFromRecycleBin(
       })
       .or(`drs_code.eq.${target.file_name},drs_date.eq.${target.report_date}`);
 
+    await fetchDRSHistoryFromDB();
     return true;
   } catch (err) {
     console.error('Failed to restore report from Recycle Bin:', err);

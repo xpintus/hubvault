@@ -141,6 +141,10 @@ export default function DRSPerformanceReport() {
           setActiveItem(activeReport);
           setSummary(activeReport.summary);
           setUniqueRows(activeReport.rows);
+        } else {
+          setActiveItem(null);
+          setSummary(null);
+          setUniqueRows([]);
         }
       })
       .catch((err) => {

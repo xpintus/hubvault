@@ -47,7 +47,8 @@ export async function fetchNDRShipments(
       hub:hub_id(id, name, code)
     `,
       { count: 'exact' }
-    );
+    )
+    .is('deleted_at', null);
 
   if (hubId && hubId !== 'ALL') {
     query = query.eq('hub_id', hubId);
@@ -659,7 +660,10 @@ export async function fetchNDRSupervisorActions(shipmentId: string): Promise<NDR
 }
 
 export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics> {
-  let query = supabase.from('ndr_shipments').select('ndr_workflow_status, shipment_status_current, created_at, updated_at, total_attempts, original_ndr_reason, normalized_ndr_reason');
+  let query = supabase
+    .from('ndr_shipments')
+    .select('ndr_workflow_status, shipment_status_current, created_at, updated_at, total_attempts, original_ndr_reason, normalized_ndr_reason')
+    .is('deleted_at', null);
 
   if (hubId && hubId !== 'ALL') {
     query = query.eq('hub_id', hubId);

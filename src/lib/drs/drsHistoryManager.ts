@@ -44,12 +44,36 @@ export function saveLocalDRSHistoryItem(
   }
 }
 
+export function removeLocalDRSHistoryItem(id: string): DRSReportHistoryItem[] {
+  try {
+    const history = getLocalDRSHistory().filter((h) => h.id !== id);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    }
+    return history;
+  } catch (err) {
+    console.error('Failed to remove local DRS report history item:', err);
+    return getLocalDRSHistory();
+  }
+}
+
+export function clearLocalDRSHistory(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch (err) {
+    console.error('Failed to clear local DRS report history:', err);
+  }
+}
+
 export async function fetchDRSHistoryFromDB(): Promise<DRSReportHistoryItem[]> {
   const localHistory = getLocalDRSHistory();
   try {
     const { data, error } = await supabase
       .from('drs_report_history')
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -100,12 +124,12 @@ export async function fetchDRSHistoryFromDB(): Promise<DRSReportHistoryItem[]> {
       };
     });
 
-    // Merge DB history with LocalStorage history to eliminate gaps
-    const mergedMap = new Map<string, DRSReportHistoryItem>();
-    localHistory.forEach((h) => mergedMap.set(h.id, h));
-    mapped.forEach((h) => mergedMap.set(h.id, h));
+    // Update LocalStorage cache with current active DB history
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+    }
 
-    return Array.from(mergedMap.values()).slice(0, 50);
+    return mapped;
   } catch (err) {
     console.error('Failed to fetch DRS history from DB:', err);
     return localHistory;
@@ -208,23 +232,35 @@ export async function saveDRSHistorySnapshot(
 }
 
 export async function deleteDRSHistoryItem(id: string): Promise<DRSReportHistoryItem[]> {
-  const localHistory = getLocalDRSHistory().filter((h) => h.id !== id);
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localHistory));
+  removeLocalDRSHistoryItem(id);
+  if (getActiveReportId() === id) {
+    clearActiveReportId();
   }
 
   try {
-    const { error } = await supabase.from('drs_report_history').delete().eq('id', id);
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from('drs_report_history')
+      .update({ deleted_at: nowIso })
+      .eq('id', id);
+
     if (error) {
       console.warn('Supabase DRS Delete Warning:', error.message);
+    }
+
+    // Soft delete linked NDR shipments
+    const { data: target } = await supabase.from('drs_report_history').select('file_name, report_date').eq('id', id).single();
+    if (target) {
+      await supabase
+        .from('ndr_shipments')
+        .update({ deleted_at: nowIso })
+        .or(`drs_code.eq.${target.file_name},drs_date.eq.${target.report_date}`);
     }
   } catch (err) {
     console.error('Failed to delete DRS history snapshot from Supabase:', err);
   }
 
-  const dbHistory = await fetchDRSHistoryFromDB();
-  if (dbHistory && dbHistory.length > 0) return dbHistory;
-  return localHistory;
+  return await fetchDRSHistoryFromDB();
 }
 
 export const ACTIVE_REPORT_ID_KEY = 'hubvault_active_drs_report_id_v5';
@@ -263,14 +299,31 @@ export async function loadActiveDRSReport(
 ): Promise<{ activeReport: DRSReportHistoryItem | null; historyList: DRSReportHistoryItem[] }> {
   const historyList = await fetchDRSHistoryFromDB();
   if (historyList.length === 0) {
+    clearActiveReportId();
     return { activeReport: null, historyList: [] };
   }
 
   const targetId = preferredId || getActiveReportId();
-  let activeReport = targetId ? historyList.find((h) => h.id === targetId) || historyList[0] : historyList[0];
+  let activeReport: DRSReportHistoryItem | null = null;
+
+  if (targetId) {
+    const found = historyList.find((h) => h.id === targetId);
+    if (found) {
+      activeReport = found;
+    } else {
+      clearActiveReportId();
+      if (!preferredId && historyList.length > 0) {
+        activeReport = historyList[0];
+      }
+    }
+  } else {
+    activeReport = historyList[0];
+  }
 
   if (activeReport && activeReport.id) {
     setActiveReportId(activeReport.id);
+  } else {
+    clearActiveReportId();
   }
 
   return { activeReport, historyList };
