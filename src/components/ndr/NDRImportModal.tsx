@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { fetchExistingAWBMap, importNDRBatch } from '@/lib/ndr/ndrService';
 import { downloadNDRImportTemplate, parseNDRExcelFile } from '@/lib/ndr/ndrExcel';
 import { NDRExcelImportPreview } from '@/types/ndr';
-import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, RefreshCw, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Download, FileSpreadsheet, RefreshCw, UploadCloud, X } from 'lucide-react';
 
 interface NDRImportModalProps {
   isOpen: boolean;
@@ -14,38 +14,104 @@ interface NDRImportModalProps {
 
 export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose, onSuccess, hubId }) => {
   const { profile } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [progressMsg, setProgressMsg] = useState<string>('Reading file...');
   const [preview, setPreview] = useState<NDRExcelImportPreview | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   if (!isOpen) return null;
+
+  const validateFile = (selectedFile: File): string | null => {
+    if (!selectedFile) return 'No file selected.';
+
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileNameLower = selectedFile.name.toLowerCase();
+    const hasValidExt = validExtensions.some((ext) => fileNameLower.endsWith(ext));
+
+    if (!hasValidExt) {
+      return 'Invalid file type. Please upload a valid .xlsx, .xls, or .csv file.';
+    }
+
+    if (selectedFile.size === 0) {
+      return 'Selected file is empty (0 bytes).';
+    }
+
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    if (selectedFile.size > MAX_SIZE) {
+      return 'File size exceeds maximum limit of 50MB.';
+    }
+
+    return null;
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
     await processFile(selected);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      await processFile(droppedFile);
+    }
   };
 
   const processFile = async (f: File) => {
+    setErrorMsg(null);
+    setPreview(null);
+
+    const validationErr = validateFile(f);
+    if (validationErr) {
+      setErrorMsg(validationErr);
+      return;
+    }
+
+    if (!hubId) {
+      setErrorMsg('Please select a hub before importing the NDR report.');
+      return;
+    }
+
     setFile(f);
     setLoading(true);
-    setErrorMsg(null);
+    setProgressMsg('Reading file...');
+
     try {
-      // First quick pass to extract AWBs
+      setProgressMsg('Validating rows & headers...');
       const initialPreview = await parseNDRExcelFile(f);
       const awbList = initialPreview.validRows.map((r) => r.waybill_no).filter(Boolean);
 
-      // Fetch existing AWBs from DB for accurate duplication analysis
+      setProgressMsg('Checking existing AWBs in database...');
       const existingMap = await fetchExistingAWBMap(awbList, hubId);
       const existingAWBsSet = new Set(existingMap.keys());
 
-      // Second pass with DB context
+      setProgressMsg('Generating preview summary...');
       const fullPreview = await parseNDRExcelFile(f, existingAWBsSet);
       setPreview(fullPreview);
     } catch (err: any) {
-      console.error('Failed to parse NDR Excel:', err);
+      console.error('Failed to parse NDR file:', err);
       setErrorMsg(err.message || 'Failed to parse Excel file. Please ensure valid XLSX/XLS/CSV format.');
     } finally {
       setLoading(false);
@@ -54,22 +120,32 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
 
   const handleConfirmImport = async () => {
     if (!file || !preview || preview.readyToImportCount === 0) return;
+
+    if (!hubId) {
+      setErrorMsg('Please select a hub before importing the NDR report.');
+      return;
+    }
+
     setImporting(true);
     setErrorMsg(null);
+    setProgressMsg('Starting shipment import...');
+
     try {
+      const allRowsToProcess = [...preview.validRows, ...preview.invalidRows, ...preview.duplicateRows];
       await importNDRBatch(
         file.name,
-        [...preview.validRows, ...preview.invalidRows, ...preview.duplicateRows],
+        allRowsToProcess,
         hubId,
         profile?.id || null,
         profile?.name || 'Operations Admin',
-        profile?.role || 'hub_admin'
+        profile?.role || 'hub_admin',
+        (msg) => setProgressMsg(msg)
       );
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Import failed:', err);
-      setErrorMsg(err.message || 'Failed to import NDR shipments. Please try again.');
+      console.error('NDR Import Execution Error:', err);
+      setErrorMsg(err.message || 'Failed to import NDR shipments. Please check database permissions or migration status.');
     } finally {
       setImporting(false);
     }
@@ -100,9 +176,12 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {errorMsg && (
-            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800/40 text-rose-600 dark:text-rose-400 text-sm flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800/40 text-rose-600 dark:text-rose-400 text-sm flex items-start gap-2.5">
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold">Import Error</p>
+                <p className="text-xs mt-0.5">{errorMsg}</p>
+              </div>
             </div>
           )}
 
@@ -121,24 +200,39 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
           </div>
 
           {/* File Drag Drop Zone */}
-          <label className="border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-brand-500 dark:hover:border-brand-400 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition bg-neutral-50/50 dark:bg-neutral-900/20 group">
+          <label
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition bg-neutral-50/50 dark:bg-neutral-900/20 group ${
+              isDragging
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-900/20'
+                : 'border-neutral-300 dark:border-neutral-700 hover:border-brand-500 dark:hover:border-brand-400'
+            }`}
+          >
             <UploadCloud className="h-10 w-10 text-neutral-400 group-hover:text-brand-500 transition mb-3" />
             <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
               {file ? file.name : 'Click or drop NDR Excel / CSV file here'}
             </p>
-            <p className="text-xs text-neutral-500 mt-1">Supports .xlsx, .xls, .csv files up to 50,000+ rows</p>
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileChange} className="hidden" />
+            <p className="text-xs text-neutral-500 mt-1">Supports .xlsx, .xls, .csv files up to 50MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </label>
 
-          {loading && (
+          {(loading || importing) && (
             <div className="py-8 flex flex-col items-center justify-center gap-3 text-neutral-500">
               <RefreshCw className="h-8 w-8 animate-spin text-brand-600" />
-              <p className="text-sm font-medium">Analyzing NDR file and validating AWBs...</p>
+              <p className="text-sm font-medium">{progressMsg}</p>
             </div>
           )}
 
           {/* Validation Breakdown Preview Cards */}
-          {preview && !loading && (
+          {preview && !loading && !importing && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
                 Import Validation Summary
@@ -193,13 +287,19 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
                         <td className="px-3 py-2 font-semibold text-neutral-900 dark:text-neutral-100">{r.waybill_no}</td>
                         <td className="px-3 py-2">{r.consignee}</td>
                         <td className="px-3 py-2">{r.Employee_name}</td>
-                        <td className="px-3 py-2 font-mono">{r.delivery_pincode}</td>
+                        <td className="px-3 py-2 font-mono">{r.delivery_pincode || '-'}</td>
                         <td className="px-3 py-2 font-semibold">₹{r.amount_payable}</td>
                         <td className="px-3 py-2 max-w-[180px] truncate text-neutral-500">{r.reason}</td>
                         <td className="px-3 py-2">
-                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Ready
-                          </span>
+                          {r.warnings && r.warnings.length > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium" title={r.warnings.join(', ')}>
+                              <AlertTriangle className="h-3.5 w-3.5" /> Warning
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Ready
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -214,12 +314,13 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition"
+            disabled={importing}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            disabled={!preview || preview.readyToImportCount === 0 || importing}
+            disabled={!preview || preview.readyToImportCount === 0 || loading || importing}
             onClick={handleConfirmImport}
             className="px-5 py-2 rounded-xl text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white disabled:opacity-50 transition shadow-glow flex items-center gap-2"
           >

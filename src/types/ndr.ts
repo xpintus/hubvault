@@ -113,6 +113,8 @@ export interface NDRImportBatch {
   duplicate_rows: number;
   invalid_rows: number;
   ready_to_import: number;
+  status?: 'processing' | 'completed' | 'failed';
+  error_message?: string | null;
   hub_id: string | null;
   created_at: string;
 }
@@ -238,6 +240,7 @@ export interface ParsedNDRExcelRow {
   drs_status: string;
   ndr_instruction_received: string;
   errors: string[];
+  warnings: string[];
   isDuplicateInFile: boolean;
   isExistingInDB: boolean;
 }
@@ -247,6 +250,8 @@ export interface NDRExcelImportPreview {
   invalidRows: ParsedNDRExcelRow[];
   duplicateRows: ParsedNDRExcelRow[];
   existingRows: ParsedNDRExcelRow[];
+  warningRows: ParsedNDRExcelRow[];
+  missingAwbRows: ParsedNDRExcelRow[];
   totalRows: number;
   readyToImportCount: number;
 }

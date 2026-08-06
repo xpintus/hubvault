@@ -1,46 +1,164 @@
+import * as XLSX from 'xlsx';
 import { NDRExcelImportPreview, NDRShipment, ParsedNDRExcelRow } from '@/types/ndr';
 
-export function normalizePincode(raw: unknown): string {
-  if (raw == null || raw === '') return '';
-  const str = String(raw).trim();
-  // Remove commas, spaces, trailing zeroes if parsed as float
-  const cleaned = str.replace(/[,. \s]/g, '');
-  return cleaned;
+export function normalizeHeader(value: unknown): string {
+  return String(value ?? '')
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\r\n]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '');
 }
 
-export function parseNDRNumber(raw: unknown): number {
-  if (raw == null || raw === '') return 0;
-  const cleaned = String(raw).replace(/[^0-9.-]/g, '');
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
+export const HEADER_ALIASES: Record<string, string> = {
+  waybill_no: 'waybill_no',
+  waybill: 'waybill_no',
+  waybill_number: 'waybill_no',
+  awb: 'waybill_no',
+  awb_number: 'waybill_no',
+  awb_no: 'waybill_no',
+
+  drs_code: 'drs_code',
+  drs: 'drs_code',
+  drs_no: 'drs_code',
+  drs_number: 'drs_code',
+
+  employee_name: 'employee_name',
+  employee: 'employee_name',
+  delivery_executive: 'employee_name',
+  executive_name: 'employee_name',
+  de_name: 'employee_name',
+
+  partner_name: 'partner_name',
+  partner: 'partner_name',
+  vendor: 'partner_name',
+  vendor_name: 'partner_name',
+
+  location: 'location',
+  hub_location: 'location',
+  hub: 'location',
+
+  city: 'city',
+  customer_name: 'customer_name',
+  client_name: 'customer_name',
+  client: 'customer_name',
+
+  state: 'state',
+  shipment_status: 'shipment_status',
+  status: 'shipment_status',
+
+  amount_payable: 'amount_payable',
+  amount: 'amount_payable',
+  cod_amount: 'amount_payable',
+  payable_amount: 'amount_payable',
+
+  payment_type: 'payment_type',
+  pay_type: 'payment_type',
+  mode: 'payment_type',
+  payment_mode: 'payment_type',
+
+  pod_date: 'pod_date',
+  '1st_attempt_date': 'first_attempt_date',
+  first_attempt_date: 'first_attempt_date',
+
+  last_attempt_date: 'last_attempt_date',
+
+  total_attemps: 'total_attempts',
+  total_attempts: 'total_attempts',
+  attempts: 'total_attempts',
+
+  consignee: 'consignee',
+  consignee_name: 'consignee',
+  customer: 'consignee',
+
+  delivery_pincode: 'delivery_pincode',
+  pincode: 'delivery_pincode',
+  pin_code: 'delivery_pincode',
+  pin: 'delivery_pincode',
+
+  is_mobility: 'is_mobility',
+  mobility: 'is_mobility',
+
+  reason: 'reason',
+  original_ndr_reason: 'reason',
+  ndr_reason: 'reason',
+
+  otp_details: 'otp_details',
+  otp_status: 'otp_details',
+  otp: 'otp_details',
+
+  drs_date: 'drs_date',
+  drs_status: 'drs_status',
+  ndr_instruction_received: 'ndr_instruction_received',
+};
+
+export function normalizeAwb(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '');
 }
 
-export function parseNDRDate(raw: unknown): string | null {
-  if (raw == null || raw === '') return null;
-  if (raw instanceof Date) {
-    if (isNaN(raw.getTime())) return null;
-    return raw.toISOString();
-  }
-  const s = String(raw).trim();
-  if (!s) return null;
-  
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d.toISOString();
-  }
-  // DD/MM/YYYY or DD-MM-YYYY
-  const dmY = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/);
-  if (dmY) {
-    const day = parseInt(dmY[1], 10);
-    const month = parseInt(dmY[2], 10) - 1;
-    const year = parseInt(dmY[3], 10);
-    const d = new Date(Date.UTC(year, month, day));
-    return isNaN(d.getTime()) ? null : d.toISOString();
+export function normalizeAmount(value: unknown): number {
+  const cleaned = String(value ?? '')
+    .replace(/[₹,\s]/g, '')
+    .trim();
+  const amount = Number(cleaned);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+export function normalizePincode(value: unknown): string {
+  return String(value ?? '')
+    .replace(/[^\d]/g, '')
+    .trim();
+}
+
+export function parseReportDate(value: unknown): string | null {
+  if (value == null || value === '') return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
   }
 
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d.toISOString();
+  if (typeof value === 'number') {
+    try {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (!parsed) return null;
+      const date = new Date(
+        parsed.y,
+        parsed.m - 1,
+        parsed.d,
+        parsed.H ?? 0,
+        parsed.M ?? 0,
+        parsed.S ?? 0
+      );
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    } catch {
+      return null;
+    }
+  }
+
+  const text = String(value).trim();
+  if (!text) return null;
+
+  // Pattern: D-M-YYYY, HH:mm or D/M/YYYY HH:mm or D-M-YYYY
+  const match = text.match(
+    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:,\s*|\s+)?(\d{1,2})?:?(\d{2})?$/
+  );
+
+  if (match) {
+    const [, day, month, year, hour = '0', minute = '0'] = match;
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute)
+    );
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  const d = new Date(text);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 /**
@@ -50,71 +168,112 @@ export async function parseNDRExcelFile(
   file: File,
   existingAWBsInDB: Set<string> = new Set()
 ): Promise<NDRExcelImportPreview> {
-  const XLSX = await import('xlsx');
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    return {
-      validRows: [],
-      invalidRows: [],
-      duplicateRows: [],
-      existingRows: [],
-      totalRows: 0,
-      readyToImportCount: 0,
-    };
+  const workbook = XLSX.read(buffer, {
+    type: 'array',
+    cellDates: false,
+    raw: false,
+  });
+
+  const firstSheetName = workbook.SheetNames.find((name) => {
+    const sheet = workbook.Sheets[name];
+    if (!sheet) return false;
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    return Array.isArray(rows) && rows.length > 1;
+  });
+
+  if (!firstSheetName) {
+    throw new Error('No readable worksheet or shipment rows were found in this file.');
   }
 
-  const worksheet = workbook.Sheets[sheetName];
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+  const worksheet = workbook.Sheets[firstSheetName];
+  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: '',
+    raw: false,
+  });
+
+  if (!rawRows || rawRows.length === 0) {
+    throw new Error('No readable shipment rows were found in this file.');
+  }
+
+  // Header normalization and mapping verification
+  const sampleRawRow = rawRows[0] || {};
+  const rawKeys = Object.keys(sampleRawRow);
+  const normalizedKeyMap = new Map<string, string>(); // rawKey -> canonicalKey
+
+  let hasWaybillHeader = false;
+
+  rawKeys.forEach((key) => {
+    const norm = normalizeHeader(key);
+    const canonical = HEADER_ALIASES[norm] || norm;
+    normalizedKeyMap.set(key, canonical);
+    if (canonical === 'waybill_no') {
+      hasWaybillHeader = true;
+    }
+  });
+
+  if (!hasWaybillHeader) {
+    throw new Error('Required AWB / waybill_no header missing in file.');
+  }
 
   const validRows: ParsedNDRExcelRow[] = [];
   const invalidRows: ParsedNDRExcelRow[] = [];
   const duplicateRows: ParsedNDRExcelRow[] = [];
   const existingRows: ParsedNDRExcelRow[] = [];
+  const warningRows: ParsedNDRExcelRow[] = [];
+  const missingAwbRows: ParsedNDRExcelRow[] = [];
 
   const seenAWBsInFile = new Set<string>();
 
   rawRows.forEach((row, idx) => {
     const errors: string[] = [];
+    const warnings: string[] = [];
+    const mapped: Record<string, unknown> = {};
 
-    // Map exact Excel columns with fallback key matching
-    const waybill_no = String(
-      row['waybill_no'] ?? row['Waybill No'] ?? row['waybill'] ?? row['AWB'] ?? row['awb_number'] ?? ''
-    ).trim();
+    // Map row values using normalized keys
+    Object.entries(row).forEach(([rawKey, val]) => {
+      const canonical = normalizedKeyMap.get(rawKey) || normalizeHeader(rawKey);
+      mapped[canonical] = val;
+    });
 
-    const drs_code = String(row['drs_code'] ?? row['DRS Code'] ?? '').trim();
-    const Employee_name = String(row['Employee_name'] ?? row['Employee Name'] ?? row['Delivery Executive'] ?? '').trim();
-    const partner_name = String(row['partner_name'] ?? row['Partner Name'] ?? row['Vendor'] ?? '').trim();
-    const LOCATION = String(row['LOCATION'] ?? row['Location'] ?? row['Hub Location'] ?? '').trim();
-    const city = String(row['city'] ?? row['City'] ?? '').trim();
-    const customer_name = String(row['customer_name'] ?? row['Customer Name'] ?? row['Client Name'] ?? '').trim();
-    const state = String(row['state'] ?? row['State'] ?? '').trim();
-    const shipment_status = String(row['shipment_status'] ?? row['Shipment Status'] ?? 'UNDEL').trim();
-    const amount_payable = parseNDRNumber(row['amount_payable'] ?? row['Amount Payable'] ?? row['COD Amount']);
-    const payment_type = String(row['payment_type'] ?? row['Payment Type'] ?? 'COD').trim();
-    const POD_date = parseNDRDate(row['POD_date'] ?? row['POD Date']) ?? '';
-    const first_attempt_date = parseNDRDate(row['1st_attempt_date'] ?? row['First Attempt Date']) ?? '';
-    const last_attempt_date = parseNDRDate(row['last_attempt_date'] ?? row['Last Attempt Date']) ?? '';
-    const total_attemps = parseNDRNumber(row['total_attemps'] ?? row['total_attempts'] ?? row['Total Attempts']) || 1;
-    const consignee = String(row['consignee'] ?? row['Consignee'] ?? row['Customer'] ?? '').trim();
-    const delivery_pincode = normalizePincode(row['delivery_pincode'] ?? row['Pincode'] ?? row['delivery_pincode_text']);
-    const is_mobility = String(row['is_mobility'] ?? row['Is Mobility'] ?? '').trim();
-    const reason = String(row['reason'] ?? row['Original NDR Reason'] ?? row['Reason'] ?? '').trim();
-    const otp_details = String(row['otp_details'] ?? row['OTP Status'] ?? '').trim();
-    const drs_date = parseNDRDate(row['drs_date'] ?? row['DRS Date']) ?? '';
-    const drs_status = String(row['drs_status'] ?? row['DRS Status'] ?? '').trim();
-    const ndr_instruction_received = String(row['ndr_instruction_received'] ?? '').trim();
+    const waybill_no = normalizeAwb(mapped['waybill_no']);
+    const drs_code = String(mapped['drs_code'] ?? '').trim();
+    const Employee_name = String(mapped['employee_name'] ?? '').trim();
+    const partner_name = String(mapped['partner_name'] ?? '').trim();
+    const LOCATION = String(mapped['location'] ?? '').trim();
+    const city = String(mapped['city'] ?? '').trim();
+    const customer_name = String(mapped['customer_name'] ?? '').trim();
+    const state = String(mapped['state'] ?? '').trim();
+    const shipment_status = String(mapped['shipment_status'] ?? 'UNDEL').trim();
+    const amount_payable = normalizeAmount(mapped['amount_payable']);
+    const payment_type = String(mapped['payment_type'] ?? 'COD').trim();
+    const POD_date = parseReportDate(mapped['pod_date']) ?? '';
+    const first_attempt_date = parseReportDate(mapped['first_attempt_date']) ?? '';
+    const last_attempt_date = parseReportDate(mapped['last_attempt_date']) ?? '';
+    const total_attemps = normalizeAmount(mapped['total_attempts']) || 1;
+    const consignee = String(mapped['consignee'] ?? '').trim();
+    const delivery_pincode = normalizePincode(mapped['delivery_pincode']);
+    const is_mobility = String(mapped['is_mobility'] ?? '').trim();
+    const reason = String(mapped['reason'] ?? '').trim();
+    const otp_details = String(mapped['otp_details'] ?? '').trim();
+    const drs_date = parseReportDate(mapped['drs_date']) ?? '';
+    const drs_status = String(mapped['drs_status'] ?? '').trim();
+    const ndr_instruction_received = String(mapped['ndr_instruction_received'] ?? '').trim();
 
-    // Validations
+    // Mandatory AWB check
     if (!waybill_no) {
       errors.push('Missing AWB / Waybill Number');
     }
-    if (!consignee && !customer_name) {
-      errors.push('Missing Consignee / Customer Name');
-    }
     if (amount_payable < 0) {
       errors.push('Invalid negative amount payable');
+    }
+
+    // Warnings (non-fatal)
+    if (!delivery_pincode || delivery_pincode.length < 6) {
+      warnings.push('Missing or non-standard 6-digit pincode');
+    }
+    if (!consignee && !customer_name) {
+      warnings.push('Consignee / Client name is empty');
     }
 
     const isDuplicateInFile = waybill_no ? seenAWBsInFile.has(waybill_no) : false;
@@ -139,7 +298,7 @@ export async function parseNDRExcelFile(
       first_attempt_date,
       last_attempt_date,
       total_attemps,
-      consignee: consignee || customer_name,
+      consignee: consignee || customer_name || 'Customer',
       delivery_pincode,
       is_mobility,
       reason,
@@ -148,12 +307,14 @@ export async function parseNDRExcelFile(
       drs_status,
       ndr_instruction_received,
       errors,
+      warnings,
       isDuplicateInFile,
       isExistingInDB,
     };
 
     if (errors.length > 0) {
       invalidRows.push(parsedRow);
+      if (!waybill_no) missingAwbRows.push(parsedRow);
     } else if (isDuplicateInFile) {
       duplicateRows.push(parsedRow);
     } else if (isExistingInDB) {
@@ -162,6 +323,10 @@ export async function parseNDRExcelFile(
     } else {
       validRows.push(parsedRow);
     }
+
+    if (warnings.length > 0) {
+      warningRows.push(parsedRow);
+    }
   });
 
   return {
@@ -169,6 +334,8 @@ export async function parseNDRExcelFile(
     invalidRows,
     duplicateRows,
     existingRows,
+    warningRows,
+    missingAwbRows,
     totalRows: rawRows.length,
     readyToImportCount: validRows.length,
   };
@@ -178,7 +345,6 @@ export async function parseNDRExcelFile(
  * Export shipment dataset to Excel (.xlsx)
  */
 export async function exportNDRShipmentsToExcel(shipments: NDRShipment[], filename = 'ndr_shipments.xlsx') {
-  const XLSX = await import('xlsx');
   const rows = shipments.map((s) => ({
     'AWB Number': s.awb_number,
     'DRS Code': s.drs_code || '',
@@ -219,7 +385,6 @@ export async function exportNDRShipmentsToExcel(shipments: NDRShipment[], filena
  * Export shipment dataset to CSV
  */
 export async function exportNDRShipmentsToCSV(shipments: NDRShipment[], filename = 'ndr_shipments.csv') {
-  const XLSX = await import('xlsx');
   const rows = shipments.map((s) => ({
     AWB: s.awb_number,
     Client: s.client_name || '',
@@ -250,31 +415,30 @@ export async function exportNDRShipmentsToCSV(shipments: NDRShipment[], filename
  * Download sample NDR Excel import template
  */
 export async function downloadNDRImportTemplate() {
-  const XLSX = await import('xlsx');
   const sampleData = [
     {
       drs_code: 'DRS-90812',
-      waybill_no: 'AWB9988112233',
-      Employee_name: 'Rahul Sharma',
-      partner_name: 'Delhivery',
-      LOCATION: 'Mumbai Central Hub',
-      city: 'Mumbai',
+      waybill_no: 'VL0084988429007',
+      Employee_name: 'shambhunath das',
+      partner_name: 'Pradeep Kumar Sahani',
+      LOCATION: 'E1/BGUS/8/JDG',
+      city: 'Begusarai',
       customer_name: 'MEESHO',
-      state: 'Maharashtra',
+      state: 'Bihar',
       shipment_status: 'UNDEL',
-      amount_payable: 1450,
+      amount_payable: 248,
       payment_type: 'COD',
       POD_date: '',
-      '1st_attempt_date': '2026-08-01',
-      last_attempt_date: '2026-08-05',
-      total_attemps: 2,
-      consignee: 'Anjali Verma',
-      delivery_pincode: '400001',
+      '1st_attempt_date': '6-8-2026, 11:00',
+      last_attempt_date: '6-8-2026, 13:17',
+      total_attemps: 1,
+      consignee: 'sweety Kumari gupta',
+      delivery_pincode: '8,51,218',
       is_mobility: 'Yes',
-      reason: 'Customer Refused Order - Price High',
-      otp_details: 'OTP Failed',
-      drs_date: '2026-08-05',
-      drs_status: 'Completed',
+      reason: 'Customer refused to give the OTP',
+      otp_details: 'Not OTP Verified',
+      drs_date: '6-8-2026',
+      drs_status: 'COMPLETED',
       ndr_instruction_received: '',
     },
   ];

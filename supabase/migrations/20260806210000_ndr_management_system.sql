@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.ndr_import_batches (
     duplicate_rows INTEGER NOT NULL DEFAULT 0,
     invalid_rows INTEGER NOT NULL DEFAULT 0,
     ready_to_import INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'completed', -- processing, completed, failed
+    error_message TEXT,
     hub_id UUID REFERENCES public.hubs(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -160,72 +162,57 @@ CREATE TABLE IF NOT EXISTS public.ndr_timeline_logs (
 ALTER TABLE public.ndr_timeline_logs ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_ndr_timeline_logs_shipment ON public.ndr_timeline_logs(shipment_id);
 
--- Row Level Security (RLS) Policies
+-- RLS Policies for Authenticated Operations Users
 
--- Super admin policy: Full access
-CREATE POLICY ndr_import_batches_super_admin ON public.ndr_import_batches FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
-);
+-- ndr_import_batches
+DROP POLICY IF EXISTS "select_ndr_import_batches" ON public.ndr_import_batches;
+CREATE POLICY "select_ndr_import_batches" ON public.ndr_import_batches FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY ndr_shipments_super_admin ON public.ndr_shipments FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
-);
+DROP POLICY IF EXISTS "insert_ndr_import_batches" ON public.ndr_import_batches;
+CREATE POLICY "insert_ndr_import_batches" ON public.ndr_import_batches FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY ndr_call_logs_super_admin ON public.ndr_call_logs FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
-);
+DROP POLICY IF EXISTS "update_ndr_import_batches" ON public.ndr_import_batches;
+CREATE POLICY "update_ndr_import_batches" ON public.ndr_import_batches FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY ndr_supervisor_actions_super_admin ON public.ndr_supervisor_actions FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
-);
+DROP POLICY IF EXISTS "delete_ndr_import_batches" ON public.ndr_import_batches;
+CREATE POLICY "delete_ndr_import_batches" ON public.ndr_import_batches FOR DELETE TO authenticated USING (true);
 
-CREATE POLICY ndr_timeline_logs_super_admin ON public.ndr_timeline_logs FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
-);
+-- ndr_shipments
+DROP POLICY IF EXISTS "select_ndr_shipments" ON public.ndr_shipments;
+CREATE POLICY "select_ndr_shipments" ON public.ndr_shipments FOR SELECT TO authenticated USING (true);
 
--- Hub-isolated policies for users (hub_admin, supervisor, collector)
-CREATE POLICY ndr_import_batches_hub_policy ON public.ndr_import_batches FOR ALL USING (
-    hub_id IN (
-        SELECT hub_id FROM public.profiles WHERE id = auth.uid()
-        UNION
-        SELECT hub_id FROM public.user_hub_access WHERE user_id = auth.uid()
-    )
-);
+DROP POLICY IF EXISTS "insert_ndr_shipments" ON public.ndr_shipments;
+CREATE POLICY "insert_ndr_shipments" ON public.ndr_shipments FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY ndr_shipments_hub_policy ON public.ndr_shipments FOR ALL USING (
-    hub_id IN (
-        SELECT hub_id FROM public.profiles WHERE id = auth.uid()
-        UNION
-        SELECT hub_id FROM public.user_hub_access WHERE user_id = auth.uid()
-    )
-);
+DROP POLICY IF EXISTS "update_ndr_shipments" ON public.ndr_shipments;
+CREATE POLICY "update_ndr_shipments" ON public.ndr_shipments FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY ndr_call_logs_hub_policy ON public.ndr_call_logs FOR ALL USING (
-    shipment_id IN (
-        SELECT id FROM public.ndr_shipments WHERE hub_id IN (
-            SELECT hub_id FROM public.profiles WHERE id = auth.uid()
-            UNION
-            SELECT hub_id FROM public.user_hub_access WHERE user_id = auth.uid()
-        )
-    )
-);
+DROP POLICY IF EXISTS "delete_ndr_shipments" ON public.ndr_shipments;
+CREATE POLICY "delete_ndr_shipments" ON public.ndr_shipments FOR DELETE TO authenticated USING (true);
 
-CREATE POLICY ndr_supervisor_actions_hub_policy ON public.ndr_supervisor_actions FOR ALL USING (
-    shipment_id IN (
-        SELECT id FROM public.ndr_shipments WHERE hub_id IN (
-            SELECT hub_id FROM public.profiles WHERE id = auth.uid()
-            UNION
-            SELECT hub_id FROM public.user_hub_access WHERE user_id = auth.uid()
-        )
-    )
-);
+-- ndr_call_logs
+DROP POLICY IF EXISTS "select_ndr_call_logs" ON public.ndr_call_logs;
+CREATE POLICY "select_ndr_call_logs" ON public.ndr_call_logs FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY ndr_timeline_logs_hub_policy ON public.ndr_timeline_logs FOR ALL USING (
-    shipment_id IN (
-        SELECT id FROM public.ndr_shipments WHERE hub_id IN (
-            SELECT hub_id FROM public.profiles WHERE id = auth.uid()
-            UNION
-            SELECT hub_id FROM public.user_hub_access WHERE user_id = auth.uid()
-        )
-    )
-);
+DROP POLICY IF EXISTS "insert_ndr_call_logs" ON public.ndr_call_logs;
+CREATE POLICY "insert_ndr_call_logs" ON public.ndr_call_logs FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "update_ndr_call_logs" ON public.ndr_call_logs;
+CREATE POLICY "update_ndr_call_logs" ON public.ndr_call_logs FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+-- ndr_supervisor_actions
+DROP POLICY IF EXISTS "select_ndr_supervisor_actions" ON public.ndr_supervisor_actions;
+CREATE POLICY "select_ndr_supervisor_actions" ON public.ndr_supervisor_actions FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "insert_ndr_supervisor_actions" ON public.ndr_supervisor_actions;
+CREATE POLICY "insert_ndr_supervisor_actions" ON public.ndr_supervisor_actions FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "update_ndr_supervisor_actions" ON public.ndr_supervisor_actions;
+CREATE POLICY "update_ndr_supervisor_actions" ON public.ndr_supervisor_actions FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+-- ndr_timeline_logs
+DROP POLICY IF EXISTS "select_ndr_timeline_logs" ON public.ndr_timeline_logs;
+CREATE POLICY "select_ndr_timeline_logs" ON public.ndr_timeline_logs FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "insert_ndr_timeline_logs" ON public.ndr_timeline_logs;
+CREATE POLICY "insert_ndr_timeline_logs" ON public.ndr_timeline_logs FOR INSERT TO authenticated WITH CHECK (true);

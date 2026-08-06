@@ -139,11 +139,32 @@ export async function importNDRBatch(
   hubId: string | null,
   userId: string | null,
   userName: string | null,
-  userRole: string | null
+  userRole: string | null,
+  onProgress?: (message: string) => void
 ): Promise<{ batchId: string; importedCount: number; updatedCount: number }> {
-  // 1. Create batch record
-  const validRows = rows.filter((r) => r.errors.length === 0 && !r.isDuplicateInFile);
+  // 1. Hub ID check
+  if (!hubId) {
+    throw new Error('Please select a hub before importing the NDR report.');
+  }
 
+  // 2. Migration & Table Existence Check
+  const { error: checkErr } = await supabase.from('ndr_shipments').select('id').limit(1);
+  if (checkErr) {
+    if (
+      checkErr.code === '42P01' ||
+      checkErr.message?.includes('does not exist') ||
+      checkErr.message?.includes('relation "public.ndr_shipments"')
+    ) {
+      throw new Error('NDR database migration has not been applied. Required table ndr_shipments was not found.');
+    }
+  }
+
+  const validRows = rows.filter((r) => r.errors.length === 0 && !r.isDuplicateInFile);
+  if (validRows.length === 0) {
+    throw new Error('No valid shipment rows were found ready to import.');
+  }
+
+  // 3. Create batch record with status 'processing'
   const { data: batch, error: batchErr } = await supabase
     .from('ndr_import_batches')
     .insert({
@@ -156,151 +177,213 @@ export async function importNDRBatch(
       duplicate_rows: rows.filter((r) => r.isDuplicateInFile).length,
       invalid_rows: rows.filter((r) => r.errors.length > 0).length,
       ready_to_import: validRows.length,
+      status: 'processing',
       hub_id: hubId,
     })
     .select()
     .single();
 
-  if (batchErr) throw batchErr;
+  if (batchErr) {
+    console.error('NDR import failed creating batch', {
+      message: batchErr.message,
+      code: batchErr.code,
+      details: batchErr.details,
+      hint: batchErr.hint,
+    });
+    throw new Error(batchErr.message || 'Failed to create import batch record.');
+  }
 
-  const awbList = validRows.map((r) => r.waybill_no);
-  const existingMap = await fetchExistingAWBMap(awbList, hubId);
+  try {
+    onProgress?.('Checking existing AWBs in database...');
+    const awbList = validRows.map((r) => r.waybill_no);
+    const existingMap = await fetchExistingAWBMap(awbList, hubId);
 
-  const newInserts: Partial<NDRShipment>[] = [];
-  const updates: { id: string; payload: Partial<NDRShipment>; timeline: Partial<NDRTimelineLog> }[] = [];
-  const timelineLogs: Partial<NDRTimelineLog>[] = [];
+    const newInserts: Partial<NDRShipment>[] = [];
+    const updates: { id: string; payload: Partial<NDRShipment>; timeline: Partial<NDRTimelineLog> }[] = [];
+    const timelineLogs: Partial<NDRTimelineLog>[] = [];
 
-  let importedCount = 0;
-  let updatedCount = 0;
+    let importedCount = 0;
+    let updatedCount = 0;
 
-  for (const r of validRows) {
-    const existing = existingMap.get(r.waybill_no);
+    for (const r of validRows) {
+      const existing = existingMap.get(r.waybill_no);
 
-    if (existing) {
-      updatedCount++;
-      const isClosed = existing.ndr_workflow_status === 'Closed';
-      const newCycle = isClosed ? existing.ndr_cycle + 1 : existing.ndr_cycle;
-      const newWorkflowStatus: NDRWorkflowStatus = 'UNDEL';
+      if (existing) {
+        updatedCount++;
+        const isClosed = existing.ndr_workflow_status === 'Closed';
+        const newCycle = isClosed ? existing.ndr_cycle + 1 : existing.ndr_cycle;
+        const newWorkflowStatus: NDRWorkflowStatus = 'UNDEL';
 
-      const updatePayload: Partial<NDRShipment> = {
-        drs_code: r.drs_code || existing.drs_code,
-        delivery_executive: r.Employee_name || existing.delivery_executive,
-        partner_name: r.partner_name || existing.partner_name,
-        hub_location: r.LOCATION || existing.hub_location,
-        city: r.city || existing.city,
-        state: r.state || existing.state,
-        amount_payable: r.amount_payable || existing.amount_payable,
-        payment_type: r.payment_type || existing.payment_type,
-        last_attempt_date: r.last_attempt_date || new Date().toISOString(),
-        total_attempts: r.total_attemps || existing.total_attempts + 1,
-        delivery_pincode: r.delivery_pincode || existing.delivery_pincode,
-        drs_status: r.drs_status || existing.drs_status,
-        shipment_status_current: 'UNDEL',
-        ndr_workflow_status: newWorkflowStatus,
-        ndr_cycle: newCycle,
-        import_batch_id: batch.id,
-        updated_at: new Date().toISOString(),
-      };
+        const updatePayload: Partial<NDRShipment> = {
+          drs_code: r.drs_code || existing.drs_code,
+          delivery_executive: r.Employee_name || existing.delivery_executive,
+          partner_name: r.partner_name || existing.partner_name,
+          hub_location: r.LOCATION || existing.hub_location,
+          city: r.city || existing.city,
+          state: r.state || existing.state,
+          amount_payable: r.amount_payable || existing.amount_payable,
+          payment_type: r.payment_type || existing.payment_type,
+          last_attempt_date: r.last_attempt_date || new Date().toISOString(),
+          total_attempts: r.total_attemps || existing.total_attempts + 1,
+          delivery_pincode: r.delivery_pincode || existing.delivery_pincode,
+          drs_status: r.drs_status || existing.drs_status,
+          shipment_status_current: 'UNDEL',
+          ndr_workflow_status: newWorkflowStatus,
+          ndr_cycle: newCycle,
+          import_batch_id: batch.id,
+          updated_at: new Date().toISOString(),
+        };
 
-      const timelineEntry: Partial<NDRTimelineLog> = {
-        shipment_id: existing.id,
-        event_type: 'import',
-        action_title: isClosed ? `Re-imported NDR (Cycle ${newCycle})` : 'Re-imported Open NDR',
-        user_id: userId,
-        user_name: userName || 'Operations Staff',
-        user_role: userRole || 'hub_admin',
-        previous_status: existing.ndr_workflow_status,
-        new_status: newWorkflowStatus,
-        remarks: `Updated from file "${filename}". ${isClosed ? 'New NDR Cycle initiated.' : 'Updated operational details.'}`,
-        meta_data: { filename, batch_id: batch.id, cycle: newCycle },
-      };
+        const timelineEntry: Partial<NDRTimelineLog> = {
+          shipment_id: existing.id,
+          event_type: 'import',
+          action_title: isClosed ? `Re-imported NDR (Cycle ${newCycle})` : 'Re-imported Open NDR',
+          user_id: userId,
+          user_name: userName || 'Operations Staff',
+          user_role: userRole || 'hub_admin',
+          previous_status: existing.ndr_workflow_status,
+          new_status: newWorkflowStatus,
+          remarks: `Updated from file "${filename}". ${isClosed ? 'New NDR Cycle initiated.' : 'Updated operational details.'}`,
+          meta_data: { filename, batch_id: batch.id, cycle: newCycle },
+        };
 
-      updates.push({ id: existing.id, payload: updatePayload, timeline: timelineEntry });
-    } else {
-      importedCount++;
-      const newShipmentId = crypto.randomUUID();
-      const insertPayload: Partial<NDRShipment> = {
-        id: newShipmentId,
-        awb_number: r.waybill_no,
-        drs_code: r.drs_code,
-        client_name: r.customer_name,
-        consignee_name: r.consignee,
-        delivery_executive: r.Employee_name,
-        partner_name: r.partner_name,
-        hub_location: r.LOCATION,
-        city: r.city,
-        state: r.state,
-        payment_type: r.payment_type || 'COD',
-        amount_payable: r.amount_payable,
-
-        shipment_status_original: r.shipment_status || 'UNDEL',
-        original_ndr_reason: r.reason,
-        otp_status: r.otp_details,
-        drs_status: r.drs_status,
-        drs_date: r.drs_date || null,
-        first_attempt_date: r.first_attempt_date || new Date().toISOString(),
-        last_attempt_date: r.last_attempt_date || new Date().toISOString(),
-        total_attempts: r.total_attemps || 1,
-        delivery_pincode: r.delivery_pincode,
-        is_mobility: r.is_mobility,
-
-        shipment_status_current: 'UNDEL',
-        ndr_workflow_status: 'UNDEL',
-        hub_id: hubId,
-        import_batch_id: batch.id,
-        ndr_cycle: 1,
-        raw_data: {
+        updates.push({ id: existing.id, payload: updatePayload, timeline: timelineEntry });
+      } else {
+        importedCount++;
+        const newShipmentId = crypto.randomUUID();
+        const insertPayload: Partial<NDRShipment> = {
+          id: newShipmentId,
+          awb_number: r.waybill_no,
           drs_code: r.drs_code,
-          waybill_no: r.waybill_no,
-          Employee_name: r.Employee_name,
+          client_name: r.customer_name,
+          consignee_name: r.consignee,
+          delivery_executive: r.Employee_name,
           partner_name: r.partner_name,
-          LOCATION: r.LOCATION,
+          hub_location: r.LOCATION,
           city: r.city,
-          customer_name: r.customer_name,
-          consignee: r.consignee,
-          reason: r.reason,
-          otp_details: r.otp_details,
-        },
-        created_by: userId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+          state: r.state,
+          payment_type: r.payment_type || 'COD',
+          amount_payable: r.amount_payable,
 
-      newInserts.push(insertPayload);
+          shipment_status_original: r.shipment_status || 'UNDEL',
+          original_ndr_reason: r.reason,
+          otp_status: r.otp_details,
+          drs_status: r.drs_status,
+          drs_date: r.drs_date || null,
+          first_attempt_date: r.first_attempt_date || new Date().toISOString(),
+          last_attempt_date: r.last_attempt_date || new Date().toISOString(),
+          total_attempts: r.total_attemps || 1,
+          delivery_pincode: r.delivery_pincode,
+          is_mobility: r.is_mobility,
 
-      timelineLogs.push({
-        shipment_id: newShipmentId,
-        event_type: 'import',
-        action_title: 'Imported from Excel',
-        user_id: userId,
-        user_name: userName || 'Operations Staff',
-        user_role: userRole || 'hub_admin',
-        previous_status: undefined,
-        new_status: 'UNDEL',
-        remarks: `Imported via file "${filename}"`,
-        meta_data: { filename, batch_id: batch.id },
-      });
+          shipment_status_current: 'UNDEL',
+          ndr_workflow_status: 'UNDEL',
+          hub_id: hubId,
+          import_batch_id: batch.id,
+          ndr_cycle: 1,
+          raw_data: {
+            drs_code: r.drs_code,
+            waybill_no: r.waybill_no,
+            Employee_name: r.Employee_name,
+            partner_name: r.partner_name,
+            LOCATION: r.LOCATION,
+            city: r.city,
+            customer_name: r.customer_name,
+            consignee: r.consignee,
+            reason: r.reason,
+            otp_details: r.otp_details,
+          },
+          created_by: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        newInserts.push(insertPayload);
+
+        timelineLogs.push({
+          shipment_id: newShipmentId,
+          event_type: 'import',
+          action_title: 'Imported from Excel',
+          user_id: userId,
+          user_name: userName || 'Operations Staff',
+          user_role: userRole || 'hub_admin',
+          previous_status: undefined,
+          new_status: 'UNDEL',
+          remarks: `Imported via file "${filename}"`,
+          meta_data: { filename, batch_id: batch.id },
+        });
+      }
     }
-  }
 
-  // Execute Inserts
-  if (newInserts.length > 0) {
-    const { error: insErr } = await supabase.from('ndr_shipments').insert(newInserts);
-    if (insErr) throw insErr;
-  }
+    // Execute Inserts in chunks of 200
+    const CHUNK_SIZE = 200;
+    if (newInserts.length > 0) {
+      for (let i = 0; i < newInserts.length; i += CHUNK_SIZE) {
+        const chunk = newInserts.slice(i, i + CHUNK_SIZE);
+        onProgress?.(`Importing ${Math.min(i + chunk.length, newInserts.length)} of ${newInserts.length} new shipments...`);
+        const { error: insErr } = await supabase.from('ndr_shipments').insert(chunk);
+        if (insErr) {
+          console.error('NDR shipment chunk insert error:', {
+            message: insErr.message,
+            code: insErr.code,
+            details: insErr.details,
+            hint: insErr.hint,
+          });
+          throw insErr;
+        }
+      }
+    }
 
-  // Execute Updates & Timeline entries
-  for (const item of updates) {
-    await supabase.from('ndr_shipments').update(item.payload).eq('id', item.id);
-    timelineLogs.push(item.timeline);
-  }
+    // Execute Updates & Timeline entries
+    if (updates.length > 0) {
+      onProgress?.(`Updating ${updates.length} existing NDR shipments...`);
+      for (const item of updates) {
+        const { error: updErr } = await supabase.from('ndr_shipments').update(item.payload).eq('id', item.id);
+        if (updErr) {
+          console.error('NDR shipment update error:', updErr);
+          throw updErr;
+        }
+        timelineLogs.push(item.timeline);
+      }
+    }
 
-  if (timelineLogs.length > 0) {
-    await supabase.from('ndr_timeline_logs').insert(timelineLogs);
-  }
+    // Insert Timeline logs in chunks of 200
+    if (timelineLogs.length > 0) {
+      onProgress?.('Recording audit timeline entries...');
+      for (let i = 0; i < timelineLogs.length; i += CHUNK_SIZE) {
+        const chunk = timelineLogs.slice(i, i + CHUNK_SIZE);
+        const { error: timeErr } = await supabase.from('ndr_timeline_logs').insert(chunk);
+        if (timeErr) {
+          console.error('NDR timeline insert error:', timeErr);
+          throw timeErr;
+        }
+      }
+    }
 
-  return { batchId: batch.id, importedCount, updatedCount };
+    // Mark batch completed
+    await supabase
+      .from('ndr_import_batches')
+      .update({ status: 'completed' })
+      .eq('id', batch.id);
+
+    return { batchId: batch.id, importedCount, updatedCount };
+  } catch (err: any) {
+    // Mark batch failed on error
+    await supabase
+      .from('ndr_import_batches')
+      .update({ status: 'failed', error_message: err.message || 'Import process failed' })
+      .eq('id', batch.id);
+
+    console.error('NDR import batch execution failed:', {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint,
+    });
+    throw err;
+  }
 }
+
 
 export async function logNDRCall(params: {
   shipmentId: string;
