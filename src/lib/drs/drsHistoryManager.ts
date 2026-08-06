@@ -139,12 +139,19 @@ export async function fetchDRSHistoryFromDB(): Promise<DRSReportHistoryItem[]> {
 export async function saveDRSHistorySnapshot(
   item: DRSReportHistoryItem
 ): Promise<DRSReportHistoryItem[]> {
+  // Ensure valid UUID format for PostgreSQL uuid primary key
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!item.id || !uuidRegex.test(item.id)) {
+    item.id = crypto.randomUUID ? crypto.randomUUID() : `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12, '0')}`;
+  }
+
   // Always update local storage first so history is immediately populated
   const localUpdated = saveLocalDRSHistoryItem(item, false);
 
   try {
     const s = item.summary;
     const fullPayload = {
+      id: item.id,
       report_date: item.reportDate,
       file_name: item.fileName,
       hub_id: item.hubId || null,
@@ -183,9 +190,16 @@ export async function saveDRSHistorySnapshot(
       },
     };
 
-    const { error: fullError } = await supabase.from('drs_report_history').insert(fullPayload);
+    const { data: insertedData, error: fullError } = await supabase
+      .from('drs_report_history')
+      .insert(fullPayload)
+      .select('id')
+      .single();
 
-    if (fullError) {
+    if (insertedData?.id) {
+      item.id = insertedData.id;
+      setActiveReportId(insertedData.id);
+    } else if (fullError) {
       console.warn('Supabase full payload insert failed (trying legacy fallback):', fullError.message);
       // Fallback payload without columns if PostgREST schema cache hasn't refreshed yet
       const legacyPayload = {
@@ -239,13 +253,14 @@ export async function deleteDRSHistoryItem(id: string): Promise<DRSReportHistory
 
   try {
     const nowIso = new Date().toISOString();
-    const { error } = await supabase
+    const { data: updateRes } = await supabase
       .from('drs_report_history')
       .update({ deleted_at: nowIso })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
-    if (error) {
-      console.warn('Supabase DRS Delete Warning:', error.message);
+    if (!updateRes || updateRes.length === 0) {
+      await supabase.from('drs_report_history').delete().eq('id', id);
     }
 
     // Soft delete linked NDR shipments

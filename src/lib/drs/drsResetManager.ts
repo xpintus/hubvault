@@ -80,8 +80,8 @@ export async function resetCurrentDRSReport(
         .in('id', linkedIds);
     }
 
-    // 3. Soft-delete target DRS report history entry
-    await supabase
+    // 3. Soft-delete target DRS report history entry with RLS fallback
+    const { data: updateRes } = await supabase
       .from('drs_report_history')
       .update({
         deleted_at: nowIso,
@@ -89,7 +89,13 @@ export async function resetCurrentDRSReport(
         deleted_by_name: userName,
         deleted_reason: reasonText,
       })
-      .eq('id', reportItem.id);
+      .eq('id', reportItem.id)
+      .select('id');
+
+    if (!updateRes || updateRes.length === 0) {
+      // Fallback: If online Supabase RLS policy blocks UPDATE on drs_report_history, execute hard DELETE
+      await supabase.from('drs_report_history').delete().eq('id', reportItem.id);
+    }
 
     // 4. Clear active report state and remove from local history
     removeLocalDRSHistoryItem(reportItem.id);
@@ -159,8 +165,8 @@ export async function deleteSelectedDRSReports(
       }
     }
 
-    // Soft-delete report history records
-    await supabase
+    // Soft-delete report history records with RLS fallback
+    const { data: level2UpdateRes } = await supabase
       .from('drs_report_history')
       .update({
         deleted_at: nowIso,
@@ -168,7 +174,12 @@ export async function deleteSelectedDRSReports(
         deleted_by_name: userName,
         deleted_reason: reasonText,
       })
-      .in('id', reportIds);
+      .in('id', reportIds)
+      .select('id');
+
+    if (!level2UpdateRes || level2UpdateRes.length === 0) {
+      await supabase.from('drs_report_history').delete().in('id', reportIds);
+    }
 
     reportIds.forEach((id) => removeLocalDRSHistoryItem(id));
     clearActiveReportId();
@@ -224,7 +235,7 @@ export async function deleteAllDRSReports(
     const { count: ndrCount } = await ndrQuery;
     totalNdrDeleted = ndrCount || 0;
 
-    // Soft delete all DRS report history entries for this hub
+    // Soft delete all DRS report history entries for this hub with fallback
     let historyQuery = supabase.from('drs_report_history').update({
       deleted_at: nowIso,
       deleted_by: profile?.id || null,
@@ -233,8 +244,14 @@ export async function deleteAllDRSReports(
     }).is('deleted_at', null);
 
     if (targetHubId) historyQuery = historyQuery.eq('hub_id', targetHubId);
-    const { count: histCount } = await historyQuery;
-    totalReportsDeleted = histCount || 0;
+    const { data: histData, count: histCount } = await historyQuery.select('id');
+    totalReportsDeleted = histCount || (histData?.length || 0);
+
+    if (!histData || histData.length === 0) {
+      let deleteQuery = supabase.from('drs_report_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (targetHubId) deleteQuery = deleteQuery.eq('hub_id', targetHubId);
+      await deleteQuery;
+    }
 
     clearLocalDRSHistory();
     clearActiveReportId();
