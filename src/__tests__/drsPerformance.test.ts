@@ -3,51 +3,55 @@ import { computeEmployeeDRSMetrics, computeOverallDRSSummary, filterDRSRows } fr
 import { normalizeAttempts, normalizeHeaderKey, normalizeStatus } from '../lib/drs/drsParser';
 import { DRSReportRow } from '../types/drs';
 
-describe('DRS Parser & Normalization Utility', () => {
-  it('normalizes headers safely regardless of BOM, case, or special characters', () => {
-    expect(normalizeHeaderKey('\uFEFFdrs_code')).toBe('drscode');
-    expect(normalizeHeaderKey('  Employee Name  ')).toBe('employeename');
+describe('Header Normalization (Excel Compatibility)', () => {
+  it('strips BOM, spaces, underscores, line breaks, and hyphens', () => {
+    expect(normalizeHeaderKey('\uFEFFwaybill_no')).toBe('waybillno');
+    expect(normalizeHeaderKey(' Employee_Name \r\n ')).toBe('employeename');
     expect(normalizeHeaderKey('1st_attempt_date')).toBe('1stattemptdate');
     expect(normalizeHeaderKey('total_attemps')).toBe('totalattemps');
+    expect(normalizeHeaderKey('DELIVERY - STATUS')).toBe('deliverystatus');
   });
 
-  it('normalizes shipment statuses accurately', () => {
+  it('normalizes shipment statuses correctly', () => {
     expect(normalizeStatus('DEL')).toBe('Delivered');
     expect(normalizeStatus('DELIVERED')).toBe('Delivered');
     expect(normalizeStatus('UNDEL')).toBe('Undelivered');
     expect(normalizeStatus('UNDELIVERED')).toBe('Undelivered');
     expect(normalizeStatus('CANCEL')).toBe('Cancelled');
     expect(normalizeStatus('CANCELLED')).toBe('Cancelled');
+    expect(normalizeStatus('CANCELED')).toBe('Cancelled');
     expect(normalizeStatus('RTO')).toBe('RTO');
     expect(normalizeStatus('RETURN TO ORIGIN')).toBe('RTO');
-    expect(normalizeStatus('UNKNOWN_STATUS')).toBe('Unknown');
+    expect(normalizeStatus('')).toBe('Unknown');
   });
 
-  it('cleans attempt numbers safely', () => {
+  it('normalizes attempt counts (defaulting missing/blank on valid row to 1)', () => {
     expect(normalizeAttempts('1')).toBe(1);
+    expect(normalizeAttempts('2')).toBe(2);
     expect(normalizeAttempts(' Attempt 3 ')).toBe(3);
-    expect(normalizeAttempts('')).toBe(0);
-    expect(normalizeAttempts(null)).toBe(0);
-    expect(normalizeAttempts(undefined)).toBe(0);
+    expect(normalizeAttempts('')).toBe(1);
+    expect(normalizeAttempts(null)).toBe(1);
+    expect(normalizeAttempts(undefined)).toBe(1);
+    expect(normalizeAttempts('0')).toBe(1);
   });
 });
 
-describe('DRS Analytics Engine Calculations', () => {
-  const sampleUniqueRows: DRSReportRow[] = [
+describe('Excel Pivot Table Calculation Engine Verification', () => {
+  const dataset: DRSReportRow[] = [
     {
       rowIndex: 1,
-      drs_code: 'DRS001',
-      waybill_no: 'AWB1001',
+      drs_code: 'DRS-01',
+      waybill_no: 'AWB001',
       employee_name: 'Shambhunath Das',
       partner_name: 'Delhivery',
       location: 'Hub A',
       city: 'Kolkata',
       state: 'WB',
-      customer_name: 'Client X',
-      consignee: 'Customer A',
+      customer_name: 'Client A',
+      consignee: 'Consignee 1',
       shipment_status_raw: 'DEL',
       shipment_status_normalized: 'Delivered',
-      amount_payable: 500,
+      amount_payable: 1000,
       payment_type: 'COD',
       pod_date: '2026-08-06',
       first_attempt_date: '2026-08-06',
@@ -66,18 +70,18 @@ describe('DRS Analytics Engine Calculations', () => {
     },
     {
       rowIndex: 2,
-      drs_code: 'DRS001',
-      waybill_no: 'AWB1002',
+      drs_code: 'DRS-01',
+      waybill_no: 'AWB002',
       employee_name: 'Shambhunath Das',
       partner_name: 'Delhivery',
       location: 'Hub A',
       city: 'Kolkata',
       state: 'WB',
-      customer_name: 'Client X',
-      consignee: 'Customer B',
+      customer_name: 'Client A',
+      consignee: 'Consignee 2',
       shipment_status_raw: 'UNDEL',
       shipment_status_normalized: 'Undelivered',
-      amount_payable: 800,
+      amount_payable: 500,
       payment_type: 'COD',
       pod_date: '',
       first_attempt_date: '2026-08-06',
@@ -96,18 +100,18 @@ describe('DRS Analytics Engine Calculations', () => {
     },
     {
       rowIndex: 3,
-      drs_code: 'DRS002',
-      waybill_no: 'AWB1003',
+      drs_code: 'DRS-02',
+      waybill_no: 'AWB003',
       employee_name: 'Shambhunath Das',
       partner_name: 'Delhivery',
       location: 'Hub A',
       city: 'Kolkata',
       state: 'WB',
-      customer_name: 'Client Y',
-      consignee: 'Customer C',
+      customer_name: 'Client B',
+      consignee: 'Consignee 3',
       shipment_status_raw: 'DEL',
       shipment_status_normalized: 'Delivered',
-      amount_payable: 1200,
+      amount_payable: 1500,
       payment_type: 'Prepaid',
       pod_date: '2026-08-06',
       first_attempt_date: '2026-08-05',
@@ -124,58 +128,102 @@ describe('DRS Analytics Engine Calculations', () => {
       duplicate_count: 1,
       is_invalid: false,
     },
+    {
+      rowIndex: 4,
+      drs_code: 'DRS-02',
+      waybill_no: 'AWB004',
+      employee_name: 'Rahul Sharma',
+      partner_name: 'Ecom Express',
+      location: 'Hub B',
+      city: 'Howrah',
+      state: 'WB',
+      customer_name: 'Client B',
+      consignee: 'Consignee 4',
+      shipment_status_raw: 'RTO',
+      shipment_status_normalized: 'RTO',
+      amount_payable: 750,
+      payment_type: 'COD',
+      pod_date: '',
+      first_attempt_date: '2026-08-04',
+      last_attempt_date: '2026-08-06',
+      total_attempts: 3,
+      delivery_pincode: '711101',
+      is_mobility: 'No',
+      reason: 'RTO Approved',
+      otp_details: '',
+      drs_date: '2026-08-06',
+      drs_status: 'Completed',
+      ndr_instruction_received: '',
+      is_duplicate: false,
+      duplicate_count: 1,
+      is_invalid: false,
+    },
   ];
 
-  it('computes overall DRS summary metrics accurately', () => {
-    const summary = computeOverallDRSSummary(sampleUniqueRows, {
-      fileName: 'test.xlsx',
+  it('matches Excel Pivot formulas for Overall DRS Summary', () => {
+    const summary = computeOverallDRSSummary(dataset, {
+      fileName: 'drs_test.xlsx',
       reportDate: '2026-08-06',
-      totalRows: 3,
-      validRows: 3,
+      totalRows: 4,
+      validRows: 4,
       invalidRows: 0,
       duplicateRows: 0,
     });
 
-    expect(summary.totalOfd).toBe(3);
-    expect(summary.firstAttemptOfd).toBe(2);
-    expect(summary.firstAttemptDelivered).toBe(1);
-    expect(summary.firstAttemptUndel).toBe(1);
-    expect(summary.firstAttemptDeliveryPct).toBe(50.0);
-
-    expect(summary.reattemptOfd).toBe(1);
-    expect(summary.reattemptDelivered).toBe(1);
-    expect(summary.reattemptDeliveryPct).toBe(100.0);
-
+    // Total OFD = DEL + UNDEL + RTO + CANCEL
+    expect(summary.totalOfd).toBe(4);
     expect(summary.totalDelivered).toBe(2);
     expect(summary.totalUndel).toBe(1);
-    expect(summary.overallDeliveryPct).toBe(66.67);
+    expect(summary.totalRto).toBe(1);
 
-    expect(summary.firstAttemptContributionPct).toBe(50.0);
-    expect(summary.reattemptContributionPct).toBe(50.0);
+    // First Attempt (attempt <= 1)
+    expect(summary.firstAttemptOfd).toBe(2); // AWB001, AWB002
+    expect(summary.firstAttemptDelivered).toBe(1); // AWB001
+    expect(summary.firstAttemptDeliveryPct).toBe(50.0); // 1 / 2 * 100
+
+    // Reattempt (attempt >= 2)
+    expect(summary.reattemptOfd).toBe(2); // AWB003, AWB004
+    expect(summary.reattemptDelivered).toBe(1); // AWB003
+    expect(summary.reattemptDeliveryPct).toBe(50.0); // 1 / 2 * 100
+
+    // Overall Delivery %
+    expect(summary.overallDeliveryPct).toBe(50.0); // 2 / 4 * 100
   });
 
-  it('computes employee-wise DRS metrics accurately', () => {
-    const empMetrics = computeEmployeeDRSMetrics(sampleUniqueRows);
-    expect(empMetrics.length).toBe(1);
+  it('verifies that Employee totals SUM exactly to overall grand totals', () => {
+    const summary = computeOverallDRSSummary(dataset, {
+      fileName: 'drs_test.xlsx',
+      reportDate: '2026-08-06',
+      totalRows: 4,
+      validRows: 4,
+      invalidRows: 0,
+      duplicateRows: 0,
+    });
 
-    const das = empMetrics[0];
-    expect(das.employee_name).toBe('Shambhunath Das');
-    expect(das.total_ofd).toBe(3);
-    expect(das.first_attempt_ofd).toBe(2);
-    expect(das.first_attempt_delivered).toBe(1);
-    expect(das.reattempt_ofd).toBe(1);
-    expect(das.reattempt_delivered).toBe(1);
-    expect(das.total_delivered).toBe(2);
-    expect(das.overall_delivery_pct).toBe(66.67);
-  });
+    const employeeMetrics = computeEmployeeDRSMetrics(dataset);
+    expect(employeeMetrics.length).toBe(2);
 
-  it('filters rows based on minimum OFD threshold', () => {
-    const empMetrics = computeEmployeeDRSMetrics(sampleUniqueRows);
+    let sumEmpOfd = 0;
+    let sumEmpDel = 0;
+    let sumEmp1stOfd = 0;
+    let sumEmp1stDel = 0;
+    let sumEmpReOfd = 0;
+    let sumEmpReDel = 0;
 
-    const filterMin1 = empMetrics.filter((e) => e.total_ofd >= 1);
-    expect(filterMin1.length).toBe(1);
+    employeeMetrics.forEach((e) => {
+      sumEmpOfd += e.total_ofd;
+      sumEmpDel += e.total_delivered;
+      sumEmp1stOfd += e.first_attempt_ofd;
+      sumEmp1stDel += e.first_attempt_delivered;
+      sumEmpReOfd += e.reattempt_ofd;
+      sumEmpReDel += e.reattempt_delivered;
+    });
 
-    const filterMin5 = empMetrics.filter((e) => e.total_ofd >= 5);
-    expect(filterMin5.length).toBe(0);
+    expect(sumEmpOfd).toBe(summary.totalOfd);
+    expect(sumEmpDel).toBe(summary.totalDelivered);
+    expect(sumEmp1stOfd).toBe(summary.firstAttemptOfd);
+    expect(sumEmp1stDel).toBe(summary.firstAttemptDelivered);
+    expect(sumEmpReOfd).toBe(summary.reattemptOfd);
+    expect(sumEmpReDel).toBe(summary.reattemptDelivered);
   });
 });

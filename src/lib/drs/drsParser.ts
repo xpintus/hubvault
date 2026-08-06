@@ -1,39 +1,43 @@
 import { DRSReportRow, NormalizedShipmentStatus } from '@/types/drs';
 import * as XLSX from 'xlsx';
 
-// Header Normalization Helper: strip BOM, trim, lowercase, remove non-alphanumeric chars
+// Header Normalization: Remove BOM, whitespace, underscores, hyphens, linebreaks, convert to lowercase
 export function normalizeHeaderKey(key: string): string {
   return String(key ?? '')
     .replace(/^\uFEFF/, '') // Remove BOM
     .trim()
     .toLowerCase()
+    .replace(/[\s_\-\r\n]+/g, '') // Remove spaces, underscores, hyphens, linebreaks
     .replace(/[^a-z0-9]/g, '');
 }
 
-// Map column aliases to standard keys
+// Find header key from aliases
 export function findHeaderKey(rowKeys: string[], aliases: string[]): string | undefined {
   const normalizedAliases = aliases.map(normalizeHeaderKey);
   return rowKeys.find((k) => normalizedAliases.includes(normalizeHeaderKey(k)));
 }
 
-// Normalize shipment status safely
+// Normalize shipment status according to Excel Pivot rules
 export function normalizeStatus(rawStatus: unknown): NormalizedShipmentStatus {
-  const s = String(rawStatus ?? '').trim().toUpperCase();
+  const s = String(rawStatus ?? '').trim().toUpperCase().replace(/[\s_\-]+/g, ' ');
   if (['DEL', 'DELIVERED'].includes(s)) return 'Delivered';
   if (['UNDEL', 'UNDELIVERED'].includes(s)) return 'Undelivered';
   if (['CANCEL', 'CANCELLED', 'CANCELED'].includes(s)) return 'Cancelled';
-  if (['RTO', 'RETURN TO ORIGIN'].includes(s)) return 'RTO';
+  if (['RTO', 'RETURN TO ORIGIN', 'RETURNED'].includes(s)) return 'RTO';
   return 'Unknown';
 }
 
-// Normalize attempt count safely
+// Normalize attempt count: integer conversion, defaulting to 1 for valid rows with missing attempt string
 export function normalizeAttempts(rawAttempts: unknown): number {
-  const str = String(rawAttempts ?? '0').replace(/[^\d]/g, '');
+  if (rawAttempts === null || rawAttempts === undefined || String(rawAttempts).trim() === '') {
+    return 1;
+  }
+  const str = String(rawAttempts).replace(/[^\d]/g, '');
   const num = parseInt(str, 10);
-  return isNaN(num) || num < 0 ? 0 : num;
+  return isNaN(num) || num <= 0 ? 1 : num;
 }
 
-// Parse Excel or CSV File ArrayBuffer / File object
+// Parse Excel or CSV File
 export async function parseDRSFile(file: File): Promise<{
   rows: DRSReportRow[];
   uniqueRows: DRSReportRow[];
@@ -63,32 +67,31 @@ export async function parseDRSFile(file: File): Promise<{
   const sampleRow = rawJson[0];
   const rowKeys = Object.keys(sampleRow);
 
-  // Column Key Resolution Helper
   const getKey = (aliases: string[]) => findHeaderKey(rowKeys, aliases);
 
-  const keyDrsCode = getKey(['drs_code', 'drs_no', 'drs_number', 'drs']);
-  const keyWaybill = getKey(['waybill_no', 'waybill', 'awb_number', 'awb_no', 'awb', 'tracking_no', 'waybillno']);
-  const keyEmployee = getKey(['Employee_name', 'employee_name', 'employee', 'delivery_executive', 'de_name', 'fe_name', 'field_executive', 'rider_name', 'employeename']);
-  const keyPartner = getKey(['partner_name', 'partner', 'courier', 'vendor', 'vendor_name', 'partnername']);
-  const keyLocation = getKey(['LOCATION', 'location', 'hub_location', 'hub', 'branch']);
-  const keyCity = getKey(['city', 'destination_city']);
-  const keyState = getKey(['state', 'destination_state']);
-  const keyCustomer = getKey(['customer_name', 'client_name', 'client', 'customername']);
-  const keyConsignee = getKey(['consignee', 'consignee_name', 'customer', 'receiver_name', 'consigneename']);
-  const keyStatus = getKey(['shipment_status', 'shipmentstatus', 'status', 'delivery_status', 'drs_status']);
-  const keyAmount = getKey(['amount_payable', 'amount', 'cod_amount', 'collectable_amount', 'amountpayable']);
-  const keyPayment = getKey(['payment_type', 'paymenttype', 'pay_mode', 'payment_mode', 'cod_prepaid']);
-  const keyPodDate = getKey(['POD_date', 'pod_date', 'poddate', 'delivery_date']);
-  const keyFirstAttempt = getKey(['1st_attempt_date', 'first_attempt_date', 'first_ofd_date']);
-  const keyLastAttempt = getKey(['last_attempt_date', 'last_ofd_date', 'attempt_date']);
-  const keyAttempts = getKey(['total_attemps', 'total_attempts', 'totalattempts', 'attempt_count', 'attempts']);
-  const keyPincode = getKey(['delivery_pincode', 'pincode', 'zipcode', 'pin']);
-  const keyMobility = getKey(['is_mobility', 'mobility']);
-  const keyReason = getKey(['reason', 'ndr_reason', 'undelivered_reason', 'fail_reason', 'original_ndr_reason']);
-  const keyOtp = getKey(['otp_details', 'otp_status', 'otp']);
-  const keyDrsDate = getKey(['drs_date', 'drsdate', 'dispatch_date']);
+  const keyDrsCode = getKey(['drs_code', 'drs_no', 'drs_number', 'drs', 'drsnumber', 'drscode']);
+  const keyWaybill = getKey(['waybill_no', 'waybill', 'awb_number', 'awb_no', 'awb', 'tracking_no', 'waybillno', 'awbno', 'awbnumber', 'trackingno']);
+  const keyEmployee = getKey(['Employee_name', 'employee_name', 'employee', 'delivery_executive', 'de_name', 'fe_name', 'field_executive', 'rider_name', 'employeename', 'dename', 'fename', 'ridername', 'drivername']);
+  const keyPartner = getKey(['partner_name', 'partner', 'courier', 'vendor', 'vendor_name', 'partnername', 'vendorname']);
+  const keyLocation = getKey(['LOCATION', 'location', 'hub_location', 'hub', 'branch', 'hublocation']);
+  const keyCity = getKey(['city', 'destination_city', 'destinationcity']);
+  const keyState = getKey(['state', 'destination_state', 'destinationstate']);
+  const keyCustomer = getKey(['customer_name', 'client_name', 'client', 'customername', 'clientname']);
+  const keyConsignee = getKey(['consignee', 'consignee_name', 'customer', 'receiver_name', 'consigneename', 'receivername']);
+  const keyStatus = getKey(['shipment_status', 'shipmentstatus', 'status', 'delivery_status', 'drs_status', 'deliverystatus', 'drsstatus']);
+  const keyAmount = getKey(['amount_payable', 'amount', 'cod_amount', 'collectable_amount', 'amountpayable', 'codamount']);
+  const keyPayment = getKey(['payment_type', 'paymenttype', 'pay_mode', 'payment_mode', 'cod_prepaid', 'paymentmode', 'paymode']);
+  const keyPodDate = getKey(['POD_date', 'pod_date', 'poddate', 'delivery_date', 'deliverydate']);
+  const keyFirstAttempt = getKey(['1st_attempt_date', 'first_attempt_date', 'first_ofd_date', '1stattemptdate', 'firstattemptdate']);
+  const keyLastAttempt = getKey(['last_attempt_date', 'last_ofd_date', 'attempt_date', 'lastattemptdate', 'attemptdate']);
+  const keyAttempts = getKey(['total_attemps', 'total_attempts', 'totalattempts', 'attempt_count', 'attempts', 'attemptcount', 'totalattemps']);
+  const keyPincode = getKey(['delivery_pincode', 'pincode', 'zipcode', 'pin', 'deliverypincode']);
+  const keyMobility = getKey(['is_mobility', 'mobility', 'ismobility']);
+  const keyReason = getKey(['reason', 'ndr_reason', 'undelivered_reason', 'fail_reason', 'original_ndr_reason', 'ndrreason', 'failreason']);
+  const keyOtp = getKey(['otp_details', 'otp_status', 'otp', 'otpdetails', 'otpstatus']);
+  const keyDrsDate = getKey(['drs_date', 'drsdate', 'dispatch_date', 'dispatchdate']);
   const keyDrsStatus = getKey(['drs_status', 'drsstatus']);
-  const keyInstruction = getKey(['ndr_instruction_received', 'instruction']);
+  const keyInstruction = getKey(['ndr_instruction_received', 'instruction', 'ndrinstructionreceived']);
 
   const parsedRows: DRSReportRow[] = [];
   const invalidRows: DRSReportRow[] = [];
@@ -97,9 +100,9 @@ export async function parseDRSFile(file: File): Promise<{
     const waybill = String(keyWaybill ? r[keyWaybill] : '').trim();
     const employee = String(keyEmployee ? r[keyEmployee] : '').trim() || 'Unassigned Executive';
     const rawStat = String(keyStatus ? r[keyStatus] : '').trim();
-    const attempts = normalizeAttempts(keyAttempts ? r[keyAttempts] : 0);
+    const attempts = normalizeAttempts(keyAttempts ? r[keyAttempts] : undefined);
 
-    const isInvalid = !waybill || waybill === '0' || waybill === 'null';
+    const isInvalid = !waybill || waybill === '0' || waybill.toLowerCase() === 'null' || waybill.toLowerCase() === 'undefined';
 
     const rowObj: DRSReportRow = {
       rowIndex: idx + 1,
@@ -140,7 +143,7 @@ export async function parseDRSFile(file: File): Promise<{
     }
   });
 
-  // Duplicate Consolidation: Group by waybill_no and pick latest operational record
+  // Duplicate Consolidation: One AWB = One Shipment (keep latest valid record)
   const awbGroupMap = new Map<string, DRSReportRow[]>();
   parsedRows.forEach((row) => {
     const list = awbGroupMap.get(row.waybill_no) || [];
@@ -155,16 +158,15 @@ export async function parseDRSFile(file: File): Promise<{
     if (group.length === 1) {
       uniqueRows.push(group[0]);
     } else {
-      // Sort group to find the latest operational row (DEL > highest attempts > latest attempt date > highest index)
       group.sort((a, b) => {
-        // DEL status takes precedence if present
+        // Delivered status takes highest priority
         if (a.shipment_status_normalized === 'Delivered' && b.shipment_status_normalized !== 'Delivered') return -1;
         if (b.shipment_status_normalized === 'Delivered' && a.shipment_status_normalized !== 'Delivered') return 1;
 
-        // Higher total_attempts takes precedence
+        // Higher attempt count precedence
         if (b.total_attempts !== a.total_attempts) return b.total_attempts - a.total_attempts;
 
-        // Later attempt date
+        // Later attempt date precedence
         const dateA = a.last_attempt_date || a.pod_date || a.drs_date || '';
         const dateB = b.last_attempt_date || b.pod_date || b.drs_date || '';
         if (dateA && dateB && dateA !== dateB) return dateB.localeCompare(dateA);
@@ -176,7 +178,6 @@ export async function parseDRSFile(file: File): Promise<{
       const primary = { ...group[0], is_duplicate: true, duplicate_count: group.length };
       uniqueRows.push(primary);
 
-      // Remaining rows are tagged as exact duplicates
       for (let i = 1; i < group.length; i++) {
         duplicateRows.push({ ...group[i], is_duplicate: true, duplicate_count: group.length });
       }

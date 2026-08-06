@@ -12,6 +12,7 @@ export function computeOverallDRSSummary(
   }
 ): OverallDRSSummary {
   const totalOfd = uniqueRows.length;
+
   let firstAttemptOfd = 0;
   let firstAttemptDelivered = 0;
   let firstAttemptUndel = 0;
@@ -70,7 +71,7 @@ export function computeOverallDRSSummary(
       totalRto++;
     }
 
-    // First Attempt vs Reattempt Analysis
+    // First Attempt (attempts <= 1) vs Reattempt (attempts >= 2)
     if (attempts <= 1) {
       firstAttemptOfd++;
       if (status === 'Delivered') firstAttemptDelivered++;
@@ -305,7 +306,7 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
     });
   });
 
-  // Sort by Total Delivered DESC by default
+  // Default Sort by Total Delivered DESC
   employeeMetrics.sort((a, b) => b.total_delivered - a.total_delivered);
 
   return employeeMetrics;
