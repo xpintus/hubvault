@@ -1,34 +1,35 @@
 import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
 import { useNotifications } from '@/lib/notifications';
-import { ROLE_LABELS,UserRole } from '@/types';
+import { ROLE_LABELS, UserRole } from '@/types';
 import { clsx } from 'clsx';
 import {
-AlertCircle,
-Banknote,
-BookOpen,
-Building2,
-CalendarCheck2,
-ChevronLeft,
-FileBarChart,
-Gift,
-KeyRound,
-Landmark,
-LayoutDashboard,
-LogOut,
-Mail,
-Send,
-RotateCcw,
-Settings as SettingsIcon,
-ShieldAlert,
-ShoppingBag,
-UserCog,
-UserPlus,
-Users,
-Wallet,
-X,
+  AlertCircle,
+  Banknote,
+  BookOpen,
+  Building2,
+  CalendarCheck2,
+  ChevronLeft,
+  FileBarChart,
+  Gift,
+  KeyRound,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  RotateCcw,
+  Send,
+  Settings as SettingsIcon,
+  ShieldAlert,
+  ShoppingBag,
+  Truck,
+  UserCog,
+  UserPlus,
+  Users,
+  Wallet,
+  X,
 } from 'lucide-react';
-import { Link,NavLink,useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 
 interface NavItem {
   to: string;
@@ -39,6 +40,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
+  { to: '/operations/ndr/dashboard', label: 'NDR Operations', icon: Truck, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/khatabook', label: 'KhataBook', icon: BookOpen, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/reports', label: 'Reports', icon: FileBarChart, roles: ['super_admin', 'hub_admin', 'supervisor'] },
   { to: '/hubs', label: 'Hub Management', icon: Building2, roles: ['super_admin', 'hub_admin'] },
