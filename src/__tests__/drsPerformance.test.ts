@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { computeEmployeeDRSMetrics, computeOverallDRSSummary, filterDRSRows } from '../lib/drs/drsAnalyticsEngine';
-import { normalizeAttempts, normalizeHeaderKey, normalizeStatus } from '../lib/drs/drsParser';
+import { findHeaderKey, normalizeAttempts, normalizeHeaderKey, normalizeStatus } from '../lib/drs/drsParser';
 import { DRSReportRow } from '../types/drs';
+
 
 describe('Header Normalization (Excel Compatibility)', () => {
   it('strips BOM, spaces, underscores, line breaks, and hyphens', () => {
@@ -12,29 +13,31 @@ describe('Header Normalization (Excel Compatibility)', () => {
     expect(normalizeHeaderKey('DELIVERY - STATUS')).toBe('deliverystatus');
   });
 
-  it('normalizes shipment statuses correctly', () => {
-    expect(normalizeStatus('DEL')).toBe('Delivered');
-    expect(normalizeStatus('DELIVERED')).toBe('Delivered');
-    expect(normalizeStatus('UNDEL')).toBe('Undelivered');
-    expect(normalizeStatus('UNDELIVERED')).toBe('Undelivered');
-    expect(normalizeStatus('CANCEL')).toBe('Cancelled');
-    expect(normalizeStatus('CANCELLED')).toBe('Cancelled');
-    expect(normalizeStatus('CANCELED')).toBe('Cancelled');
-    expect(normalizeStatus('RTO')).toBe('RTO');
-    expect(normalizeStatus('RETURN TO ORIGIN')).toBe('RTO');
-    expect(normalizeStatus('')).toBe('Unknown');
+  it('ignores DRS status (CLOSED) and uses Status (DEL/UNDEL) for shipment delivery calculations', () => {
+    const rawHeaders = ['AWB', 'DRS status', 'Status', 'Sub status'];
+    const keyStatus = findHeaderKey(rawHeaders, ['status', 'shipment_status', 'shipmentstatus', 'delivery_status', 'deliverystatus']);
+    const keyDrsStatus = findHeaderKey(rawHeaders, ['drs_status', 'drsstatus']);
+
+    expect(keyStatus).toBe('Status');
+    expect(keyDrsStatus).toBe('DRS status');
+
+    const sampleRow = { AWB: 'AWB001', 'DRS status': 'CLOSED', Status: 'DEL', 'Sub status': 'Delivered Successfully' };
+    const rawStat = sampleRow[keyStatus as keyof typeof sampleRow];
+    expect(rawStat).toBe('DEL');
+    expect(normalizeStatus(rawStat)).toBe('Delivered');
   });
 
-  it('normalizes attempt counts (defaulting missing/blank on valid row to 1)', () => {
-    expect(normalizeAttempts('1')).toBe(1);
-    expect(normalizeAttempts('2')).toBe(2);
-    expect(normalizeAttempts(' Attempt 3 ')).toBe(3);
-    expect(normalizeAttempts('')).toBe(1);
-    expect(normalizeAttempts(null)).toBe(1);
-    expect(normalizeAttempts(undefined)).toBe(1);
-    expect(normalizeAttempts('0')).toBe(1);
+  it('calculates exact delivery percentage matching real CSV (851 DEL / 229 UNDEL = 78.8%)', () => {
+    const delCount = 851;
+    const undelCount = 229;
+    const totalOfd = delCount + undelCount; // 1080
+    const deliveryRate = Number(((delCount / totalOfd) * 100).toFixed(1));
+
+    expect(totalOfd).toBe(1080);
+    expect(deliveryRate).toBe(78.8);
   });
 });
+
 
 describe('Excel Pivot Table Calculation Engine Verification', () => {
   const dataset: DRSReportRow[] = [

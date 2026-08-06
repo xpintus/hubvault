@@ -78,7 +78,10 @@ export async function parseDRSFile(file: File): Promise<{
   const keyState = getKey(['state', 'destination_state', 'destinationstate']);
   const keyCustomer = getKey(['customer_name', 'client_name', 'client', 'customername', 'clientname']);
   const keyConsignee = getKey(['consignee', 'consignee_name', 'customer', 'receiver_name', 'consigneename', 'receivername']);
-  const keyStatus = getKey(['shipment_status', 'shipmentstatus', 'status', 'delivery_status', 'drs_status', 'deliverystatus', 'drsstatus']);
+  
+  // CRITICAL: Shipment delivery status MUST use 'status' / 'shipment_status' and NEVER 'drs_status'
+  const keyStatus = getKey(['status', 'shipment_status', 'shipmentstatus', 'delivery_status', 'deliverystatus']);
+  
   const keyAmount = getKey(['amount_payable', 'amount', 'cod_amount', 'collectable_amount', 'amountpayable', 'codamount']);
   const keyPayment = getKey(['payment_type', 'paymenttype', 'pay_mode', 'payment_mode', 'cod_prepaid', 'paymentmode', 'paymode']);
   const keyPodDate = getKey(['POD_date', 'pod_date', 'poddate', 'delivery_date', 'deliverydate']);
@@ -87,11 +90,12 @@ export async function parseDRSFile(file: File): Promise<{
   const keyAttempts = getKey(['total_attemps', 'total_attempts', 'totalattempts', 'attempt_count', 'attempts', 'attemptcount', 'totalattemps']);
   const keyPincode = getKey(['delivery_pincode', 'pincode', 'zipcode', 'pin', 'deliverypincode']);
   const keyMobility = getKey(['is_mobility', 'mobility', 'ismobility']);
-  const keyReason = getKey(['reason', 'ndr_reason', 'undelivered_reason', 'fail_reason', 'original_ndr_reason', 'ndrreason', 'failreason']);
+  const keyReason = getKey(['reason', 'ndr_reason', 'sub_status', 'substatus', 'undelivered_reason', 'fail_reason', 'original_ndr_reason', 'ndrreason', 'failreason']);
   const keyOtp = getKey(['otp_details', 'otp_status', 'otp', 'otpdetails', 'otpstatus']);
   const keyDrsDate = getKey(['drs_date', 'drsdate', 'dispatch_date', 'dispatchdate']);
   const keyDrsStatus = getKey(['drs_status', 'drsstatus']);
   const keyInstruction = getKey(['ndr_instruction_received', 'instruction', 'ndrinstructionreceived']);
+
 
   const parsedRows: DRSReportRow[] = [];
   const invalidRows: DRSReportRow[] = [];
