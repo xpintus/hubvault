@@ -166,12 +166,21 @@ export default function DRSPerformanceReport() {
         reattemptOfd: overall.reattemptOfd,
         reattemptDel: overall.reattemptDelivered,
         overallDeliveryPct: overall.overallDeliveryPct,
-        codOfd: overall.totalOfd,
-        codDel: overall.totalDelivered,
+
+        codOfd: overall.codOfd,
+        codDel: overall.codDelivered,
+        codFirstAttemptOfd: overall.codFirstAttemptOfd,
+        codFirstAttemptDel: overall.codFirstAttemptDel,
+        codFadPercent: overall.codFadPercent,
+
+        prepaidOfd: overall.prepaidOfd,
+        prepaidDel: overall.prepaidDelivered,
+        prepaidFirstAttemptOfd: overall.prepaidFirstAttemptOfd,
+        prepaidFirstAttemptDel: overall.prepaidFirstAttemptDel,
+        prepaidFadPercent: overall.prepaidFadPercent,
+
         codAmount: overall.totalCodValue,
-        prepaidOfd: 0,
-        prepaidDel: 0,
-        prepaidAmount: 0,
+        prepaidAmount: overall.deliveredCodValue,
         averageAttempt: overall.averageAttempts,
         rows: parsed.uniqueRows,
         summary: overall,
@@ -203,6 +212,19 @@ export default function DRSPerformanceReport() {
       totalDelivered: summary.totalDelivered,
       totalUndel: summary.totalUndel,
       overallDeliveryPct: summary.overallDeliveryPct,
+
+      codOfd: summary.codOfd,
+      codDel: summary.codDelivered,
+      codFirstAttemptOfd: summary.codFirstAttemptOfd,
+      codFirstAttemptDel: summary.codFirstAttemptDel,
+      codFadPercent: summary.codFadPercent,
+
+      prepaidOfd: summary.prepaidOfd,
+      prepaidDel: summary.prepaidDelivered,
+      prepaidFirstAttemptOfd: summary.prepaidFirstAttemptOfd,
+      prepaidFirstAttemptDel: summary.prepaidFirstAttemptDel,
+      prepaidFadPercent: summary.prepaidFadPercent,
+
       rows: uniqueRows,
       summary: summary,
     };
@@ -294,10 +316,15 @@ export default function DRSPerformanceReport() {
   };
 
   const handleReopenHistory = (item: DRSReportHistoryItem) => {
-    setSummary(item.summary);
-    setUniqueRows(item.rows);
-    setEmployeeMetrics(computeEmployeeDRSMetrics(item.rows));
-    setToastMsg(`Loaded saved report: ${item.fileName}`);
+    if (item.summary && item.rows && item.rows.length > 0) {
+      setSummary(item.summary);
+      setUniqueRows(item.rows);
+      setEmployeeMetrics(computeEmployeeDRSMetrics(item.rows));
+      setActiveTab('OVERVIEW');
+      setToastMsg(`Loaded saved report: ${item.fileName}`);
+    } else {
+      alert('Snapshot content is missing or corrupted.');
+    }
   };
 
   const handleDeleteHistory = async (id: string) => {
@@ -306,6 +333,34 @@ export default function DRSPerformanceReport() {
       setHistoryList(updated);
       setToastMsg('Report snapshot deleted.');
     }
+  };
+
+  const handleExportHistoryExcel = (item: DRSReportHistoryItem) => {
+    if (!item.summary || !item.rows) return;
+    const empMetrics = computeEmployeeDRSMetrics(item.rows);
+    const payMetrics = computePaymentAnalytics(item.rows);
+    const cliMetrics = computeClientDRSMetrics(item.rows);
+    const rsnMetrics = computeNDRReasonAnalytics(item.rows);
+    const rtoMet = computeRTOAnalytics(item.rows);
+
+    exportDRSPerformanceWorkbook(
+      item.summary,
+      empMetrics,
+      cliMetrics,
+      payMetrics,
+      rsnMetrics,
+      rtoMet,
+      item.rows,
+      [],
+      [],
+      `Report_${item.reportDate}`
+    );
+  };
+
+  const handleExportHistoryPDF = async (item: DRSReportHistoryItem) => {
+    if (!item.summary || !item.rows) return;
+    const empMetrics = computeEmployeeDRSMetrics(item.rows);
+    await exportDRSPerformancePDF(item.summary, empMetrics, `Executive_Report_${item.reportDate}`);
   };
 
   // Run Side-by-Side Report Comparison
@@ -627,9 +682,14 @@ export default function DRSPerformanceReport() {
                   <h3 className="font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5 text-xs">
                     <CreditCard className="h-4 w-4" /> COD Payment Analytics
                   </h3>
-                  <span className="font-mono font-black text-purple-600">{paymentMetrics.codDeliveryPct}% DEL</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-purple-600">{paymentMetrics.codDeliveryPct}% DEL</span>
+                    <span className="font-mono font-black bg-purple-600 text-white px-2 py-0.5 rounded-md text-[11px]">
+                      COD FAD: {paymentMetrics.codFadPercent}%
+                    </span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <span className="text-neutral-500 block">COD OFD</span>
                     <span className="font-black text-neutral-900 dark:text-neutral-100 text-sm">{paymentMetrics.codOfd}</span>
@@ -637,6 +697,10 @@ export default function DRSPerformanceReport() {
                   <div>
                     <span className="text-neutral-500 block">COD Delivered</span>
                     <span className="font-black text-emerald-600 text-sm">{paymentMetrics.codDelivered}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">1st OFD / DEL</span>
+                    <span className="font-black text-purple-600 text-xs">{paymentMetrics.codFirstAttemptOfd} / {paymentMetrics.codFirstAttemptDel}</span>
                   </div>
                   <div>
                     <span className="text-neutral-500 block">COD Pending</span>
@@ -655,9 +719,14 @@ export default function DRSPerformanceReport() {
                   <h3 className="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5 text-xs">
                     <CreditCard className="h-4 w-4" /> Prepaid Payment Analytics
                   </h3>
-                  <span className="font-mono font-black text-blue-600">{paymentMetrics.prepaidDeliveryPct}% DEL</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-blue-600">{paymentMetrics.prepaidDeliveryPct}% DEL</span>
+                    <span className="font-mono font-black bg-blue-600 text-white px-2 py-0.5 rounded-md text-[11px]">
+                      Prepaid FAD: {paymentMetrics.prepaidFadPercent}%
+                    </span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <span className="text-neutral-500 block">Prepaid OFD</span>
                     <span className="font-black text-neutral-900 dark:text-neutral-100 text-sm">{paymentMetrics.prepaidOfd}</span>
@@ -665,6 +734,10 @@ export default function DRSPerformanceReport() {
                   <div>
                     <span className="text-neutral-500 block">Delivered</span>
                     <span className="font-black text-emerald-600 text-sm">{paymentMetrics.prepaidDelivered}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">1st OFD / DEL</span>
+                    <span className="font-black text-blue-600 text-xs">{paymentMetrics.prepaidFirstAttemptOfd} / {paymentMetrics.prepaidFirstAttemptDel}</span>
                   </div>
                   <div>
                     <span className="text-neutral-500 block">Pending</span>
@@ -803,16 +876,31 @@ export default function DRSPerformanceReport() {
                             <td className="px-4 py-3 font-bold text-emerald-600">{h.totalDelivered}</td>
                             <td className="px-4 py-3 font-mono font-black text-emerald-600">{h.overallDeliveryPct}%</td>
                             <td className="px-4 py-3">{h.uploadedBy}</td>
-                            <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
+                            <td className="px-4 py-3 text-right flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleReopenHistory(h)}
-                                className="px-3 py-1 rounded-lg bg-brand-600 text-white font-bold transition active:scale-95"
+                                className="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-bold transition active:scale-95"
                               >
                                 Open
                               </button>
                               <button
+                                onClick={() => handleExportHistoryExcel(h)}
+                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                title="Export Excel"
+                              >
+                                <FileSpreadsheet className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleExportHistoryPDF(h)}
+                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                title="Export PDF"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </button>
+                              <button
                                 onClick={() => handleDeleteHistory(h.id)}
-                                className="p-1 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                title="Delete"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>

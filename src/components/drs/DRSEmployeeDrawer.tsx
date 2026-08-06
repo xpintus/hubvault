@@ -119,6 +119,18 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
       deliveredCodValue: metrics.cod_value_delivered,
       averageAttempts: metrics.average_attempts,
       maximumAttempts: metrics.maximum_attempts,
+
+      codOfd: metrics.cod_ofd,
+      codDelivered: metrics.cod_delivered,
+      codFirstAttemptOfd: metrics.cod_first_attempt_ofd,
+      codFirstAttemptDel: metrics.cod_first_attempt_del,
+      codFadPercent: metrics.cod_fad_percent,
+
+      prepaidOfd: metrics.prepaid_ofd,
+      prepaidDelivered: metrics.prepaid_delivered,
+      prepaidFirstAttemptOfd: metrics.prepaid_first_attempt_ofd,
+      prepaidFirstAttemptDel: metrics.prepaid_first_attempt_del,
+      prepaidFadPercent: metrics.prepaid_fad_percent,
     };
 
     exportDRSPerformanceWorkbook(
@@ -133,6 +145,9 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
         codPending: metrics.cod_pending,
         codTotalAmount: metrics.cod_value_total,
         codDeliveredAmount: metrics.cod_value_delivered,
+        codFirstAttemptOfd: metrics.cod_first_attempt_ofd,
+        codFirstAttemptDel: metrics.cod_first_attempt_del,
+        codFadPercent: metrics.cod_fad_percent,
 
         prepaidOfd: metrics.prepaid_ofd,
         prepaidDelivered: metrics.prepaid_delivered,
@@ -141,6 +156,9 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
         prepaidPending: metrics.prepaid_pending,
         prepaidTotalAmount: metrics.prepaid_amount_total,
         prepaidDeliveredAmount: metrics.prepaid_amount_total,
+        prepaidFirstAttemptOfd: metrics.prepaid_first_attempt_ofd,
+        prepaidFirstAttemptDel: metrics.prepaid_first_attempt_del,
+        prepaidFadPercent: metrics.prepaid_fad_percent,
       },
       [],
       [],
@@ -149,6 +167,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
       [],
       `Executive_${metrics.employee_name.replace(/\s+/g, '_')}_Report`
     );
+
   };
 
   return (

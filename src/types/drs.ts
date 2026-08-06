@@ -75,6 +75,9 @@ export interface EmployeeDRSMetrics {
   cod_undel: number;
   cod_delivery_pct: number;
   cod_pending: number;
+  cod_first_attempt_ofd: number;
+  cod_first_attempt_del: number;
+  cod_fad_percent: number;
 
   prepaid_ofd: number;
   prepaid_delivered: number;
@@ -82,6 +85,9 @@ export interface EmployeeDRSMetrics {
   prepaid_delivery_pct: number;
   prepaid_pending: number;
   prepaid_amount_total: number;
+  prepaid_first_attempt_ofd: number;
+  prepaid_first_attempt_del: number;
+  prepaid_fad_percent: number;
 
   average_attempts: number;
   maximum_attempts: number;
@@ -115,6 +121,9 @@ export interface PaymentAnalyticsMetrics {
   codPending: number;
   codTotalAmount: number;
   codDeliveredAmount: number;
+  codFirstAttemptOfd: number;
+  codFirstAttemptDel: number;
+  codFadPercent: number;
 
   prepaidOfd: number;
   prepaidDelivered: number;
@@ -123,6 +132,9 @@ export interface PaymentAnalyticsMetrics {
   prepaidPending: number;
   prepaidTotalAmount: number;
   prepaidDeliveredAmount: number;
+  prepaidFirstAttemptOfd: number;
+  prepaidFirstAttemptDel: number;
+  prepaidFadPercent: number;
 }
 
 export interface NDRReasonMetrics {
@@ -187,6 +199,19 @@ export interface OverallDRSSummary {
   deliveredCodValue: number;
   averageAttempts: number;
   maximumAttempts: number;
+
+  // Bug 1 Fix: Payment FAD% fields
+  codOfd: number;
+  codDelivered: number;
+  codFirstAttemptOfd: number;
+  codFirstAttemptDel: number;
+  codFadPercent: number;
+
+  prepaidOfd: number;
+  prepaidDelivered: number;
+  prepaidFirstAttemptOfd: number;
+  prepaidFirstAttemptDel: number;
+  prepaidFadPercent: number;
 }
 
 export interface DRSFilterOptions {
@@ -231,18 +256,26 @@ export interface DRSReportHistoryItem {
   reattemptOfd?: number;
   reattemptDel?: number;
   overallDeliveryPct: number;
+
   codOfd?: number;
   codDel?: number;
-  codAmount?: number;
+  codFirstAttemptOfd?: number;
+  codFirstAttemptDel?: number;
+  codFadPercent?: number;
+
   prepaidOfd?: number;
-  prepaidDel?: fontFormatNumber;
+  prepaidDel?: number;
+  prepaidFirstAttemptOfd?: number;
+  prepaidFirstAttemptDel?: number;
+  prepaidFadPercent?: number;
+
+  codAmount?: number;
   prepaidAmount?: number;
   averageAttempt?: number;
+
   rows: DRSReportRow[];
   summary: OverallDRSSummary;
 }
-
-type fontFormatNumber = number;
 
 export interface DRSReportComparison {
   reportA: DRSReportHistoryItem;
@@ -254,6 +287,4 @@ export interface DRSReportComparison {
   undelChange: number;
   deliveryRateChange: number;
   codAmountChange: number;
-  topExecA?: string;
-  topExecB?: string;
 }

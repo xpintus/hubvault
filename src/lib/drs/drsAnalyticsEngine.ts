@@ -46,6 +46,16 @@ export function computeOverallDRSSummary(
   let totalCancelled = 0;
   let totalRto = 0;
 
+  let codOfd = 0;
+  let codDelivered = 0;
+  let codFirstAttemptOfd = 0;
+  let codFirstAttemptDel = 0;
+
+  let prepaidOfd = 0;
+  let prepaidDelivered = 0;
+  let prepaidFirstAttemptOfd = 0;
+  let prepaidFirstAttemptDel = 0;
+
   let totalCodValue = 0;
   let deliveredCodValue = 0;
   let sumAttempts = 0;
@@ -66,12 +76,27 @@ export function computeOverallDRSSummary(
     if (r.drs_code) drsCodesSet.add(r.drs_code);
 
     if (isCod) {
+      codOfd++;
       totalCodValue += r.amount_payable;
+      if (status === 'Delivered') {
+        codDelivered++;
+        deliveredCodValue += r.amount_payable;
+      }
+      if (attempts <= 1) {
+        codFirstAttemptOfd++;
+        if (status === 'Delivered') codFirstAttemptDel++;
+      }
+    } else {
+      prepaidOfd++;
+      if (status === 'Delivered') prepaidDelivered++;
+      if (attempts <= 1) {
+        prepaidFirstAttemptOfd++;
+        if (status === 'Delivered') prepaidFirstAttemptDel++;
+      }
     }
 
     if (status === 'Delivered') {
       totalDelivered++;
-      if (isCod) deliveredCodValue += r.amount_payable;
     } else if (status === 'Undelivered') {
       totalUndel++;
     } else if (status === 'Cancelled') {
@@ -114,6 +139,10 @@ export function computeOverallDRSSummary(
   const firstAttemptContributionPct = totalDelivered > 0 ? (firstAttemptDelivered / totalDelivered) * 100 : 0;
   const reattemptContributionPct = totalDelivered > 0 ? (reattemptDelivered / totalDelivered) * 100 : 0;
   const averageAttempts = totalOfd > 0 ? sumAttempts / totalOfd : 0;
+
+  // Bug 1 Fix: Safe division for COD & Prepaid FAD %
+  const codFadPercent = codFirstAttemptOfd > 0 ? (codFirstAttemptDel / codFirstAttemptOfd) * 100 : 0;
+  const prepaidFadPercent = prepaidFirstAttemptOfd > 0 ? (prepaidFirstAttemptDel / prepaidFirstAttemptOfd) * 100 : 0;
 
   return {
     fileName: meta.fileName,
@@ -162,6 +191,18 @@ export function computeOverallDRSSummary(
     deliveredCodValue,
     averageAttempts: Number(averageAttempts.toFixed(2)),
     maximumAttempts,
+
+    codOfd,
+    codDelivered,
+    codFirstAttemptOfd,
+    codFirstAttemptDel,
+    codFadPercent: Number(codFadPercent.toFixed(2)),
+
+    prepaidOfd,
+    prepaidDelivered,
+    prepaidFirstAttemptOfd,
+    prepaidFirstAttemptDel,
+    prepaidFadPercent: Number(prepaidFadPercent.toFixed(2)),
   };
 }
 
@@ -206,11 +247,15 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
     let codCount = 0;
     let codDelivered = 0;
     let codUndel = 0;
+    let codFirstAttemptOfd = 0;
+    let codFirstAttemptDel = 0;
 
     let prepaidCount = 0;
     let prepaidDelivered = 0;
     let prepaidUndel = 0;
     let prepaidAmountTotal = 0;
+    let prepaidFirstAttemptOfd = 0;
+    let prepaidFirstAttemptDel = 0;
 
     let codTotalValue = 0;
     let codDeliveredValue = 0;
@@ -235,11 +280,19 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
         } else if (status === 'Undelivered') {
           codUndel++;
         }
+        if (attempts <= 1) {
+          codFirstAttemptOfd++;
+          if (status === 'Delivered') codFirstAttemptDel++;
+        }
       } else {
         prepaidCount++;
         prepaidAmountTotal += r.amount_payable;
         if (status === 'Delivered') prepaidDelivered++;
         else if (status === 'Undelivered') prepaidUndel++;
+        if (attempts <= 1) {
+          prepaidFirstAttemptOfd++;
+          if (status === 'Delivered') prepaidFirstAttemptDel++;
+        }
       }
 
       if (status === 'Delivered') {
@@ -288,6 +341,9 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
     const codDeliveryPct = codCount > 0 ? (codDelivered / codCount) * 100 : 0;
     const prepaidDeliveryPct = prepaidCount > 0 ? (prepaidDelivered / prepaidCount) * 100 : 0;
 
+    const codFadPercent = codFirstAttemptOfd > 0 ? (codFirstAttemptDel / codFirstAttemptOfd) * 100 : 0;
+    const prepaidFadPercent = prepaidFirstAttemptOfd > 0 ? (prepaidFirstAttemptDel / prepaidFirstAttemptOfd) * 100 : 0;
+
     const avgAttempts = totalOfd > 0 ? sumAttempts / totalOfd : 0;
 
     employeeMetrics.push({
@@ -334,6 +390,9 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
       cod_undel: codUndel,
       cod_delivery_pct: Number(codDeliveryPct.toFixed(2)),
       cod_pending: codCount - codDelivered,
+      cod_first_attempt_ofd: codFirstAttemptOfd,
+      cod_first_attempt_del: codFirstAttemptDel,
+      cod_fad_percent: Number(codFadPercent.toFixed(2)),
 
       prepaid_ofd: prepaidCount,
       prepaid_delivered: prepaidDelivered,
@@ -341,6 +400,9 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
       prepaid_delivery_pct: Number(prepaidDeliveryPct.toFixed(2)),
       prepaid_pending: prepaidCount - prepaidDelivered,
       prepaid_amount_total: prepaidAmountTotal,
+      prepaid_first_attempt_ofd: prepaidFirstAttemptOfd,
+      prepaid_first_attempt_del: prepaidFirstAttemptDel,
+      prepaid_fad_percent: Number(prepaidFadPercent.toFixed(2)),
 
       average_attempts: Number(avgAttempts.toFixed(2)),
       maximum_attempts: maxAttempts,
@@ -434,15 +496,22 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
   let codTotalAmount = 0;
   let codDeliveredAmount = 0;
 
+  let codFirstAttemptOfd = 0;
+  let codFirstAttemptDel = 0;
+
   let prepaidOfd = 0;
   let prepaidDelivered = 0;
   let prepaidUndel = 0;
   let prepaidTotalAmount = 0;
   let prepaidDeliveredAmount = 0;
 
+  let prepaidFirstAttemptOfd = 0;
+  let prepaidFirstAttemptDel = 0;
+
   uniqueRows.forEach((r) => {
     const isCod = r.payment_type.toUpperCase().includes('COD');
     const status = r.shipment_status_normalized;
+    const attempts = r.total_attempts || 1;
 
     if (isCod) {
       codOfd++;
@@ -453,6 +522,10 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
       } else if (status === 'Undelivered') {
         codUndel++;
       }
+      if (attempts <= 1) {
+        codFirstAttemptOfd++;
+        if (status === 'Delivered') codFirstAttemptDel++;
+      }
     } else {
       prepaidOfd++;
       prepaidTotalAmount += r.amount_payable;
@@ -462,11 +535,19 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
       } else if (status === 'Undelivered') {
         prepaidUndel++;
       }
+      if (attempts <= 1) {
+        prepaidFirstAttemptOfd++;
+        if (status === 'Delivered') prepaidFirstAttemptDel++;
+      }
     }
   });
 
   const codDeliveryPct = codOfd > 0 ? (codDelivered / codOfd) * 100 : 0;
   const prepaidDeliveryPct = prepaidOfd > 0 ? (prepaidDelivered / prepaidOfd) * 100 : 0;
+
+  // Bug 1 Fix: Safe Division for COD FAD % and Prepaid FAD %
+  const codFadPercent = codFirstAttemptOfd > 0 ? (codFirstAttemptDel / codFirstAttemptOfd) * 100 : 0;
+  const prepaidFadPercent = prepaidFirstAttemptOfd > 0 ? (prepaidFirstAttemptDel / prepaidFirstAttemptOfd) * 100 : 0;
 
   return {
     codOfd,
@@ -476,6 +557,9 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
     codPending: codOfd - codDelivered,
     codTotalAmount,
     codDeliveredAmount,
+    codFirstAttemptOfd,
+    codFirstAttemptDel,
+    codFadPercent: Number(codFadPercent.toFixed(2)),
 
     prepaidOfd,
     prepaidDelivered,
@@ -484,6 +568,9 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
     prepaidPending: prepaidOfd - prepaidDelivered,
     prepaidTotalAmount,
     prepaidDeliveredAmount,
+    prepaidFirstAttemptOfd,
+    prepaidFirstAttemptDel,
+    prepaidFadPercent: Number(prepaidFadPercent.toFixed(2)),
   };
 }
 
