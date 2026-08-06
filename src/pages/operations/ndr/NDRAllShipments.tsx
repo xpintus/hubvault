@@ -39,6 +39,7 @@ export default function NDRAllShipments() {
   const [workflowStatus, setWorkflowStatus] = useState<NDRWorkflowStatus | 'ALL'>(
     (searchParams.get('workflowStatus') as NDRWorkflowStatus) || 'ALL'
   );
+  const [attempts, setAttempts] = useState<string>(searchParams.get('attempts') || 'ALL');
   const [vendor, setVendor] = useState(searchParams.get('vendor') || 'ALL');
   const [executive, setExecutive] = useState(searchParams.get('executive') || 'ALL');
   const [reason, setReason] = useState(searchParams.get('reason') || 'ALL');
@@ -51,6 +52,7 @@ export default function NDRAllShipments() {
   // Sync state when URL searchParams change
   useEffect(() => {
     setWorkflowStatus((searchParams.get('workflowStatus') as NDRWorkflowStatus) || 'ALL');
+    setAttempts(searchParams.get('attempts') || 'ALL');
     setVendor(searchParams.get('vendor') || 'ALL');
     setExecutive(searchParams.get('executive') || 'ALL');
     setReason(searchParams.get('reason') || 'ALL');
@@ -73,6 +75,7 @@ export default function NDRAllShipments() {
         hubId: selectedHub?.id || undefined,
         search,
         workflowStatus,
+        attempts: attempts !== 'ALL' ? attempts : undefined,
         vendor: vendor !== 'ALL' ? vendor : undefined,
         executive: executive !== 'ALL' ? executive : undefined,
         reason: reason !== 'ALL' ? reason : undefined,
@@ -88,11 +91,13 @@ export default function NDRAllShipments() {
     } finally {
       setLoading(false);
     }
+
   };
 
   useEffect(() => {
     loadData();
-  }, [selectedHub, search, workflowStatus, vendor, executive, reason, otpStatus, aging, page, outletCtx?.refreshTrigger]);
+  }, [selectedHub, search, workflowStatus, attempts, vendor, executive, reason, otpStatus, aging, page, outletCtx?.refreshTrigger]);
+
 
   const handleCallSuccess = () => {
     setToastMsg('Call saved successfully. Sent to Supervisor.');
@@ -227,6 +232,20 @@ export default function NDRAllShipments() {
             <option value={NDR_WORKFLOW_STATUS.RTO}>RTO</option>
             <option value={NDR_WORKFLOW_STATUS.CLOSED}>Closed</option>
           </select>
+
+          <select
+            value={attempts}
+            onChange={(e) => {
+              setAttempts(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+          >
+            <option value="ALL">All Attempts</option>
+            <option value="1">Attempt 1</option>
+            <option value="2">Attempt 2</option>
+            <option value="3+">Attempt 3+</option>
+          </select>
         </div>
 
         <div className="flex items-center gap-2">
@@ -260,6 +279,7 @@ export default function NDRAllShipments() {
               <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="px-4 py-3">AWB</th>
+                  <th className="px-4 py-3">Attempt</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Executive</th>
                   <th className="px-4 py-3">Original Reason</th>
@@ -282,6 +302,19 @@ export default function NDRAllShipments() {
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition cursor-pointer"
                   >
                     <td className="px-4 py-3 font-mono font-bold text-neutral-900 dark:text-neutral-100">{s.awb_number}</td>
+
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                        (s.total_attempts || 1) <= 1
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                          : (s.total_attempts === 2)
+                          ? 'bg-orange-500/10 text-orange-600 border-orange-500/20'
+                          : 'bg-red-500/10 text-red-600 border-red-500/20'
+                      }`}>
+                        Attempt {s.total_attempts || 1}
+                      </span>
+                    </td>
+
 
                     <td className="px-4 py-3">
                       <p className="font-semibold text-neutral-900 dark:text-neutral-100">{s.consignee_name || '-'}</p>

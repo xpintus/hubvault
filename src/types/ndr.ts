@@ -173,6 +173,11 @@ export interface NDRMetrics {
   followUpToday: number;
   deliveredAfterNdr: number;
   rtoClosed: number;
+  attempt1Count: number;
+  attempt2Count: number;
+  attempt3Count: number;
+  attempt4PlusCount: number;
+  totalOfdAttemptsToday: number;
 }
 
 
@@ -185,6 +190,7 @@ export interface NDRFilterParams {
   executive?: string;
   status?: string;
   workflowStatus?: NDRWorkflowStatus | 'ALL' | string;
+  attempts?: string;
 
   reason?: string;
   callerId?: string;
@@ -197,6 +203,7 @@ export interface NDRFilterParams {
   page?: number;
   limit?: number;
 }
+
 
 
 export interface ParsedNDRExcelRow {
