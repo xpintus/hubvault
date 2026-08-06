@@ -168,17 +168,15 @@ export interface NDRTimelineLog {
 
 export interface NDRMetrics {
   totalActive: number;
+  freshShipments: number;
+  reattemptPending: number;
   callingPending: number;
   supervisorPending: number;
   followUpToday: number;
   deliveredAfterNdr: number;
   rtoClosed: number;
-  attempt1Count: number;
-  attempt2Count: number;
-  attempt3Count: number;
-  attempt4PlusCount: number;
-  totalOfdAttemptsToday: number;
 }
+
 
 
 export interface NDRFilterParams {

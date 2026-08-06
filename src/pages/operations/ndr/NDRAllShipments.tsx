@@ -241,9 +241,9 @@ export default function NDRAllShipments() {
             }}
             className="px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
           >
-            <option value="ALL">All Attempts</option>
-            <option value="1">Attempt 1</option>
-            <option value="2">Attempt 2</option>
+            <option value="ALL">All Shipments</option>
+            <option value="fresh">Fresh (Attempt 1)</option>
+            <option value="reattempt">Reattempt Pending (Attempt 2+)</option>
             <option value="3+">Attempt 3+</option>
           </select>
         </div>
@@ -279,7 +279,7 @@ export default function NDRAllShipments() {
               <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="px-4 py-3">AWB</th>
-                  <th className="px-4 py-3">Attempt</th>
+                  <th className="px-4 py-3">Attempt & Type</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Executive</th>
                   <th className="px-4 py-3">Original Reason</th>
@@ -311,9 +311,10 @@ export default function NDRAllShipments() {
                           ? 'bg-orange-500/10 text-orange-600 border-orange-500/20'
                           : 'bg-red-500/10 text-red-600 border-red-500/20'
                       }`}>
-                        Attempt {s.total_attempts || 1}
+                        {(s.total_attempts || 1) <= 1 ? 'Fresh (Attempt 1)' : `Reattempt (Attempt ${s.total_attempts})`}
                       </span>
                     </td>
+
 
 
                     <td className="px-4 py-3">

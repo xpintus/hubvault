@@ -6,7 +6,7 @@ import { NDRShipment } from '@/types/ndr';
 import { NDRCallModal } from '@/components/ndr/NDRCallModal';
 import { NDRStatusBadge } from '@/components/ndr/NDRStatusBadge';
 import { NDRToast } from '@/components/ndr/NDRToast';
-import { PhoneCall, RefreshCw, Filter } from 'lucide-react';
+import { Filter, PhoneCall, RefreshCw, Sparkles, Truck } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 
 export default function NDRCallingQueue() {
@@ -27,10 +27,26 @@ export default function NDRCallingQueue() {
         hubId: selectedHub?.id || undefined,
         workflowStatus: 'Calling Pending',
         attempts: attemptsFilter !== 'ALL' ? attemptsFilter : undefined,
-        limit: 100,
+        limit: 150,
       });
-      // Sort highest total_attempts first so callers work on oldest pending shipments first
-      const sorted = [...data].sort((a, b) => (b.total_attempts || 1) - (a.total_attempts || 1));
+
+      // Operational Calling Priority Comparator:
+      // 1. Fresh Shipments (Attempt 1) first
+      // 2. Reattempt Shipments sorted by highest attempt count first
+      const sorted = [...data].sort((a, b) => {
+        const attA = a.total_attempts || 1;
+        const attB = b.total_attempts || 1;
+
+        const isFreshA = attA === 1;
+        const isFreshB = attB === 1;
+
+        if (isFreshA && !isFreshB) return -1;
+        if (!isFreshA && isFreshB) return 1;
+
+        // Both are reattempt (>= 2) or both are fresh (= 1): sort by highest attempt count DESC
+        return attB - attA;
+      });
+
       setShipments(sorted);
     } catch (err) {
       console.error('Failed calling queue load:', err);
@@ -57,21 +73,21 @@ export default function NDRCallingQueue() {
   const getAttemptBadge = (attempts: number = 1) => {
     if (attempts <= 1) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-          Attempt 1
+        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
+          <Sparkles className="h-3 w-3" /> Fresh (Attempt 1)
         </span>
       );
     }
     if (attempts === 2) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
-          Attempt 2
+        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30 inline-flex items-center gap-1">
+          <Truck className="h-3 w-3" /> Reattempt (Attempt 2)
         </span>
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-        Attempt {attempts}+
+      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 inline-flex items-center gap-1">
+        <Truck className="h-3 w-3" /> Reattempt (Attempt {attempts})
       </span>
     );
   };
@@ -83,7 +99,9 @@ export default function NDRCallingQueue() {
           <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <PhoneCall className="h-5 w-5 text-purple-600" /> Calling Queue
           </h2>
-          <p className="text-xs text-neutral-500">Sorted by highest attempt count first. Prioritizing older pending shipments.</p>
+          <p className="text-xs text-neutral-500">
+            Operational Priority: <strong className="text-emerald-600">Fresh Shipments (Attempt 1)</strong> display first, followed by Reattempts sorted by highest attempt count.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -94,10 +112,9 @@ export default function NDRCallingQueue() {
               onChange={(e) => setAttemptsFilter(e.target.value)}
               className="bg-transparent font-semibold text-neutral-800 dark:text-neutral-200 focus:outline-none"
             >
-              <option value="ALL">All Attempts</option>
-              <option value="1">Attempt 1</option>
-              <option value="2">Attempt 2</option>
-              <option value="3+">Attempt 3+</option>
+              <option value="ALL">All Pending Calls</option>
+              <option value="fresh">Fresh Shipments (Attempt 1)</option>
+              <option value="reattempt">Reattempt Pending (Attempt 2+)</option>
             </select>
           </div>
 
@@ -121,7 +138,7 @@ export default function NDRCallingQueue() {
               <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="px-4 py-3">AWB</th>
-                  <th className="px-4 py-3">Attempt Count</th>
+                  <th className="px-4 py-3">Type & Attempt</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Executive</th>
                   <th className="px-4 py-3">Reason</th>

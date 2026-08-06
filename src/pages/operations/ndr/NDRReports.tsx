@@ -3,13 +3,11 @@ import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { exportNDRShipmentsToCSV, exportNDRShipmentsToExcel } from '@/lib/ndr/ndrExcel';
 import { NDRShipment } from '@/types/ndr';
-import { BarChart3, Download, FileSpreadsheet, FileText, RefreshCw, Truck } from 'lucide-react';
+import { BarChart3, Download, FileSpreadsheet, FileText, RefreshCw, Sparkles, Truck } from 'lucide-react';
 
 type ReportType =
+  | 'Fresh & Reattempt Analysis'
   | 'Daily'
-  | 'Attempt Wise'
-  | 'Weekly'
-  | 'Monthly'
   | 'Hub Wise'
   | 'Vendor Wise'
   | 'Caller Wise'
@@ -23,7 +21,7 @@ type ReportType =
 
 export default function NDRReports() {
   const { selectedHub } = useHub();
-  const [reportType, setReportType] = useState<ReportType>('Attempt Wise');
+  const [reportType, setReportType] = useState<ReportType>('Fresh & Reattempt Analysis');
   const [shipments, setShipments] = useState<NDRShipment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,14 +35,15 @@ export default function NDRReports() {
       .finally(() => setLoading(false));
   }, [selectedHub, reportType]);
 
-  // Compute Attempt Analysis Metrics
-  const attemptStats = React.useMemo(() => {
+  // Compute Fresh vs Reattempt Metrics
+  const stats = React.useMemo(() => {
     if (shipments.length === 0) {
-      return { total1: 0, total2: 0, total3Plus: 0, avgAttempts: 0, maxAttempts: 0 };
+      return { fresh: 0, reattempt: 0, delivered: 0, rto: 0, avgAttempts: 0, maxAttempts: 0 };
     }
-    let total1 = 0;
-    let total2 = 0;
-    let total3Plus = 0;
+    let fresh = 0;
+    let reattempt = 0;
+    let delivered = 0;
+    let rto = 0;
     let sumAttempts = 0;
     let maxAttempts = 0;
 
@@ -53,14 +52,16 @@ export default function NDRReports() {
       sumAttempts += att;
       if (att > maxAttempts) maxAttempts = att;
 
-      if (att === 1) total1++;
-      else if (att === 2) total2++;
-      else if (att >= 3) total3Plus++;
+      if (att === 1) fresh++;
+      else if (att >= 2) reattempt++;
+
+      if (s.shipment_status_current === 'DEL') delivered++;
+      if (s.shipment_status_current === 'RTO') rto++;
     });
 
     const avgAttempts = Number((sumAttempts / shipments.length).toFixed(2));
 
-    return { total1, total2, total3Plus, avgAttempts, maxAttempts };
+    return { fresh, reattempt, delivered, rto, avgAttempts, maxAttempts };
   }, [shipments]);
 
   // Aggregate Data depending on reportType
@@ -70,8 +71,8 @@ export default function NDRReports() {
     shipments.forEach((s) => {
       let key = 'Default';
       switch (reportType) {
-        case 'Attempt Wise':
-          key = `Attempt ${s.total_attempts || 1}`;
+        case 'Fresh & Reattempt Analysis':
+          key = (s.total_attempts || 1) <= 1 ? 'Fresh Shipments (Attempt 1)' : `Reattempt (Attempt ${s.total_attempts})`;
           break;
         case 'Daily':
           key = new Date(s.created_at).toLocaleDateString();
@@ -160,7 +161,7 @@ export default function NDRReports() {
 
   return (
     <div className="space-y-6">
-      {/* Attempt Analysis Summary Cards */}
+      {/* Fresh vs Reattempt Operational KPI Summary Cards */}
       <div className="p-6 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft space-y-4">
         <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
           <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
@@ -168,45 +169,54 @@ export default function NDRReports() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-              Delivery Attempt Analysis
+              Logistics Attempt & Operational Summary
             </h3>
-            <p className="text-xs text-neutral-500">Distribution and statistics derived from shipment attempt history.</p>
+            <p className="text-xs text-neutral-500">Breakdown of fresh imports, reattempt pending, resolutions, and average attempt metrics.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
           <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Total Attempt 1</span>
+            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-600" /> Fresh Shipments
+            </span>
             <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
-              {attemptStats.total1}
+              {stats.fresh}
             </span>
           </div>
 
           <div className="p-4 rounded-xl border border-orange-500/20 bg-orange-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Total Attempt 2</span>
+            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Reattempt Shipments</span>
             <span className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1 block">
-              {attemptStats.total2}
+              {stats.reattempt}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-xl border border-emerald-600/20 bg-emerald-500/10">
+            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Delivered After NDR</span>
+            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
+              {stats.delivered}
             </span>
           </div>
 
           <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Total Attempt 3+</span>
+            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">RTO Approved</span>
             <span className="text-2xl font-black text-red-600 dark:text-red-400 mt-1 block">
-              {attemptStats.total3Plus}
+              {stats.rto}
             </span>
           </div>
 
           <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/10">
             <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Average Attempts</span>
             <span className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">
-              {attemptStats.avgAttempts}
+              {stats.avgAttempts}
             </span>
           </div>
 
           <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/10">
             <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Maximum Attempts</span>
             <span className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1 block">
-              {attemptStats.maxAttempts}
+              {stats.maxAttempts}
             </span>
           </div>
         </div>
@@ -227,7 +237,7 @@ export default function NDRReports() {
             onChange={(e) => setReportType(e.target.value as ReportType)}
             className="px-3.5 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-neutral-900 dark:text-neutral-100"
           >
-            <option value="Attempt Wise">Attempt Wise Analysis</option>
+            <option value="Fresh & Reattempt Analysis">Fresh & Reattempt Analysis</option>
             <option value="Daily">Daily Breakdown</option>
             <option value="Vendor Wise">Vendor Wise</option>
             <option value="Executive Wise">Executive Wise</option>

@@ -114,7 +114,7 @@ export const NDRTimelineDrawer: React.FC<NDRTimelineDrawerProps> = ({ shipment, 
                 <span className="font-semibold text-neutral-800 dark:text-neutral-200">{shipment.otp_status || '-'}</span>
               </div>
               <div>
-                <span className="text-neutral-500 block">Attempt Count</span>
+                <span className="text-neutral-500 block">Attempt Type & Count</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-bold border inline-block mt-0.5 ${
                   (shipment.total_attempts || 1) <= 1
                     ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
@@ -122,9 +122,10 @@ export const NDRTimelineDrawer: React.FC<NDRTimelineDrawerProps> = ({ shipment, 
                     ? 'bg-orange-500/10 text-orange-600 border-orange-500/20'
                     : 'bg-red-500/10 text-red-600 border-red-500/20'
                 }`}>
-                  Attempt {shipment.total_attempts || 1}
+                  {(shipment.total_attempts || 1) <= 1 ? 'Fresh (Attempt 1)' : `Reattempt (Attempt ${shipment.total_attempts})`}
                 </span>
               </div>
+
               <div>
                 <span className="text-neutral-500 block">NDR Cycle</span>
                 <span className="font-bold text-brand-600 dark:text-brand-400">Cycle #{shipment.ndr_cycle}</span>
