@@ -1,221 +1,304 @@
-import { DRSReportRow, EmployeeDRSMetrics, OverallDRSSummary } from '@/types/drs';
+import {
+  ClientDRSMetrics,
+  DRSReportRow,
+  EmployeeDRSMetrics,
+  NDRReasonMetrics,
+  OverallDRSSummary,
+  PaymentAnalyticsMetrics,
+  RTOAnalyticsMetrics,
+} from '@/types/drs';
 import * as XLSX from 'xlsx';
 
 export function exportDRSPerformanceWorkbook(
   summary: OverallDRSSummary,
   employeeMetrics: EmployeeDRSMetrics[],
+  clientMetrics: ClientDRSMetrics[],
+  paymentMetrics: PaymentAnalyticsMetrics,
+  reasonMetrics: NDRReasonMetrics[],
+  rtoMetrics: RTOAnalyticsMetrics[],
   uniqueRows: DRSReportRow[],
   duplicateRows: DRSReportRow[],
   invalidRows: DRSReportRow[],
-  fileNamePrefix: string = 'DRS_Performance_Report'
+  fileNamePrefix: string = 'DRS_Performance_Enterprise_Report'
 ): void {
   const wb = XLSX.utils.book_new();
 
-  // 1. Sheet: DRS Summary
-  const summaryData = [
-    ['DRS PERFORMANCE OPERATIONAL SUMMARY REPORT'],
-    ['Report Generated At', new Date().toLocaleString()],
-    ['Source File Name', summary.fileName],
+  // Helper for adding formatted json worksheet
+  const addSheet = (name: string, data: Record<string, unknown>[]) => {
+    if (!data || data.length === 0) {
+      const wsEmpty = XLSX.utils.aoa_to_sheet([['No data available for this section']]);
+      XLSX.utils.book_append_sheet(wb, wsEmpty, name);
+      return;
+    }
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  };
+
+  // 1. Overview Sheet
+  const summaryAoa = [
+    ['HUBVAULT DRS PERFORMANCE ENTERPRISE LOGISTICS REPORT'],
+    ['Generated At', new Date().toLocaleString()],
+    ['Source File', summary.fileName],
     ['Report Date', summary.reportDate || 'N/A'],
     [''],
-    ['Metric', 'Value'],
-    ['Total Rows in Source File', summary.totalRows],
+    ['Metric Description', 'Value'],
+    ['Total Rows in File', summary.totalRows],
     ['Valid Operational Rows', summary.validRows],
     ['Invalid Rows (Missing AWB)', summary.invalidRows],
     ['Unique Shipment AWBs (Total OFD)', summary.totalOfd],
-    ['Duplicate AWB Records Consolidated', summary.duplicateRows],
-    ['Total Delivery Executives / Employees', summary.totalEmployees],
-    ['Total DRS Batches / Codes', summary.totalDrsCodes],
+    ['Duplicate AWBs Consolidated', summary.duplicateRows],
+    ['Total Delivery Executives', summary.totalEmployees],
+    ['Total DRS Codes', summary.totalDrsCodes],
     [''],
-    ['FIRST ATTEMPT METRICS (Attempt = 1)'],
-    ['First Attempt OFD', summary.firstAttemptOfd],
-    ['First Attempt Delivered', summary.firstAttemptDelivered],
-    ['First Attempt UNDEL', summary.firstAttemptUndel],
-    ['First Attempt Cancelled', summary.firstAttemptCancelled],
-    ['First Attempt RTO', summary.firstAttemptRto],
-    ['First Attempt Delivery Rate (%)', `${summary.firstAttemptDeliveryPct}%`],
-    [''],
-    ['REATTEMPT METRICS (Attempt >= 2)'],
-    ['Reattempt OFD', summary.reattemptOfd],
-    ['Reattempt Delivered', summary.reattemptDelivered],
-    ['Reattempt UNDEL', summary.reattemptUndel],
-    ['Reattempt Cancelled', summary.reattemptCancelled],
-    ['Reattempt RTO', summary.reattemptRto],
-    ['Reattempt Delivery Rate (%)', `${summary.reattemptDeliveryPct}%`],
-    ['Attempt 2 Delivered', summary.attempt2Delivered],
-    ['Attempt 3 Delivered', summary.attempt3Delivered],
-    ['Attempt 4+ Delivered', summary.attempt4PlusDelivered],
-    [''],
-    ['TOTAL OVERALL METRICS'],
-    ['Total OFD Shipments', summary.totalOfd],
+    ['DELIVERY PERFORMANCE METRICS'],
     ['Total Delivered Shipments', summary.totalDelivered],
     ['Total UNDEL Shipments', summary.totalUndel],
     ['Total Cancelled Shipments', summary.totalCancelled],
     ['Total RTO Shipments', summary.totalRto],
     ['Overall Delivery Rate (%)', `${summary.overallDeliveryPct}%`],
-    ['First Attempt Contribution (%)', `${summary.firstAttemptContributionPct}%`],
+    [''],
+    ['FIRST ATTEMPT METRICS (Attempt = 1)'],
+    ['1st Attempt OFD', summary.firstAttemptOfd],
+    ['1st Attempt Delivered', summary.firstAttemptDelivered],
+    ['1st Attempt Delivery Rate (%)', `${summary.firstAttemptDeliveryPct}%`],
+    ['1st Attempt Contribution (%)', `${summary.firstAttemptContributionPct}%`],
+    [''],
+    ['REATTEMPT METRICS (Attempt >= 2)'],
+    ['Reattempt OFD', summary.reattemptOfd],
+    ['Reattempt Delivered', summary.reattemptDelivered],
+    ['Reattempt Delivery Rate (%)', `${summary.reattemptDeliveryPct}%`],
     ['Reattempt Contribution (%)', `${summary.reattemptContributionPct}%`],
-    ['Total COD Value (₹)', summary.totalCodValue],
-    ['Delivered COD Value (₹)', summary.deliveredCodValue],
-    ['Average Attempts Per Shipment', summary.averageAttempts],
-    ['Maximum Attempts Made', summary.maximumAttempts],
+    [''],
+    ['PAYMENT METRICS'],
+    ['COD Total OFD', paymentMetrics.codOfd],
+    ['COD Delivered', paymentMetrics.codDelivered],
+    ['COD Delivery Rate (%)', `${paymentMetrics.codDeliveryPct}%`],
+    ['COD Total Amount (₹)', paymentMetrics.codTotalAmount],
+    ['COD Delivered Amount (₹)', paymentMetrics.codDeliveredAmount],
+    ['Prepaid Total OFD', paymentMetrics.prepaidOfd],
+    ['Prepaid Delivered', paymentMetrics.prepaidDelivered],
+    ['Prepaid Delivery Rate (%)', `${paymentMetrics.prepaidDeliveryPct}%`],
+    ['Prepaid Amount (₹)', paymentMetrics.prepaidTotalAmount],
   ];
 
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'DRS Summary');
+  const wsOverview = XLSX.utils.aoa_to_sheet(summaryAoa);
+  XLSX.utils.book_append_sheet(wb, wsOverview, 'Overview');
 
-  // Helper for converting objects to worksheet with formatting
-  const addFormattedSheet = (sheetName: string, data: Record<string, unknown>[]) => {
-    if (!data || data.length === 0) {
-      const wsEmpty = XLSX.utils.aoa_to_sheet([['No data available for this report section']]);
-      XLSX.utils.book_append_sheet(wb, wsEmpty, sheetName);
-      return;
-    }
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  };
-
-  // 2. Sheet: Employee Wise Report
-  const empSheetData = employeeMetrics.map((e, idx) => ({
-    'SR No': idx + 1,
-    'Employee Name': e.employee_name,
-    'Total OFD': e.total_ofd,
-    '1st Attempt OFD': e.first_attempt_ofd,
-    '1st Attempt Delivered': e.first_attempt_delivered,
-    '1st Attempt UNDEL': e.first_attempt_undel,
-    '1st Attempt Delivery %': `${e.first_attempt_delivery_pct}%`,
-    'Reattempt OFD': e.reattempt_ofd,
-    'Reattempt Delivered': e.reattempt_delivered,
-    'Reattempt UNDEL': e.reattempt_undel,
-    'Reattempt Delivery %': `${e.reattempt_delivery_pct}%`,
-    'Total Delivered': e.total_delivered,
-    'Total UNDEL': e.total_undel,
-    Cancelled: e.total_cancelled,
-    RTO: e.total_rto,
-    'Overall Delivery %': `${e.overall_delivery_pct}%`,
-    'COD Count': e.cod_shipments_count,
-    'Prepaid Count': e.prepaid_shipments_count,
-    'COD Value (₹)': e.cod_value_total,
-    'COD Value Delivered (₹)': e.cod_value_delivered,
-    'Avg Attempts': e.average_attempts,
-    'Max Attempts': e.maximum_attempts,
-  }));
-  addFormattedSheet('Employee Wise Report', empSheetData);
-
-  // 3. Sheet: First Attempt Report
-  const firstAttemptData = [...employeeMetrics]
-    .sort((a, b) => b.first_attempt_delivery_pct - a.first_attempt_delivery_pct)
-    .map((e, idx) => ({
+  // 2. Employee Report Sheet
+  addSheet(
+    'Employee Report',
+    employeeMetrics.map((e, idx) => ({
       Rank: idx + 1,
-      'Employee Name': e.employee_name,
-      'Total 1st Attempt OFD': e.first_attempt_ofd,
-      '1st Attempt Delivered': e.first_attempt_delivered,
-      '1st Attempt UNDEL': e.first_attempt_undel,
-      '1st Attempt Cancelled': e.first_attempt_cancelled,
-      '1st Attempt RTO': e.first_attempt_rto,
-      '1st Attempt Delivery %': `${e.first_attempt_delivery_pct}%`,
-    }));
-  addFormattedSheet('First Attempt Report', firstAttemptData);
-
-  // 4. Sheet: Reattempt Report
-  const reattemptData = [...employeeMetrics]
-    .sort((a, b) => b.reattempt_delivery_pct - a.reattempt_delivery_pct)
-    .map((e, idx) => ({
-      Rank: idx + 1,
-      'Employee Name': e.employee_name,
-      'Total Reattempt OFD': e.reattempt_ofd,
-      'Reattempt Delivered': e.reattempt_delivered,
-      'Reattempt UNDEL': e.reattempt_undel,
-      'Reattempt Cancelled': e.reattempt_cancelled,
-      'Reattempt RTO': e.reattempt_rto,
-      'Reattempt Delivery %': `${e.reattempt_delivery_pct}%`,
-      'Attempt 2 Delivered': e.attempt_2_delivered,
-      'Attempt 3 Delivered': e.attempt_3_delivered,
-      'Attempt 4+ Delivered': e.attempt_4plus_delivered,
-      'Average Attempts': e.average_attempts,
-    }));
-  addFormattedSheet('Reattempt Report', reattemptData);
-
-  // 5. Sheet: Total Delivery Report
-  const totalDeliveryData = [...employeeMetrics]
-    .sort((a, b) => b.total_delivered - a.total_delivered)
-    .map((e, idx) => ({
-      Rank: idx + 1,
-      'Employee Name': e.employee_name,
+      Employee: e.employee_name,
       'Total OFD': e.total_ofd,
-      'Total Delivered': e.total_delivered,
-      'Total UNDEL': e.total_undel,
-      Cancelled: e.total_cancelled,
+      '1st OFD': e.first_attempt_ofd,
+      '1st DEL': e.first_attempt_delivered,
+      '1st Rate (%)': `${e.first_attempt_delivery_pct}%`,
+      'Re OFD': e.reattempt_ofd,
+      'Re DEL': e.reattempt_delivered,
+      'Re Rate (%)': `${e.reattempt_delivery_pct}%`,
+      'Total DEL': e.total_delivered,
+      UNDEL: e.total_undel,
       RTO: e.total_rto,
-      '1st Attempt Delivered': e.first_attempt_delivered,
-      'Reattempt Delivered': e.reattempt_delivered,
-      'Overall Delivery %': `${e.overall_delivery_pct}%`,
-      '1st Attempt Contribution %': `${e.first_attempt_contribution_pct}%`,
-      'Reattempt Contribution %': `${e.reattempt_contribution_pct}%`,
-      'COD Value Delivered (₹)': e.cod_value_delivered,
-    }));
-  addFormattedSheet('Total Delivery Report', totalDeliveryData);
+      Cancel: e.total_cancelled,
+      'Overall Rate (%)': `${e.overall_delivery_pct}%`,
+      'COD OFD': e.cod_ofd,
+      'COD DEL': e.cod_delivered,
+      'COD Rate (%)': `${e.cod_delivery_pct}%`,
+      'Prepaid OFD': e.prepaid_ofd,
+      'Prepaid DEL': e.prepaid_delivered,
+      'Prepaid Rate (%)': `${e.prepaid_delivery_pct}%`,
+      'COD Amount (₹)': e.cod_value_total,
+    }))
+  );
 
-  // Helper for shipment row formatting
+  // 3. First Attempt Report
+  addSheet(
+    'First Attempt Report',
+    [...employeeMetrics]
+      .sort((a, b) => b.first_attempt_delivery_pct - a.first_attempt_delivery_pct)
+      .map((e, idx) => ({
+        Rank: idx + 1,
+        Employee: e.employee_name,
+        '1st OFD': e.first_attempt_ofd,
+        '1st DEL': e.first_attempt_delivered,
+        '1st UNDEL': e.first_attempt_undel,
+        '1st RTO': e.first_attempt_rto,
+        '1st Cancel': e.first_attempt_cancelled,
+        '1st Delivery %': `${e.first_attempt_delivery_pct}%`,
+        'COD Count': e.cod_ofd,
+        'Prepaid Count': e.prepaid_ofd,
+      }))
+  );
+
+  // 4. Reattempt Report
+  addSheet(
+    'Reattempt Report',
+    [...employeeMetrics]
+      .sort((a, b) => b.reattempt_delivery_pct - a.reattempt_delivery_pct)
+      .map((e, idx) => ({
+        Rank: idx + 1,
+        Employee: e.employee_name,
+        'Reattempt OFD': e.reattempt_ofd,
+        'Reattempt DEL': e.reattempt_delivered,
+        'Reattempt UNDEL': e.reattempt_undel,
+        'Attempt 2 DEL': e.attempt_2_delivered,
+        'Attempt 3 DEL': e.attempt_3_delivered,
+        'Attempt 4+ DEL': e.attempt_4plus_delivered,
+        'Reattempt Delivery %': `${e.reattempt_delivery_pct}%`,
+        'Avg Attempts': e.average_attempts,
+        'Max Attempt': e.maximum_attempts,
+      }))
+  );
+
+  // 5. Total Delivery Report
+  addSheet(
+    'Total Delivery Report',
+    [...employeeMetrics]
+      .sort((a, b) => b.total_delivered - a.total_delivered)
+      .map((e, idx) => ({
+        Rank: idx + 1,
+        Employee: e.employee_name,
+        'Total OFD': e.total_ofd,
+        'Total DEL': e.total_delivered,
+        UNDEL: e.total_undel,
+        RTO: e.total_rto,
+        Cancel: e.total_cancelled,
+        'Overall Delivery %': `${e.overall_delivery_pct}%`,
+        'COD DEL': e.cod_delivered,
+        'Prepaid DEL': e.prepaid_delivered,
+      }))
+  );
+
+  // 6. COD Report
+  addSheet(
+    'COD Report',
+    [...employeeMetrics]
+      .sort((a, b) => b.cod_ofd - a.cod_ofd)
+      .map((e, idx) => ({
+        Rank: idx + 1,
+        Employee: e.employee_name,
+        'COD OFD': e.cod_ofd,
+        'COD DEL': e.cod_delivered,
+        'COD Pending': e.cod_pending,
+        'COD Delivery %': `${e.cod_delivery_pct}%`,
+        'COD Amount Total (₹)': e.cod_value_total,
+        'COD Amount Collected (₹)': e.cod_value_delivered,
+      }))
+  );
+
+  // 7. Prepaid Report
+  addSheet(
+    'Prepaid Report',
+    [...employeeMetrics]
+      .sort((a, b) => b.prepaid_ofd - a.prepaid_ofd)
+      .map((e, idx) => ({
+        Rank: idx + 1,
+        Employee: e.employee_name,
+        'Prepaid OFD': e.prepaid_ofd,
+        'Prepaid DEL': e.prepaid_delivered,
+        'Prepaid Pending': e.prepaid_pending,
+        'Prepaid Delivery %': `${e.prepaid_delivery_pct}%`,
+        'Prepaid Amount (₹)': e.prepaid_amount_total,
+      }))
+  );
+
+  // 8. Client Report
+  addSheet(
+    'Client Report',
+    clientMetrics.map((c, idx) => ({
+      Rank: idx + 1,
+      'Client Name': c.client_name,
+      'Total OFD': c.total_ofd,
+      'Total DEL': c.total_delivered,
+      UNDEL: c.total_undel,
+      RTO: c.total_rto,
+      'Overall Delivery %': `${c.overall_delivery_pct}%`,
+      'COD OFD': c.cod_ofd,
+      'COD DEL': c.cod_delivered,
+      'COD Rate (%)': `${c.cod_delivery_pct}%`,
+      'COD Value (₹)': c.cod_value_total,
+      'Prepaid OFD': c.prepaid_ofd,
+      'Prepaid DEL': c.prepaid_delivered,
+      'Prepaid Rate (%)': `${c.prepaid_delivery_pct}%`,
+    }))
+  );
+
+  // 9. UNDEL Analysis
+  addSheet(
+    'UNDEL Analysis',
+    reasonMetrics.map((r, idx) => ({
+      Rank: idx + 1,
+      'NDR Reason': r.reason,
+      'UNDEL Count': r.count,
+      'Share (%)': `${r.percentage}%`,
+      'Top Executive Affected': r.affectedExecutives[0]?.name || 'N/A',
+      'Top Exec Fail Count': r.affectedExecutives[0]?.count || 0,
+    }))
+  );
+
+  // 10. RTO Analysis
+  addSheet(
+    'RTO Analysis',
+    rtoMetrics.map((r, idx) => ({
+      Rank: idx + 1,
+      'RTO Reason': r.reason,
+      'RTO Count': r.count,
+      'Share (%)': `${r.percentage}%`,
+      'Top Executive Affected': r.affectedExecutives[0]?.name || 'N/A',
+    }))
+  );
+
+  // Helper shipment row mapping
   const mapShipmentRow = (r: DRSReportRow) => ({
-    'AWB Number': r.waybill_no,
+    AWB: r.waybill_no,
     'DRS Code': r.drs_code,
     Employee: r.employee_name,
     Customer: r.consignee,
     Client: r.customer_name,
     Status: r.shipment_status_normalized,
     Attempts: r.total_attempts,
-    'Attempt Type': r.total_attempts <= 1 ? 'Fresh (Attempt 1)' : `Reattempt (Attempt ${r.total_attempts})`,
-    'NDR Reason': r.reason,
-    'OTP Status': r.otp_details,
+    Reason: r.reason,
+    OTP: r.otp_details,
     'Amount (₹)': r.amount_payable,
     'Payment Type': r.payment_type,
     Pincode: r.delivery_pincode,
     City: r.city,
     'DRS Date': r.drs_date,
-    'Last Attempt Date': r.last_attempt_date || r.pod_date,
   });
 
-  // 6. Delivered Shipments
-  const deliveredRows = uniqueRows.filter((r) => r.shipment_status_normalized === 'Delivered').map(mapShipmentRow);
-  addFormattedSheet('Delivered Shipments', deliveredRows);
+  // 11. Delivered Shipments
+  addSheet('Delivered Shipments', uniqueRows.filter((r) => r.shipment_status_normalized === 'Delivered').map(mapShipmentRow));
 
-  // 7. UNDEL Shipments
-  const undelRows = uniqueRows.filter((r) => r.shipment_status_normalized === 'Undelivered').map(mapShipmentRow);
-  addFormattedSheet('UNDEL Shipments', undelRows);
+  // 12. UNDEL Shipments
+  addSheet('UNDEL Shipments', uniqueRows.filter((r) => r.shipment_status_normalized === 'Undelivered').map(mapShipmentRow));
 
-  // 8. Cancelled Shipments
-  const cancelledRows = uniqueRows.filter((r) => r.shipment_status_normalized === 'Cancelled').map(mapShipmentRow);
-  addFormattedSheet('Cancelled Shipments', cancelledRows);
+  // 13. Duplicate Rows
+  addSheet(
+    'Duplicate Rows',
+    duplicateRows.map((r) => ({
+      'Row Index': r.rowIndex,
+      AWB: r.waybill_no,
+      Employee: r.employee_name,
+      Status: r.shipment_status_normalized,
+      Attempts: r.total_attempts,
+      'DRS Code': r.drs_code,
+      Reason: r.reason,
+      Occurrences: r.duplicate_count,
+    }))
+  );
 
-  // 9. RTO Shipments
-  const rtoRows = uniqueRows.filter((r) => r.shipment_status_normalized === 'RTO').map(mapShipmentRow);
-  addFormattedSheet('RTO Shipments', rtoRows);
+  // 14. Invalid Rows
+  addSheet(
+    'Invalid Rows',
+    invalidRows.map((r) => ({
+      'Row Index': r.rowIndex,
+      Reason: r.invalid_reason || 'Missing AWB',
+      'Raw Status': r.shipment_status_raw,
+      Employee: r.employee_name,
+    }))
+  );
 
-  // 10. Duplicate Rows
-  const dupRows = duplicateRows.map((r) => ({
-    'Source Row Index': r.rowIndex,
-    'AWB Number': r.waybill_no,
-    Employee: r.employee_name,
-    Status: r.shipment_status_normalized,
-    Attempts: r.total_attempts,
-    'DRS Code': r.drs_code,
-    Reason: r.reason,
-    'Duplicate Occurrence Count': r.duplicate_count,
-  }));
-  addFormattedSheet('Duplicate Rows', dupRows);
-
-  // 11. Invalid Rows
-  const invRows = invalidRows.map((r) => ({
-    'Source Row Index': r.rowIndex,
-    'Invalid Reason': r.invalid_reason || 'Missing AWB',
-    'Raw Status': r.shipment_status_raw,
-    Employee: r.employee_name,
-    'DRS Code': r.drs_code,
-  }));
-  addFormattedSheet('Invalid Rows', invRows);
-
-  // Download Workbook
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(wb, `${fileNamePrefix}_${dateStr}.xlsx`);
 }

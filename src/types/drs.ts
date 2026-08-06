@@ -70,8 +70,74 @@ export interface EmployeeDRSMetrics {
   cod_value_total: number;
   cod_value_delivered: number;
 
+  // Additional V4 COD / Prepaid Metrics
+  cod_ofd: number;
+  cod_delivered: number;
+  cod_undel: number;
+  cod_delivery_pct: number;
+  cod_pending: number;
+
+  prepaid_ofd: number;
+  prepaid_delivered: number;
+  prepaid_undel: number;
+  prepaid_delivery_pct: number;
+  prepaid_pending: number;
+  prepaid_amount_total: number;
+
   average_attempts: number;
   maximum_attempts: number;
+}
+
+export interface ClientDRSMetrics {
+  client_name: string;
+  total_ofd: number;
+  total_delivered: number;
+  total_undel: number;
+  total_rto: number;
+  total_cancelled: number;
+  overall_delivery_pct: number;
+
+  cod_ofd: number;
+  cod_delivered: number;
+  cod_delivery_pct: number;
+  cod_value_total: number;
+
+  prepaid_ofd: number;
+  prepaid_delivered: number;
+  prepaid_delivery_pct: number;
+  prepaid_value_total: number;
+}
+
+export interface PaymentAnalyticsMetrics {
+  codOfd: number;
+  codDelivered: number;
+  codUndel: number;
+  codDeliveryPct: number;
+  codPending: number;
+  codTotalAmount: number;
+  codDeliveredAmount: number;
+
+  prepaidOfd: number;
+  prepaidDelivered: number;
+  prepaidUndel: number;
+  prepaidDeliveryPct: number;
+  prepaidPending: number;
+  prepaidTotalAmount: number;
+  prepaidDeliveredAmount: number;
+}
+
+export interface NDRReasonMetrics {
+  reason: string;
+  count: number;
+  percentage: number;
+  affectedExecutives: { name: string; count: number }[];
+}
+
+export interface RTOAnalyticsMetrics {
+  reason: string;
+  count: number;
+  percentage: number;
+  affectedExecutives: { name: string; count: number }[];
 }
 
 export interface OverallDRSSummary {
@@ -126,6 +192,9 @@ export interface OverallDRSSummary {
 
 export interface DRSFilterOptions {
   drsDate?: string;
+  dateRangePreset?: 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'CUSTOM';
+  startDate?: string;
+  endDate?: string;
   employee?: string;
   partner?: string;
   hubLocation?: string;
@@ -138,7 +207,24 @@ export interface DRSFilterOptions {
   pincode?: string;
   reason?: string;
   otpStatus?: string;
-  minOfdThreshold?: number; // 5, 10, 20, 50
-  sortBy?: 'total_delivered' | 'total_ofd' | 'overall_delivery_pct' | 'first_attempt_delivery_pct' | 'reattempt_delivery_pct' | 'cod_value_delivered';
+  minOfdThreshold?: number; // 0, 5, 10, 20, 50
+  search?: string;
+  sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+export interface DRSReportHistoryItem {
+  id: string;
+  fileName: string;
+  reportDate: string;
+  uploadTimestamp: string;
+  uploadedBy: string;
+  hubName: string;
+  clientName: string;
+  totalOfd: number;
+  totalDelivered: number;
+  totalUndel: number;
+  overallDeliveryPct: number;
+  rows: DRSReportRow[];
+  summary: OverallDRSSummary;
 }

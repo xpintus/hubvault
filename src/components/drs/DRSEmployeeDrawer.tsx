@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { exportDRSPerformanceWorkbook } from '@/lib/drs/drsExcelExporter';
 import { DRSReportRow, EmployeeDRSMetrics } from '@/types/drs';
-import { MapPin, ShieldAlert, Truck, User, X } from 'lucide-react';
+import { CreditCard, Download, MapPin, ShieldAlert, Truck, User, X } from 'lucide-react';
 
 interface DRSEmployeeDrawerProps {
   metrics: EmployeeDRSMetrics | null;
@@ -15,11 +16,11 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ALL' | 'FIRST_ATTEMPT' | 'REATTEMPT' | 'DELIVERED' | 'UNDEL'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'FIRST_ATTEMPT' | 'REATTEMPT' | 'DELIVERED' | 'UNDEL' | 'COD' | 'PREPAID'>('ALL');
 
   if (!isOpen || !metrics) return null;
 
-  // Filter shipments for this employee
+  // Filter shipments for this executive
   const employeeShipments = shipments.filter(
     (s) => s.employee_name.toLowerCase() === metrics.employee_name.toLowerCase()
   );
@@ -29,22 +30,19 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
     if (activeTab === 'REATTEMPT') return (s.total_attempts || 1) >= 2;
     if (activeTab === 'DELIVERED') return s.shipment_status_normalized === 'Delivered';
     if (activeTab === 'UNDEL') return s.shipment_status_normalized === 'Undelivered';
+    if (activeTab === 'COD') return s.payment_type.toUpperCase().includes('COD');
+    if (activeTab === 'PREPAID') return !s.payment_type.toUpperCase().includes('COD');
     return true;
   });
 
   // Reason breakdown
   const reasonMap = new Map<string, number>();
-  // OTP breakdown
-  const otpMap = new Map<string, number>();
   // Pincode breakdown
   const pincodeMap = new Map<string, number>();
 
   employeeShipments.forEach((s) => {
     if (s.reason) {
       reasonMap.set(s.reason, (reasonMap.get(s.reason) || 0) + 1);
-    }
-    if (s.otp_details) {
-      otpMap.set(s.otp_details, (otpMap.get(s.otp_details) || 0) + 1);
     }
     if (s.delivery_pincode) {
       pincodeMap.set(s.delivery_pincode, (pincodeMap.get(s.delivery_pincode) || 0) + 1);
@@ -54,8 +52,89 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
   const topReasons = Array.from(reasonMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const topPincodes = Array.from(pincodeMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+  const handleDownloadSingleEmployeeReport = () => {
+    // Generate workbook for this single employee
+    const singleEmpSummary = {
+      fileName: `Employee_${metrics.employee_name.replace(/\s+/g, '_')}_Report.xlsx`,
+      reportDate: new Date().toISOString().split('T')[0],
+      totalRows: employeeShipments.length,
+      validRows: employeeShipments.length,
+      invalidRows: 0,
+      uniqueAwbs: employeeShipments.length,
+      duplicateRows: 0,
+      consolidatedRows: employeeShipments.length,
+      totalEmployees: 1,
+      totalDrsCodes: new Set(employeeShipments.map((s) => s.drs_code)).size,
+
+      totalOfd: metrics.total_ofd,
+      firstAttemptOfd: metrics.first_attempt_ofd,
+      firstAttemptDelivered: metrics.first_attempt_delivered,
+      firstAttemptUndel: metrics.first_attempt_undel,
+      firstAttemptCancelled: metrics.first_attempt_cancelled,
+      firstAttemptRto: metrics.first_attempt_rto,
+      firstAttemptDeliveryPct: metrics.first_attempt_delivery_pct,
+
+      reattemptOfd: metrics.reattempt_ofd,
+      reattemptDelivered: metrics.reattempt_delivered,
+      reattemptUndel: metrics.reattempt_undel,
+      reattemptCancelled: metrics.reattempt_cancelled,
+      reattemptRto: metrics.reattempt_rto,
+      reattemptDeliveryPct: metrics.reattempt_delivery_pct,
+
+      attempt2Ofd: metrics.attempt_2_ofd,
+      attempt2Delivered: metrics.attempt_2_delivered,
+      attempt3Ofd: metrics.attempt_3_ofd,
+      attempt3Delivered: metrics.attempt_3_delivered,
+      attempt4PlusOfd: metrics.attempt_4plus_ofd,
+      attempt4PlusDelivered: metrics.attempt_4plus_delivered,
+
+      totalDelivered: metrics.total_delivered,
+      totalUndel: metrics.total_undel,
+      totalCancelled: metrics.total_cancelled,
+      totalRto: metrics.total_rto,
+      overallDeliveryPct: metrics.overall_delivery_pct,
+
+      firstAttemptContributionPct: metrics.first_attempt_contribution_pct,
+      reattemptContributionPct: metrics.reattempt_contribution_pct,
+
+      totalCodValue: metrics.cod_value_total,
+      deliveredCodValue: metrics.cod_value_delivered,
+      averageAttempts: metrics.average_attempts,
+      maximumAttempts: metrics.maximum_attempts,
+    };
+
+    exportDRSPerformanceWorkbook(
+      singleEmpSummary,
+      [metrics],
+      [],
+      {
+        codOfd: metrics.cod_ofd,
+        codDelivered: metrics.cod_delivered,
+        codUndel: metrics.cod_undel,
+        codDeliveryPct: metrics.cod_delivery_pct,
+        codPending: metrics.cod_pending,
+        codTotalAmount: metrics.cod_value_total,
+        codDeliveredAmount: metrics.cod_value_delivered,
+
+        prepaidOfd: metrics.prepaid_ofd,
+        prepaidDelivered: metrics.prepaid_delivered,
+        prepaidUndel: metrics.prepaid_undel,
+        prepaidDeliveryPct: metrics.prepaid_delivery_pct,
+        prepaidPending: metrics.prepaid_pending,
+        prepaidTotalAmount: metrics.prepaid_amount_total,
+        prepaidDeliveredAmount: metrics.prepaid_amount_total,
+      },
+      [],
+      [],
+      employeeShipments,
+      [],
+      [],
+      `Executive_${metrics.employee_name.replace(/\s+/g, '_')}_Report`
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-sm animate-fade-in flex justify-end">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in flex justify-end">
       <div className="w-full max-w-3xl bg-[var(--card-bg)] border-l border-neutral-200 dark:border-neutral-800 h-full flex flex-col shadow-2xl overflow-y-auto">
         {/* Drawer Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 sticky top-0 bg-[var(--card-bg)] z-10">
@@ -65,47 +144,100 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{metrics.employee_name}</h2>
-              <p className="text-xs text-neutral-500">Employee Delivery Performance Details</p>
+              <p className="text-xs text-neutral-500">Executive Performance & Delivery Intelligence Drawer</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-          >
-            <X className="h-5 w-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadSingleEmployeeReport}
+              className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-glow transition flex items-center gap-1.5 active:scale-95"
+            >
+              <Download className="h-4 w-4" /> Download Report
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6 flex-1">
-          {/* Employee KPI Summary Grid */}
+          {/* Executive KPI Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
-              <span className="text-neutral-500 block">Total OFD</span>
+              <span className="text-neutral-500 block font-semibold">Total OFD</span>
               <span className="text-xl font-black text-neutral-900 dark:text-neutral-100">{metrics.total_ofd}</span>
+              <span className="text-[10px] text-neutral-400 font-mono">Avg Attempts: {metrics.average_attempts}</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <span className="text-emerald-700 dark:text-emerald-400 block font-semibold">Overall Delivery %</span>
+              <span className="text-emerald-700 dark:text-emerald-400 block font-bold">Overall Delivery %</span>
               <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{metrics.overall_delivery_pct}%</span>
+              <span className="text-[10px] text-emerald-600/80 font-semibold">{metrics.total_delivered} DEL</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <span className="text-blue-700 dark:text-blue-400 block font-semibold">1st Attempt Delivery %</span>
+              <span className="text-blue-700 dark:text-blue-400 block font-bold">1st Attempt Delivery %</span>
               <span className="text-xl font-black text-blue-600 dark:text-blue-400">{metrics.first_attempt_delivery_pct}%</span>
+              <span className="text-[10px] text-blue-600/80 font-semibold">{metrics.first_attempt_delivered} / {metrics.first_attempt_ofd}</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/20">
-              <span className="text-orange-700 dark:text-orange-400 block font-semibold">Reattempt Delivery %</span>
+              <span className="text-orange-700 dark:text-orange-400 block font-bold">Reattempt Delivery %</span>
               <span className="text-xl font-black text-orange-600 dark:text-orange-400">{metrics.reattempt_delivery_pct}%</span>
+              <span className="text-[10px] text-orange-600/80 font-semibold">{metrics.reattempt_delivered} / {metrics.reattempt_ofd}</span>
             </div>
           </div>
 
-          {/* Breakdown Section */}
+          {/* COD & Prepaid Payment Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {/* NDR Reason Breakdown */}
+            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 text-xs">
+                  <CreditCard className="h-4 w-4" /> COD Performance
+                </span>
+                <span className="font-mono font-bold text-emerald-600">{metrics.cod_delivery_pct}%</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div>
+                  <span className="text-neutral-500 block">COD OFD / DEL</span>
+                  <span className="font-bold">{metrics.cod_ofd} / {metrics.cod_delivered}</span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block">COD Value (₹)</span>
+                  <span className="font-bold font-mono">₹{metrics.cod_value_total.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5 text-xs">
+                  <CreditCard className="h-4 w-4" /> Prepaid Performance
+                </span>
+                <span className="font-mono font-bold text-purple-600">{metrics.prepaid_delivery_pct}%</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div>
+                  <span className="text-neutral-500 block">Prepaid OFD / DEL</span>
+                  <span className="font-bold">{metrics.prepaid_ofd} / {metrics.prepaid_delivered}</span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block">Prepaid Amount (₹)</span>
+                  <span className="font-bold font-mono">₹{metrics.prepaid_amount_total.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Reason & Pincode Analysis */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-2">
               <h3 className="font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                <ShieldAlert className="h-4 w-4 text-amber-500" /> Top NDR Reasons
+                <ShieldAlert className="h-4 w-4 text-amber-500" /> NDR Reasons Breakdown
               </h3>
               {topReasons.length === 0 ? (
                 <p className="text-neutral-400 italic">No NDR reasons recorded.</p>
@@ -121,10 +253,9 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
               )}
             </div>
 
-            {/* Pincode Breakdown */}
             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-2">
               <h3 className="font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                <MapPin className="h-4 w-4 text-brand-500" /> Top Delivery Pincodes
+                <MapPin className="h-4 w-4 text-brand-500" /> Top Pincodes Handled
               </h3>
               {topPincodes.length === 0 ? (
                 <p className="text-neutral-400 italic">No pincodes recorded.</p>
@@ -141,42 +272,47 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
             </div>
           </div>
 
-          {/* Filter Tabs for Shipments List */}
+          {/* Filtered Shipment List */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
-                <Truck className="h-4 w-4 text-brand-600" /> Shipments List ({filteredList.length})
+                <Truck className="h-4 w-4 text-brand-600" /> Executive Shipments List ({filteredList.length})
               </h3>
 
-              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900 p-1 rounded-xl text-xs font-semibold">
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
                 <button
                   onClick={() => setActiveTab('ALL')}
-                  className={`px-2.5 py-1 rounded-lg transition ${activeTab === 'ALL' ? 'bg-[var(--card-bg)] font-bold text-brand-600 shadow-sm' : 'text-neutral-500'}`}
+                  className={`px-2 py-1 rounded-lg transition ${activeTab === 'ALL' ? 'bg-[var(--card-bg)] font-bold text-brand-600 shadow-sm' : 'text-neutral-500'}`}
                 >
                   All ({employeeShipments.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('FIRST_ATTEMPT')}
-                  className={`px-2.5 py-1 rounded-lg transition ${activeTab === 'FIRST_ATTEMPT' ? 'bg-[var(--card-bg)] font-bold text-emerald-600 shadow-sm' : 'text-neutral-500'}`}
+                  className={`px-2 py-1 rounded-lg transition ${activeTab === 'FIRST_ATTEMPT' ? 'bg-[var(--card-bg)] font-bold text-emerald-600 shadow-sm' : 'text-neutral-500'}`}
                 >
-                  1st Attempt ({metrics.first_attempt_ofd})
+                  1st ({metrics.first_attempt_ofd})
                 </button>
                 <button
                   onClick={() => setActiveTab('REATTEMPT')}
-                  className={`px-2.5 py-1 rounded-lg transition ${activeTab === 'REATTEMPT' ? 'bg-[var(--card-bg)] font-bold text-orange-600 shadow-sm' : 'text-neutral-500'}`}
+                  className={`px-2 py-1 rounded-lg transition ${activeTab === 'REATTEMPT' ? 'bg-[var(--card-bg)] font-bold text-orange-600 shadow-sm' : 'text-neutral-500'}`}
                 >
-                  Reattempt ({metrics.reattempt_ofd})
+                  Re ({metrics.reattempt_ofd})
                 </button>
                 <button
                   onClick={() => setActiveTab('DELIVERED')}
-                  className={`px-2.5 py-1 rounded-lg transition ${activeTab === 'DELIVERED' ? 'bg-[var(--card-bg)] font-bold text-emerald-600 shadow-sm' : 'text-neutral-500'}`}
+                  className={`px-2 py-1 rounded-lg transition ${activeTab === 'DELIVERED' ? 'bg-[var(--card-bg)] font-bold text-emerald-600 shadow-sm' : 'text-neutral-500'}`}
                 >
-                  Delivered ({metrics.total_delivered})
+                  DEL ({metrics.total_delivered})
+                </button>
+                <button
+                  onClick={() => setActiveTab('COD')}
+                  className={`px-2 py-1 rounded-lg transition ${activeTab === 'COD' ? 'bg-[var(--card-bg)] font-bold text-purple-600 shadow-sm' : 'text-neutral-500'}`}
+                >
+                  COD ({metrics.cod_ofd})
                 </button>
               </div>
             </div>
 
-            {/* Shipments Data Table */}
             <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden text-xs">
               <div className="overflow-x-auto max-h-96">
                 <table className="w-full text-left">
@@ -187,7 +323,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
                       <th className="px-3 py-2">Amount</th>
                       <th className="px-3 py-2">Attempt</th>
                       <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">NDR Reason</th>
+                      <th className="px-3 py-2">Reason</th>
                       <th className="px-3 py-2">DRS Code</th>
                     </tr>
                   </thead>

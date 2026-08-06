@@ -1,4 +1,13 @@
-import { DRSFilterOptions, DRSReportRow, EmployeeDRSMetrics, OverallDRSSummary } from '@/types/drs';
+import {
+  ClientDRSMetrics,
+  DRSFilterOptions,
+  DRSReportRow,
+  EmployeeDRSMetrics,
+  NDRReasonMetrics,
+  OverallDRSSummary,
+  PaymentAnalyticsMetrics,
+  RTOAnalyticsMetrics,
+} from '@/types/drs';
 
 export function computeOverallDRSSummary(
   uniqueRows: DRSReportRow[],
@@ -195,7 +204,14 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
     let totalRto = 0;
 
     let codCount = 0;
+    let codDelivered = 0;
+    let codUndel = 0;
+
     let prepaidCount = 0;
+    let prepaidDelivered = 0;
+    let prepaidUndel = 0;
+    let prepaidAmountTotal = 0;
+
     let codTotalValue = 0;
     let codDeliveredValue = 0;
 
@@ -213,13 +229,21 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
       if (isCod) {
         codCount++;
         codTotalValue += r.amount_payable;
+        if (status === 'Delivered') {
+          codDelivered++;
+          codDeliveredValue += r.amount_payable;
+        } else if (status === 'Undelivered') {
+          codUndel++;
+        }
       } else {
         prepaidCount++;
+        prepaidAmountTotal += r.amount_payable;
+        if (status === 'Delivered') prepaidDelivered++;
+        else if (status === 'Undelivered') prepaidUndel++;
       }
 
       if (status === 'Delivered') {
         totalDelivered++;
-        if (isCod) codDeliveredValue += r.amount_payable;
       } else if (status === 'Undelivered') {
         totalUndel++;
       } else if (status === 'Cancelled') {
@@ -260,6 +284,10 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
 
     const firstAttemptContributionPct = totalDelivered > 0 ? (firstAttemptDelivered / totalDelivered) * 100 : 0;
     const reattemptContributionPct = totalDelivered > 0 ? (reattemptDelivered / totalDelivered) * 100 : 0;
+
+    const codDeliveryPct = codCount > 0 ? (codDelivered / codCount) * 100 : 0;
+    const prepaidDeliveryPct = prepaidCount > 0 ? (prepaidDelivered / prepaidCount) * 100 : 0;
+
     const avgAttempts = totalOfd > 0 ? sumAttempts / totalOfd : 0;
 
     employeeMetrics.push({
@@ -301,15 +329,236 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
       cod_value_total: codTotalValue,
       cod_value_delivered: codDeliveredValue,
 
+      cod_ofd: codCount,
+      cod_delivered: codDelivered,
+      cod_undel: codUndel,
+      cod_delivery_pct: Number(codDeliveryPct.toFixed(2)),
+      cod_pending: codCount - codDelivered,
+
+      prepaid_ofd: prepaidCount,
+      prepaid_delivered: prepaidDelivered,
+      prepaid_undel: prepaidUndel,
+      prepaid_delivery_pct: Number(prepaidDeliveryPct.toFixed(2)),
+      prepaid_pending: prepaidCount - prepaidDelivered,
+      prepaid_amount_total: prepaidAmountTotal,
+
       average_attempts: Number(avgAttempts.toFixed(2)),
       maximum_attempts: maxAttempts,
     });
   });
 
-  // Default Sort by Total Delivered DESC
   employeeMetrics.sort((a, b) => b.total_delivered - a.total_delivered);
-
   return employeeMetrics;
+}
+
+export function computeClientDRSMetrics(uniqueRows: DRSReportRow[]): ClientDRSMetrics[] {
+  const map = new Map<string, DRSReportRow[]>();
+
+  uniqueRows.forEach((r) => {
+    const client = r.customer_name || 'Direct / Other';
+    const list = map.get(client) || [];
+    list.push(r);
+    map.set(client, list);
+  });
+
+  const clientMetrics: ClientDRSMetrics[] = [];
+
+  map.forEach((rows, clientName) => {
+    const totalOfd = rows.length;
+    let totalDel = 0;
+    let totalUndel = 0;
+    let totalRto = 0;
+    let totalCancel = 0;
+
+    let codOfd = 0;
+    let codDel = 0;
+    let codValTotal = 0;
+
+    let prepaidOfd = 0;
+    let prepaidDel = 0;
+    let prepaidValTotal = 0;
+
+    rows.forEach((r) => {
+      const status = r.shipment_status_normalized;
+      const isCod = r.payment_type.toUpperCase().includes('COD');
+
+      if (status === 'Delivered') totalDel++;
+      else if (status === 'Undelivered') totalUndel++;
+      else if (status === 'RTO') totalRto++;
+      else if (status === 'Cancelled') totalCancel++;
+
+      if (isCod) {
+        codOfd++;
+        codValTotal += r.amount_payable;
+        if (status === 'Delivered') codDel++;
+      } else {
+        prepaidOfd++;
+        prepaidValTotal += r.amount_payable;
+        if (status === 'Delivered') prepaidDel++;
+      }
+    });
+
+    const overallPct = totalOfd > 0 ? (totalDel / totalOfd) * 100 : 0;
+    const codPct = codOfd > 0 ? (codDel / codOfd) * 100 : 0;
+    const prepaidPct = prepaidOfd > 0 ? (prepaidDel / prepaidOfd) * 100 : 0;
+
+    clientMetrics.push({
+      client_name: clientName,
+      total_ofd: totalOfd,
+      total_delivered: totalDel,
+      total_undel: totalUndel,
+      total_rto: totalRto,
+      total_cancelled: totalCancel,
+      overall_delivery_pct: Number(overallPct.toFixed(2)),
+
+      cod_ofd: codOfd,
+      cod_delivered: codDel,
+      cod_delivery_pct: Number(codPct.toFixed(2)),
+      cod_value_total: codValTotal,
+
+      prepaid_ofd: prepaidOfd,
+      prepaid_delivered: prepaidDel,
+      prepaid_delivery_pct: Number(prepaidPct.toFixed(2)),
+      prepaid_value_total: prepaidValTotal,
+    });
+  });
+
+  clientMetrics.sort((a, b) => b.total_ofd - a.total_ofd);
+  return clientMetrics;
+}
+
+export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnalyticsMetrics {
+  let codOfd = 0;
+  let codDelivered = 0;
+  let codUndel = 0;
+  let codTotalAmount = 0;
+  let codDeliveredAmount = 0;
+
+  let prepaidOfd = 0;
+  let prepaidDelivered = 0;
+  let prepaidUndel = 0;
+  let prepaidTotalAmount = 0;
+  let prepaidDeliveredAmount = 0;
+
+  uniqueRows.forEach((r) => {
+    const isCod = r.payment_type.toUpperCase().includes('COD');
+    const status = r.shipment_status_normalized;
+
+    if (isCod) {
+      codOfd++;
+      codTotalAmount += r.amount_payable;
+      if (status === 'Delivered') {
+        codDelivered++;
+        codDeliveredAmount += r.amount_payable;
+      } else if (status === 'Undelivered') {
+        codUndel++;
+      }
+    } else {
+      prepaidOfd++;
+      prepaidTotalAmount += r.amount_payable;
+      if (status === 'Delivered') {
+        prepaidDelivered++;
+        prepaidDeliveredAmount += r.amount_payable;
+      } else if (status === 'Undelivered') {
+        prepaidUndel++;
+      }
+    }
+  });
+
+  const codDeliveryPct = codOfd > 0 ? (codDelivered / codOfd) * 100 : 0;
+  const prepaidDeliveryPct = prepaidOfd > 0 ? (prepaidDelivered / prepaidOfd) * 100 : 0;
+
+  return {
+    codOfd,
+    codDelivered,
+    codUndel,
+    codDeliveryPct: Number(codDeliveryPct.toFixed(2)),
+    codPending: codOfd - codDelivered,
+    codTotalAmount,
+    codDeliveredAmount,
+
+    prepaidOfd,
+    prepaidDelivered,
+    prepaidUndel,
+    prepaidDeliveryPct: Number(prepaidDeliveryPct.toFixed(2)),
+    prepaidPending: prepaidOfd - prepaidDelivered,
+    prepaidTotalAmount,
+    prepaidDeliveredAmount,
+  };
+}
+
+export function computeNDRReasonAnalytics(uniqueRows: DRSReportRow[]): NDRReasonMetrics[] {
+  const undelRows = uniqueRows.filter((r) => r.shipment_status_normalized === 'Undelivered');
+  const totalUndel = undelRows.length;
+  if (totalUndel === 0) return [];
+
+  const reasonMap = new Map<string, { count: number; execMap: Map<string, number> }>();
+
+  undelRows.forEach((r) => {
+    const reason = r.reason || 'Unspecified NDR Reason';
+    const exec = r.employee_name || 'Unassigned Executive';
+    const entry = reasonMap.get(reason) || { count: 0, execMap: new Map() };
+    entry.count++;
+    entry.execMap.set(exec, (entry.execMap.get(exec) || 0) + 1);
+    reasonMap.set(reason, entry);
+  });
+
+  const result: NDRReasonMetrics[] = [];
+
+  reasonMap.forEach((entry, reason) => {
+    const pct = (entry.count / totalUndel) * 100;
+    const affectedExecutives = Array.from(entry.execMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    result.push({
+      reason,
+      count: entry.count,
+      percentage: Number(pct.toFixed(2)),
+      affectedExecutives,
+    });
+  });
+
+  result.sort((a, b) => b.count - a.count);
+  return result;
+}
+
+export function computeRTOAnalytics(uniqueRows: DRSReportRow[]): RTOAnalyticsMetrics[] {
+  const rtoRows = uniqueRows.filter((r) => r.shipment_status_normalized === 'RTO');
+  const totalRto = rtoRows.length;
+  if (totalRto === 0) return [];
+
+  const reasonMap = new Map<string, { count: number; execMap: Map<string, number> }>();
+
+  rtoRows.forEach((r) => {
+    const reason = r.reason || 'RTO Action Approved';
+    const exec = r.employee_name || 'Unassigned Executive';
+    const entry = reasonMap.get(reason) || { count: 0, execMap: new Map() };
+    entry.count++;
+    entry.execMap.set(exec, (entry.execMap.get(exec) || 0) + 1);
+    reasonMap.set(reason, entry);
+  });
+
+  const result: RTOAnalyticsMetrics[] = [];
+
+  reasonMap.forEach((entry, reason) => {
+    const pct = (entry.count / totalRto) * 100;
+    const affectedExecutives = Array.from(entry.execMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    result.push({
+      reason,
+      count: entry.count,
+      percentage: Number(pct.toFixed(2)),
+      affectedExecutives,
+    });
+  });
+
+  result.sort((a, b) => b.count - a.count);
+  return result;
 }
 
 export function filterDRSRows(rows: DRSReportRow[], filters: DRSFilterOptions): DRSReportRow[] {
@@ -327,6 +576,16 @@ export function filterDRSRows(rows: DRSReportRow[], filters: DRSFilterOptions): 
 
     if (filters.attemptType === 'FIRST_ATTEMPT' && (r.total_attempts || 1) > 1) return false;
     if (filters.attemptType === 'REATTEMPT' && (r.total_attempts || 1) < 2) return false;
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      const matchAwb = r.waybill_no.toLowerCase().includes(q);
+      const matchEmp = r.employee_name.toLowerCase().includes(q);
+      const matchClient = r.customer_name.toLowerCase().includes(q);
+      const matchConsignee = r.consignee.toLowerCase().includes(q);
+      const matchDrs = r.drs_code.toLowerCase().includes(q);
+      if (!matchAwb && !matchEmp && !matchClient && !matchConsignee && !matchDrs) return false;
+    }
 
     if (filters.attemptCount) {
       const att = parseInt(filters.attemptCount, 10);
