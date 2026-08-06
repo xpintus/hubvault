@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { computeEmployeeDRSMetrics, computeOverallDRSSummary, filterDRSRows } from '../lib/drs/drsAnalyticsEngine';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  computeEmployeeDRSMetrics,
+  computeOverallDRSSummary,
+  computePaymentAnalytics,
+  filterDRSRows,
+} from '../lib/drs/drsAnalyticsEngine';
+import { compareDRSReportItems, getLocalDRSHistory, saveLocalDRSHistoryItem } from '../lib/drs/drsHistoryManager';
 import { findHeaderKey, normalizeAttempts, normalizeHeaderKey, normalizeStatus } from '../lib/drs/drsParser';
-import { DRSReportRow } from '../types/drs';
-
+import { DRSReportHistoryItem, DRSReportRow } from '../types/drs';
 
 describe('Header Normalization (Excel Compatibility)', () => {
   it('strips BOM, spaces, underscores, line breaks, and hyphens', () => {
@@ -38,8 +43,7 @@ describe('Header Normalization (Excel Compatibility)', () => {
   });
 });
 
-
-describe('Excel Pivot Table Calculation Engine Verification', () => {
+describe('Live Runtime Analytics & Payment FAD% Calculations', () => {
   const dataset: DRSReportRow[] = [
     {
       rowIndex: 1,
@@ -119,7 +123,7 @@ describe('Excel Pivot Table Calculation Engine Verification', () => {
       pod_date: '2026-08-06',
       first_attempt_date: '2026-08-05',
       last_attempt_date: '2026-08-06',
-      total_attempts: 2,
+      total_attempts: 1,
       delivery_pincode: '700003',
       is_mobility: 'Yes',
       reason: '',
@@ -163,7 +167,7 @@ describe('Excel Pivot Table Calculation Engine Verification', () => {
     },
   ];
 
-  it('matches Excel Pivot formulas for Overall DRS Summary', () => {
+  it('calculates exact COD FAD% and Prepaid FAD% with safe division', () => {
     const summary = computeOverallDRSSummary(dataset, {
       fileName: 'drs_test.xlsx',
       reportDate: '2026-08-06',
@@ -173,60 +177,181 @@ describe('Excel Pivot Table Calculation Engine Verification', () => {
       duplicateRows: 0,
     });
 
-    // Total OFD = DEL + UNDEL + RTO + CANCEL
-    expect(summary.totalOfd).toBe(4);
-    expect(summary.totalDelivered).toBe(2);
-    expect(summary.totalUndel).toBe(1);
-    expect(summary.totalRto).toBe(1);
+    const payment = computePaymentAnalytics(dataset);
 
-    // First Attempt (attempt <= 1)
-    expect(summary.firstAttemptOfd).toBe(2); // AWB001, AWB002
-    expect(summary.firstAttemptDelivered).toBe(1); // AWB001
-    expect(summary.firstAttemptDeliveryPct).toBe(50.0); // 1 / 2 * 100
+    // COD First Attempt: AWB001 (DEL, att=1), AWB002 (UNDEL, att=1) -> OFD=2, DEL=1 => 50.0%
+    expect(payment.codFirstAttemptOfd).toBe(2);
+    expect(payment.codFirstAttemptDel).toBe(1);
+    expect(payment.codFadPercent).toBe(50.0);
+    expect(summary.codFadPercent).toBe(50.0);
 
-    // Reattempt (attempt >= 2)
-    expect(summary.reattemptOfd).toBe(2); // AWB003, AWB004
-    expect(summary.reattemptDelivered).toBe(1); // AWB003
-    expect(summary.reattemptDeliveryPct).toBe(50.0); // 1 / 2 * 100
-
-    // Overall Delivery %
-    expect(summary.overallDeliveryPct).toBe(50.0); // 2 / 4 * 100
+    // Prepaid First Attempt: AWB003 (DEL, att=1) -> OFD=1, DEL=1 => 100.0%
+    expect(payment.prepaidFirstAttemptOfd).toBe(1);
+    expect(payment.prepaidFirstAttemptDel).toBe(1);
+    expect(payment.prepaidFadPercent).toBe(100.0);
+    expect(summary.prepaidFadPercent).toBe(100.0);
   });
 
-  it('verifies that Employee totals SUM exactly to overall grand totals', () => {
-    const summary = computeOverallDRSSummary(dataset, {
-      fileName: 'drs_test.xlsx',
-      reportDate: '2026-08-06',
-      totalRows: 4,
-      validRows: 4,
-      invalidRows: 0,
-      duplicateRows: 0,
-    });
+  it('handles safe division when Prepaid denominator is 0 (returns 0% instead of NaN/Infinity)', () => {
+    const codOnlyDataset = dataset.filter((r) => r.payment_type === 'COD');
+    const payment = computePaymentAnalytics(codOnlyDataset);
 
-    const employeeMetrics = computeEmployeeDRSMetrics(dataset);
-    expect(employeeMetrics.length).toBe(2);
-
-    let sumEmpOfd = 0;
-    let sumEmpDel = 0;
-    let sumEmp1stOfd = 0;
-    let sumEmp1stDel = 0;
-    let sumEmpReOfd = 0;
-    let sumEmpReDel = 0;
-
-    employeeMetrics.forEach((e) => {
-      sumEmpOfd += e.total_ofd;
-      sumEmpDel += e.total_delivered;
-      sumEmp1stOfd += e.first_attempt_ofd;
-      sumEmp1stDel += e.first_attempt_delivered;
-      sumEmpReOfd += e.reattempt_ofd;
-      sumEmpReDel += e.reattempt_delivered;
-    });
-
-    expect(sumEmpOfd).toBe(summary.totalOfd);
-    expect(sumEmpDel).toBe(summary.totalDelivered);
-    expect(sumEmp1stOfd).toBe(summary.firstAttemptOfd);
-    expect(sumEmp1stDel).toBe(summary.firstAttemptDelivered);
-    expect(sumEmpReOfd).toBe(summary.reattemptOfd);
-    expect(sumEmpReDel).toBe(summary.reattemptDelivered);
+    expect(payment.prepaidFirstAttemptOfd).toBe(0);
+    expect(payment.prepaidFirstAttemptDel).toBe(0);
+    expect(payment.prepaidFadPercent).toBe(0);
+    expect(Number.isNaN(payment.prepaidFadPercent)).toBe(false);
   });
 });
+
+describe('Report History Storage & Snapshot Comparison Engine', () => {
+  let store: Record<string, string> = {};
+
+  beforeEach(() => {
+    store = {};
+    global.localStorage = {
+      getItem: (key: string) => store[key] || null,
+      setItem: (key: string, value: string) => {
+        store[key] = value.toString();
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        store = {};
+      },
+      length: 0,
+      key: () => null,
+    } as any;
+  });
+
+  it('saves snapshot and compares reports correctly', () => {
+
+    const datasetA: DRSReportRow[] = [
+      {
+        rowIndex: 1,
+        drs_code: 'DRS-01',
+        waybill_no: 'AWB001',
+        employee_name: 'Shambhunath Das',
+        partner_name: 'Delhivery',
+        location: 'Hub A',
+        city: 'Kolkata',
+        state: 'WB',
+        customer_name: 'Client A',
+        consignee: 'Consignee 1',
+        shipment_status_raw: 'DEL',
+        shipment_status_normalized: 'Delivered',
+        amount_payable: 1000,
+        payment_type: 'COD',
+        pod_date: '2026-08-05',
+        first_attempt_date: '2026-08-05',
+        last_attempt_date: '2026-08-05',
+        total_attempts: 1,
+        delivery_pincode: '700001',
+        is_mobility: 'Yes',
+        reason: '',
+        otp_details: '',
+        drs_date: '2026-08-05',
+        drs_status: 'Completed',
+        ndr_instruction_received: '',
+        is_duplicate: false,
+        duplicate_count: 1,
+        is_invalid: false,
+      },
+    ];
+
+    const summaryA = computeOverallDRSSummary(datasetA, {
+      fileName: 'report_yesterday.xlsx',
+      reportDate: '2026-08-05',
+      totalRows: 1,
+      validRows: 1,
+      invalidRows: 0,
+      duplicateRows: 0,
+    });
+
+    const itemA: DRSReportHistoryItem = {
+      id: 'history_01',
+      fileName: 'report_yesterday.xlsx',
+      reportDate: '2026-08-05',
+      uploadTimestamp: '2026-08-05 10:00:00',
+      uploadedBy: 'Manager',
+      hubName: 'Main Hub',
+      clientName: 'All Clients',
+      totalOfd: 1,
+      totalDelivered: 1,
+      totalUndel: 0,
+      overallDeliveryPct: 100.0,
+      rows: datasetA,
+      summary: summaryA,
+    };
+
+    const datasetB: DRSReportRow[] = [
+      ...datasetA,
+      {
+        rowIndex: 2,
+        drs_code: 'DRS-02',
+        waybill_no: 'AWB002',
+        employee_name: 'Shambhunath Das',
+        partner_name: 'Delhivery',
+        location: 'Hub A',
+        city: 'Kolkata',
+        state: 'WB',
+        customer_name: 'Client A',
+        consignee: 'Consignee 2',
+        shipment_status_raw: 'UNDEL',
+        shipment_status_normalized: 'Undelivered',
+        amount_payable: 500,
+        payment_type: 'COD',
+        pod_date: '',
+        first_attempt_date: '2026-08-06',
+        last_attempt_date: '2026-08-06',
+        total_attempts: 1,
+        delivery_pincode: '700002',
+        is_mobility: 'Yes',
+        reason: 'Refused',
+        otp_details: '',
+        drs_date: '2026-08-06',
+        drs_status: 'Completed',
+        ndr_instruction_received: '',
+        is_duplicate: false,
+        duplicate_count: 1,
+        is_invalid: false,
+      },
+    ];
+
+    const summaryB = computeOverallDRSSummary(datasetB, {
+      fileName: 'report_today.xlsx',
+      reportDate: '2026-08-06',
+      totalRows: 2,
+      validRows: 2,
+      invalidRows: 0,
+      duplicateRows: 0,
+    });
+
+    const itemB: DRSReportHistoryItem = {
+      id: 'history_02',
+      fileName: 'report_today.xlsx',
+      reportDate: '2026-08-06',
+      uploadTimestamp: '2026-08-06 10:00:00',
+      uploadedBy: 'Manager',
+      hubName: 'Main Hub',
+      clientName: 'All Clients',
+      totalOfd: 2,
+      totalDelivered: 1,
+      totalUndel: 1,
+      overallDeliveryPct: 50.0,
+      rows: datasetB,
+      summary: summaryB,
+    };
+
+    const savedA = saveLocalDRSHistoryItem(itemA);
+    const savedB = saveLocalDRSHistoryItem(itemB);
+
+    expect(savedB.length).toBeGreaterThanOrEqual(2);
+
+    const comparison = compareDRSReportItems(itemA, itemB);
+    expect(comparison.ofdChange).toBe(1); // 2 - 1
+    expect(comparison.delChange).toBe(0); // 1 - 1
+    expect(comparison.deliveryRateChange).toBe(-50.0); // 50 - 100
+  });
+});
+

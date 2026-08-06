@@ -5,6 +5,7 @@ const STORAGE_KEY = 'hubvault_drs_report_history_v5';
 
 export function getLocalDRSHistory(): DRSReportHistoryItem[] {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     return JSON.parse(raw) as DRSReportHistoryItem[];
@@ -33,7 +34,9 @@ export function saveLocalDRSHistoryItem(
     }
 
     const trimmed = updated.slice(0, 50);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    }
     return trimmed;
   } catch (err) {
     console.error('Failed to save local DRS report history item:', err);
@@ -42,6 +45,7 @@ export function saveLocalDRSHistoryItem(
 }
 
 export async function fetchDRSHistoryFromDB(): Promise<DRSReportHistoryItem[]> {
+  const localHistory = getLocalDRSHistory();
   try {
     const { data, error } = await supabase
       .from('drs_report_history')
@@ -49,58 +53,62 @@ export async function fetchDRSHistoryFromDB(): Promise<DRSReportHistoryItem[]> {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (error) {
-      console.warn('Supabase fetch history warning (using local fallback):', error.message);
-      return getLocalDRSHistory();
+    if (error || !data) {
+      console.warn('Supabase fetch history warning (using local fallback):', error?.message);
+      return localHistory;
     }
 
-    if (!data || data.length === 0) {
-      return getLocalDRSHistory();
-    }
+    const mapped: DRSReportHistoryItem[] = data.map((d: any) => {
+      const snapSummary = d.json_snapshot?.summary;
+      return {
+        id: d.id,
+        fileName: d.file_name || 'DRS_Report.xlsx',
+        reportDate: d.report_date,
+        uploadTimestamp: new Date(d.uploaded_at || d.created_at).toLocaleString(),
+        uploadedBy: d.uploaded_by || 'Logistics Admin',
+        hubId: d.hub_id,
+        hubName: d.hub_name || 'Main Hub',
+        clientName: d.client || 'All Clients',
+        totalOfd: d.total_ofd || 0,
+        totalDelivered: d.delivered || 0,
+        totalUndel: d.undel || 0,
+        totalRto: d.rto || 0,
+        totalCancel: d.cancel || 0,
+        firstAttemptOfd: d.first_attempt_ofd || 0,
+        firstAttemptDel: d.first_attempt_del || 0,
+        reattemptOfd: d.reattempt_ofd || 0,
+        reattemptDel: d.reattempt_del || 0,
+        overallDeliveryPct: Number(d.overall_percent || 0),
 
-    const mapped: DRSReportHistoryItem[] = data.map((d: any) => ({
-      id: d.id,
-      fileName: d.file_name || 'DRS_Report.xlsx',
-      reportDate: d.report_date,
-      uploadTimestamp: new Date(d.uploaded_at || d.created_at).toLocaleString(),
-      uploadedBy: d.uploaded_by || 'Logistics Admin',
-      hubId: d.hub_id,
-      hubName: d.hub_name || 'Main Hub',
-      clientName: d.client || 'All Clients',
-      totalOfd: d.total_ofd || 0,
-      totalDelivered: d.delivered || 0,
-      totalUndel: d.undel || 0,
-      totalRto: d.rto || 0,
-      totalCancel: d.cancel || 0,
-      firstAttemptOfd: d.first_attempt_ofd || 0,
-      firstAttemptDel: d.first_attempt_del || 0,
-      reattemptOfd: d.reattempt_ofd || 0,
-      reattemptDel: d.reattempt_del || 0,
-      overallDeliveryPct: Number(d.overall_percent || 0),
+        codOfd: d.cod_ofd || snapSummary?.codOfd || 0,
+        codDel: d.cod_del || snapSummary?.codDelivered || 0,
+        codFirstAttemptOfd: d.cod_first_attempt_ofd || snapSummary?.codFirstAttemptOfd || 0,
+        codFirstAttemptDel: d.cod_first_attempt_del || snapSummary?.codFirstAttemptDel || 0,
+        codFadPercent: Number(d.cod_fad_percent ?? snapSummary?.codFadPercent ?? 0),
 
-      codOfd: d.cod_ofd || 0,
-      codDel: d.cod_del || 0,
-      codFirstAttemptOfd: d.cod_first_attempt_ofd || 0,
-      codFirstAttemptDel: d.cod_first_attempt_del || 0,
-      codFadPercent: Number(d.cod_fad_percent || 0),
+        prepaidOfd: d.prepaid_ofd || snapSummary?.prepaidOfd || 0,
+        prepaidDel: d.prepaid_del || snapSummary?.prepaidDelivered || 0,
+        prepaidFirstAttemptOfd: d.prepaid_first_attempt_ofd || snapSummary?.prepaidFirstAttemptOfd || 0,
+        prepaidFirstAttemptDel: d.prepaid_first_attempt_del || snapSummary?.prepaidFirstAttemptDel || 0,
+        prepaidFadPercent: Number(d.prepaid_fad_percent ?? snapSummary?.prepaidFadPercent ?? 0),
 
-      prepaidOfd: d.prepaid_ofd || 0,
-      prepaidDel: d.prepaid_del || 0,
-      prepaidFirstAttemptOfd: d.prepaid_first_attempt_ofd || 0,
-      prepaidFirstAttemptDel: d.prepaid_first_attempt_del || 0,
-      prepaidFadPercent: Number(d.prepaid_fad_percent || 0),
+        codAmount: Number(d.cod_amount || snapSummary?.totalCodValue || 0),
+        prepaidAmount: Number(d.prepaid_amount || snapSummary?.deliveredCodValue || 0),
+        averageAttempt: Number(d.average_attempt || snapSummary?.averageAttempts || 1),
+        rows: d.json_snapshot?.rows || [],
+        summary: snapSummary || null,
+      };
+    });
 
-      codAmount: Number(d.cod_amount || 0),
-      prepaidAmount: Number(d.prepaid_amount || 0),
-      averageAttempt: Number(d.average_attempt || 0),
-      rows: d.json_snapshot?.rows || [],
-      summary: d.json_snapshot?.summary || null,
-    }));
+    // Merge DB history with LocalStorage history to eliminate gaps
+    const mergedMap = new Map<string, DRSReportHistoryItem>();
+    localHistory.forEach((h) => mergedMap.set(h.id, h));
+    mapped.forEach((h) => mergedMap.set(h.id, h));
 
-    return mapped;
+    return Array.from(mergedMap.values()).slice(0, 50);
   } catch (err) {
     console.error('Failed to fetch DRS history from DB:', err);
-    return getLocalDRSHistory();
+    return localHistory;
   }
 }
 
@@ -112,7 +120,7 @@ export async function saveDRSHistorySnapshot(
 
   try {
     const s = item.summary;
-    const payload = {
+    const fullPayload = {
       report_date: item.reportDate,
       file_name: item.fileName,
       hub_id: item.hubId || null,
@@ -151,9 +159,44 @@ export async function saveDRSHistorySnapshot(
       },
     };
 
-    const { error } = await supabase.from('drs_report_history').insert(payload);
-    if (error) {
-      console.warn('Supabase DRS Insert Warning (falling back to LocalStorage):', error.message);
+    const { error: fullError } = await supabase.from('drs_report_history').insert(fullPayload);
+
+    if (fullError) {
+      console.warn('Supabase full payload insert failed (trying legacy fallback):', fullError.message);
+      // Fallback payload without columns if PostgREST schema cache hasn't refreshed yet
+      const legacyPayload = {
+        report_date: item.reportDate,
+        file_name: item.fileName,
+        hub_id: item.hubId || null,
+        hub_name: item.hubName || 'Main Hub',
+        client: item.clientName || 'All Clients',
+        uploaded_by: item.uploadedBy || 'Logistics Admin',
+        total_ofd: item.totalOfd,
+        delivered: item.totalDelivered,
+        undel: item.totalUndel,
+        rto: s?.totalRto || 0,
+        cancel: s?.totalCancelled || 0,
+        first_attempt_ofd: s?.firstAttemptOfd || 0,
+        first_attempt_del: s?.firstAttemptDelivered || 0,
+        reattempt_ofd: s?.reattemptOfd || 0,
+        reattempt_del: s?.reattemptDelivered || 0,
+        overall_percent: item.overallDeliveryPct,
+        cod_ofd: s?.codOfd || 0,
+        cod_del: s?.codDelivered || 0,
+        cod_amount: s?.totalCodValue || 0,
+        prepaid_ofd: s?.prepaidOfd || 0,
+        prepaid_del: s?.prepaidDelivered || 0,
+        prepaid_amount: s?.deliveredCodValue || 0,
+        average_attempt: s?.averageAttempts || 1,
+        json_snapshot: {
+          rows: item.rows,
+          summary: item.summary,
+        },
+      };
+      const { error: legacyError } = await supabase.from('drs_report_history').insert(legacyPayload);
+      if (legacyError) {
+        console.error('Supabase legacy DRS Insert Error:', legacyError.message);
+      }
     }
   } catch (err) {
     console.error('Failed to insert DRS history snapshot to Supabase:', err);
@@ -166,7 +209,9 @@ export async function saveDRSHistorySnapshot(
 
 export async function deleteDRSHistoryItem(id: string): Promise<DRSReportHistoryItem[]> {
   const localHistory = getLocalDRSHistory().filter((h) => h.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(localHistory));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(localHistory));
+  }
 
   try {
     const { error } = await supabase.from('drs_report_history').delete().eq('id', id);
