@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
 import { fetchNDRMetrics } from '@/lib/ndr/ndrService';
+import {
+  deleteAllDRSReports,
+  resetCurrentDRSReport,
+} from '@/lib/drs/drsResetManager';
+import { DRSResetModal } from '@/components/drs/DRSResetModal';
+import { DRSRecycleBinDrawer } from '@/components/drs/DRSRecycleBinDrawer';
+import { loadActiveDRSReport } from '@/lib/drs/drsHistoryManager';
 import { NDRMetrics } from '@/types/ndr';
 import {
   Archive,
@@ -28,20 +36,43 @@ import {
 
 export default function NDRDashboard() {
   const { selectedHub } = useHub();
-  const { refreshTrigger } = useOutletContext<{ refreshTrigger: number }>();
+  const { profile } = useAuth();
+  const { refreshTrigger, handleImportSuccess } = useOutletContext<{ refreshTrigger?: number; handleImportSuccess?: () => void }>();
   const navigate = useNavigate();
 
   const [metrics, setMetrics] = useState<NDRMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Reset & Data Management State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetLevel, setResetLevel] = useState<1 | 2 | 3>(1);
+  const [recycleBinOpen, setRecycleBinOpen] = useState(false);
+
+  const loadData = () => {
     setLoading(true);
     fetchNDRMetrics(selectedHub?.id || null)
       .then((data) => {
         setMetrics(data);
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, [selectedHub, refreshTrigger]);
+
+  const handleConfirmReset = async (options: { reason: string; exportBeforeDelete: boolean }) => {
+    if (resetLevel === 1) {
+      const { activeReport } = await loadActiveDRSReport();
+      if (activeReport) {
+        await resetCurrentDRSReport(activeReport, profile, selectedHub?.id, options);
+      }
+    } else if (resetLevel === 3) {
+      await deleteAllDRSReports(profile, selectedHub?.id, options.reason);
+    }
+    loadData();
+    if (handleImportSuccess) handleImportSuccess();
+  };
 
   if (loading || !metrics) {
     return (
@@ -213,6 +244,40 @@ export default function NDRDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Enterprise Data Management Action Bar */}
+      <div className="p-4 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">
+          <Archive className="h-4 w-4 text-brand-600" />
+          <span>NDR Operational Data Management</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button
+            onClick={() => {
+              setResetLevel(1);
+              setResetModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+          >
+            Reset Current Report
+          </button>
+          <button
+            onClick={() => {
+              setResetLevel(3);
+              setResetModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+          >
+            Delete All
+          </button>
+          <button
+            onClick={() => setRecycleBinOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+          >
+            Recycle Bin
+          </button>
+        </div>
+      </div>
       {/* 8 Operational Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiCards.map((card) => {
@@ -287,6 +352,24 @@ export default function NDRDashboard() {
           })}
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      <DRSResetModal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        level={resetLevel}
+        onConfirm={handleConfirmReset}
+      />
+
+      {/* Recycle Bin Drawer */}
+      <DRSRecycleBinDrawer
+        isOpen={recycleBinOpen}
+        onClose={() => setRecycleBinOpen(false)}
+        onRestoreSuccess={() => {
+          loadData();
+          if (handleImportSuccess) handleImportSuccess();
+        }}
+      />
     </div>
   );
 }

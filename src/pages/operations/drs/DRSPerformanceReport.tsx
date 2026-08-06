@@ -4,6 +4,13 @@ import { useHub } from '@/lib/hubContext';
 import { useNavigate } from 'react-router-dom';
 import { NDRAutoSyncResult, syncDRSUndelToNDR } from '@/lib/ndr/ndrAutoSync';
 import {
+  deleteAllDRSReports,
+  deleteSelectedDRSReports,
+  resetCurrentDRSReport,
+} from '@/lib/drs/drsResetManager';
+import { DRSResetModal } from '@/components/drs/DRSResetModal';
+import { DRSRecycleBinDrawer } from '@/components/drs/DRSRecycleBinDrawer';
+import {
   computeClientDRSMetrics,
   computeEmployeeDRSMetrics,
   computeNDRReasonAnalytics,
@@ -16,6 +23,7 @@ import { exportDRSPerformanceWorkbook } from '@/lib/drs/drsExcelExporter';
 import {
   compareDRSReportItems,
   deleteDRSHistoryItem,
+  fetchDRSHistoryFromDB,
   loadActiveDRSReport,
   saveDRSHistorySnapshot,
   setActiveReportId,
@@ -107,6 +115,12 @@ export default function DRSPerformanceReport() {
   const [comparisonResult, setComparisonResult] = useState<DRSReportComparison | null>(null);
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Enterprise Reset & Data Management State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetLevel, setResetLevel] = useState<1 | 2 | 3>(1);
+  const [recycleBinOpen, setRecycleBinOpen] = useState(false);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
 
   // Filters State
   const [filters, setFilters] = useState<DRSFilterOptions>({
@@ -389,6 +403,46 @@ export default function DRSPerformanceReport() {
     setComparisonResult(compareDRSReportItems(itemA, itemB));
   };
 
+  const handleOpenResetModal = (lvl: 1 | 2 | 3) => {
+    setResetLevel(lvl);
+    setResetModalOpen(true);
+  };
+
+  const handleConfirmReset = async (options: { reason: string; exportBeforeDelete: boolean }) => {
+    if (resetLevel === 1 && activeItem) {
+      await resetCurrentDRSReport(activeItem, profile, selectedHub?.id, options);
+      setActiveItem(null);
+      setSummary(null);
+      setUniqueRows([]);
+      setNdrSyncResult(null);
+      const refreshedHist = await fetchDRSHistoryFromDB();
+      setHistoryList(refreshedHist);
+      setToastMsg('Current DRS Report & linked NDR cases reset.');
+    } else if (resetLevel === 2) {
+      const selectedItems = historyList.filter((h) => selectedReportIds.includes(h.id));
+      if (selectedItems.length === 0) return;
+      await deleteSelectedDRSReports(selectedItems, profile, selectedHub?.id, options.reason);
+      setSelectedReportIds([]);
+      if (activeItem && selectedReportIds.includes(activeItem.id)) {
+        setActiveItem(null);
+        setSummary(null);
+        setUniqueRows([]);
+        setNdrSyncResult(null);
+      }
+      const refreshedHist = await fetchDRSHistoryFromDB();
+      setHistoryList(refreshedHist);
+      setToastMsg(`${selectedItems.length} Reports deleted.`);
+    } else if (resetLevel === 3) {
+      await deleteAllDRSReports(profile, selectedHub?.id, options.reason);
+      setActiveItem(null);
+      setSummary(null);
+      setUniqueRows([]);
+      setNdrSyncResult(null);
+      setHistoryList([]);
+      setToastMsg('ALL DRS Reports, Snapshots & NDR Cases reset.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 p-4 md:p-8 space-y-6 max-w-[1700px] mx-auto transition-colors font-sans antialiased">
       {/* ========================================================= */}
@@ -418,10 +472,10 @@ export default function DRSPerformanceReport() {
           </div>
         </div>
 
-        {/* Action Controls & Search Box */}
+        {/* Action Controls & Enterprise Reset Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {summary && (
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-[200px]">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
               <input
                 type="text"
@@ -464,20 +518,38 @@ export default function DRSPerformanceReport() {
               </button>
 
               <button
-                onClick={handleExportExcel}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                onClick={() => handleOpenResetModal(1)}
+                className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                title="Reset Current Opened Report"
               >
-                <FileSpreadsheet className="h-4 w-4" /> Export Excel
-              </button>
-
-              <button
-                onClick={handleExportPDF}
-                className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
-              >
-                <FileText className="h-4 w-4" /> Export PDF
+                <Trash2 className="h-4 w-4" /> Reset Current
               </button>
             </>
           )}
+
+          {selectedReportIds.length > 0 && (
+            <button
+              onClick={() => handleOpenResetModal(2)}
+              className="px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected ({selectedReportIds.length})
+            </button>
+          )}
+
+          <button
+            onClick={() => handleOpenResetModal(3)}
+            className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+            title="Admin Delete ALL Reports"
+          >
+            <ShieldAlert className="h-4 w-4" /> Delete All
+          </button>
+
+          <button
+            onClick={() => setRecycleBinOpen(true)}
+            className="px-3 py-2 rounded-xl bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-bold transition flex items-center gap-1.5 active:scale-95"
+          >
+            <RotateCcw className="h-4 w-4 text-orange-500" /> Recycle Bin
+          </button>
         </div>
       </header>
 
@@ -1286,6 +1358,30 @@ export default function DRSPerformanceReport() {
           </div>
         </div>
       )}
+
+      {/* Enterprise Reset Confirmation Modal */}
+      <DRSResetModal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        level={resetLevel}
+        currentReport={activeItem}
+        selectedReports={historyList.filter((h) => selectedReportIds.includes(h.id))}
+        onConfirm={handleConfirmReset}
+      />
+
+      {/* Enterprise Recycle Bin Drawer */}
+      <DRSRecycleBinDrawer
+        isOpen={recycleBinOpen}
+        onClose={() => setRecycleBinOpen(false)}
+        onRestoreSuccess={async () => {
+          const restoredHist = await fetchDRSHistoryFromDB();
+          setHistoryList(restoredHist);
+          if (restoredHist.length > 0) {
+            handleOpenHistoryItem(restoredHist[0]);
+          }
+          setToastMsg('Report & NDR cases restored from Recycle Bin!');
+        }}
+      />
 
       {/* Employee Side Drawer */}
       <DRSEmployeeDrawer

@@ -248,6 +248,16 @@ export function setActiveReportId(id: string): void {
   }
 }
 
+export function clearActiveReportId(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(ACTIVE_REPORT_ID_KEY);
+    }
+  } catch (err) {
+    console.error('Failed to clear active DRS report ID:', err);
+  }
+}
+
 export async function loadActiveDRSReport(
   preferredId?: string | null
 ): Promise<{ activeReport: DRSReportHistoryItem | null; historyList: DRSReportHistoryItem[] }> {
