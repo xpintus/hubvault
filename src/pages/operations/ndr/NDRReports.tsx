@@ -3,15 +3,17 @@ import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { exportNDRShipmentsToCSV, exportNDRShipmentsToExcel } from '@/lib/ndr/ndrExcel';
 import { NDRShipment } from '@/types/ndr';
-import { BarChart3, Download, FileSpreadsheet, FileText, RefreshCw, Sparkles, Truck } from 'lucide-react';
+import { BarChart3, Download, FileSpreadsheet, FileText, RefreshCw, ShieldCheck, Sparkles, Truck } from 'lucide-react';
 
 type ReportType =
   | 'Fresh & Reattempt Analysis'
   | 'Daily'
+  | 'Caller Performance'
+  | 'Caller Wise'
+  | 'Supervisor Performance'
+  | 'Supervisor Wise'
   | 'Hub Wise'
   | 'Vendor Wise'
-  | 'Caller Wise'
-  | 'Supervisor Wise'
   | 'Executive Wise'
   | 'Reason Wise'
   | 'OTP Wise'
@@ -35,33 +37,41 @@ export default function NDRReports() {
       .finally(() => setLoading(false));
   }, [selectedHub, reportType]);
 
-  // Compute Fresh vs Reattempt Metrics
+  // Compute Logistics Stats
   const stats = React.useMemo(() => {
     if (shipments.length === 0) {
-      return { fresh: 0, reattempt: 0, delivered: 0, rto: 0, avgAttempts: 0, maxAttempts: 0 };
+      return { todaysUpload: 0, fresh: 0, reattempt: 0, supervisorPending: 0, deliveredToday: 0, rto: 0, avgAttempts: 0, maxAttempts: 0 };
     }
+    const todayStr = new Date().toISOString().split('T')[0];
+    let todaysUpload = 0;
     let fresh = 0;
     let reattempt = 0;
-    let delivered = 0;
+    let supervisorPending = 0;
+    let deliveredToday = 0;
     let rto = 0;
     let sumAttempts = 0;
     let maxAttempts = 0;
 
     shipments.forEach((s) => {
       const att = s.total_attempts || 1;
+      const createdDate = s.created_at ? s.created_at.split('T')[0] : '';
+      const updatedDate = s.updated_at ? s.updated_at.split('T')[0] : '';
+
+      if (createdDate === todayStr) todaysUpload++;
       sumAttempts += att;
       if (att > maxAttempts) maxAttempts = att;
 
-      if (att === 1) fresh++;
+      if (att === 1 && (s.ndr_workflow_status === 'Calling Pending' || s.shipment_status_current === 'UNDEL')) fresh++;
       else if (att >= 2) reattempt++;
 
-      if (s.shipment_status_current === 'DEL') delivered++;
-      if (s.shipment_status_current === 'RTO') rto++;
+      if (s.ndr_workflow_status === 'Supervisor Pending') supervisorPending++;
+      if ((s.shipment_status_current === 'DEL' || s.ndr_workflow_status === 'Delivered') && updatedDate === todayStr) deliveredToday++;
+      if (s.shipment_status_current === 'RTO' || s.ndr_workflow_status === 'RTO') rto++;
     });
 
     const avgAttempts = Number((sumAttempts / shipments.length).toFixed(2));
 
-    return { fresh, reattempt, delivered, rto, avgAttempts, maxAttempts };
+    return { todaysUpload, fresh, reattempt, supervisorPending, deliveredToday, rto, avgAttempts, maxAttempts };
   }, [shipments]);
 
   // Aggregate Data depending on reportType
@@ -77,6 +87,15 @@ export default function NDRReports() {
         case 'Daily':
           key = new Date(s.created_at).toLocaleDateString();
           break;
+        case 'Caller Performance':
+        case 'Caller Wise':
+          key = s.assigned_caller?.name || 'Unassigned Caller';
+          break;
+        case 'Supervisor Performance':
+        case 'Supervisor Wise':
+          key = s.assigned_supervisor?.name || 'Unassigned Supervisor';
+          break;
+
         case 'Vendor Wise':
           key = s.partner_name || 'Unknown Vendor';
           break;
@@ -85,12 +104,6 @@ export default function NDRReports() {
           break;
         case 'Reason Wise':
           key = s.original_ndr_reason || 'Unspecified';
-          break;
-        case 'Caller Wise':
-          key = s.assigned_caller?.name || 'Unassigned Caller';
-          break;
-        case 'Supervisor Wise':
-          key = s.assigned_supervisor?.name || 'Unassigned Supervisor';
           break;
         case 'OTP Wise':
           key = s.otp_status || 'No OTP Details';
@@ -161,7 +174,7 @@ export default function NDRReports() {
 
   return (
     <div className="space-y-6">
-      {/* Fresh vs Reattempt Operational KPI Summary Cards */}
+      {/* Logistics KPI Summary Block */}
       <div className="p-6 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft space-y-4">
         <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
           <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
@@ -169,53 +182,69 @@ export default function NDRReports() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-              Logistics Attempt & Operational Summary
+              Logistics Operational Performance Summary
             </h3>
-            <p className="text-xs text-neutral-500">Breakdown of fresh imports, reattempt pending, resolutions, and average attempt metrics.</p>
+            <p className="text-xs text-neutral-500">Summary of today's uploads, active queues, supervisor pending, resolutions, and average attempt metrics.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-600" /> Fresh Shipments
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs">
+          <div className="p-3.5 rounded-xl border border-indigo-500/20 bg-indigo-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 block">Today's Upload</span>
+            <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">
+              {stats.todaysUpload}
             </span>
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-emerald-600" /> Fresh
+            </span>
+            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
               {stats.fresh}
             </span>
           </div>
 
-          <div className="p-4 rounded-xl border border-orange-500/20 bg-orange-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Reattempt Shipments</span>
-            <span className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1 block">
+          <div className="p-3.5 rounded-xl border border-orange-500/20 bg-orange-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 block">Reattempt</span>
+            <span className="text-xl font-black text-orange-600 dark:text-orange-400 mt-1 block">
               {stats.reattempt}
             </span>
           </div>
 
-          <div className="p-4 rounded-xl border border-emerald-600/20 bg-emerald-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Delivered After NDR</span>
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
-              {stats.delivered}
+          <div className="p-3.5 rounded-xl border border-rose-500/20 bg-rose-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3 text-rose-600" /> Supervisor
+            </span>
+            <span className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 block">
+              {stats.supervisorPending}
             </span>
           </div>
 
-          <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">RTO Approved</span>
-            <span className="text-2xl font-black text-red-600 dark:text-red-400 mt-1 block">
+          <div className="p-3.5 rounded-xl border border-emerald-600/20 bg-emerald-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 block">Delivered Today</span>
+            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
+              {stats.deliveredToday}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-red-500/20 bg-red-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 block">RTO Closed</span>
+            <span className="text-xl font-black text-red-600 dark:text-red-400 mt-1 block">
               {stats.rto}
             </span>
           </div>
 
-          <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Average Attempts</span>
-            <span className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">
+          <div className="p-3.5 rounded-xl border border-blue-500/20 bg-blue-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 block">Avg Attempts</span>
+            <span className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1 block">
               {stats.avgAttempts}
             </span>
           </div>
 
-          <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/10">
-            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 block">Maximum Attempts</span>
-            <span className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1 block">
+          <div className="p-3.5 rounded-xl border border-purple-500/20 bg-purple-500/10">
+            <span className="font-bold text-neutral-600 dark:text-neutral-400 block">Max Attempts</span>
+            <span className="text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block">
               {stats.maxAttempts}
             </span>
           </div>
@@ -239,11 +268,11 @@ export default function NDRReports() {
           >
             <option value="Fresh & Reattempt Analysis">Fresh & Reattempt Analysis</option>
             <option value="Daily">Daily Breakdown</option>
+            <option value="Caller Performance">Caller Performance</option>
+            <option value="Supervisor Performance">Supervisor Performance</option>
             <option value="Vendor Wise">Vendor Wise</option>
             <option value="Executive Wise">Executive Wise</option>
             <option value="Reason Wise">Reason Wise</option>
-            <option value="Caller Wise">Caller Wise</option>
-            <option value="Supervisor Wise">Supervisor Wise</option>
             <option value="OTP Wise">OTP Wise</option>
             <option value="COD Wise">COD Wise</option>
             <option value="Hub Wise">Hub Wise</option>

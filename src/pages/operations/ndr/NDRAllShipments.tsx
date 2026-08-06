@@ -47,12 +47,14 @@ export default function NDRAllShipments() {
   const [aging, setAging] = useState<number | undefined>(
     searchParams.get('aging') ? Number(searchParams.get('aging')) : undefined
   );
+  const [isToday, setIsToday] = useState<boolean>(searchParams.get('isToday') === 'true');
   const [page, setPage] = useState(1);
 
   // Sync state when URL searchParams change
   useEffect(() => {
     setWorkflowStatus((searchParams.get('workflowStatus') as NDRWorkflowStatus) || 'ALL');
     setAttempts(searchParams.get('attempts') || 'ALL');
+    setIsToday(searchParams.get('isToday') === 'true');
     setVendor(searchParams.get('vendor') || 'ALL');
     setExecutive(searchParams.get('executive') || 'ALL');
     setReason(searchParams.get('reason') || 'ALL');
@@ -76,6 +78,7 @@ export default function NDRAllShipments() {
         search,
         workflowStatus,
         attempts: attempts !== 'ALL' ? attempts : undefined,
+        isToday,
         vendor: vendor !== 'ALL' ? vendor : undefined,
         executive: executive !== 'ALL' ? executive : undefined,
         reason: reason !== 'ALL' ? reason : undefined,
@@ -91,12 +94,12 @@ export default function NDRAllShipments() {
     } finally {
       setLoading(false);
     }
-
   };
 
   useEffect(() => {
     loadData();
-  }, [selectedHub, search, workflowStatus, attempts, vendor, executive, reason, otpStatus, aging, page, outletCtx?.refreshTrigger]);
+  }, [selectedHub, search, workflowStatus, attempts, isToday, vendor, executive, reason, otpStatus, aging, page, outletCtx?.refreshTrigger]);
+
 
 
   const handleCallSuccess = () => {

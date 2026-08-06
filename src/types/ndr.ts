@@ -167,16 +167,21 @@ export interface NDRTimelineLog {
 }
 
 export interface NDRMetrics {
+  todaysUpload: number;
   totalActive: number;
   freshShipments: number;
   reattemptPending: number;
   callingPending: number;
   supervisorPending: number;
   followUpToday: number;
-  deliveredAfterNdr: number;
+  deliveredToday: number;
   rtoClosed: number;
+  attempt1Count: number;
+  attempt2Count: number;
+  attempt3Count: number;
+  attempt4PlusCount: number;
+  totalOfdAttemptsToday: number;
 }
-
 
 
 export interface NDRFilterParams {
@@ -189,6 +194,7 @@ export interface NDRFilterParams {
   status?: string;
   workflowStatus?: NDRWorkflowStatus | 'ALL' | string;
   attempts?: string;
+  isToday?: boolean;
 
   reason?: string;
   callerId?: string;
@@ -201,6 +207,7 @@ export interface NDRFilterParams {
   page?: number;
   limit?: number;
 }
+
 
 
 

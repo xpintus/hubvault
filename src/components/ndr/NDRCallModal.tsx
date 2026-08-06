@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { logNDRCall } from '@/lib/ndr/ndrService';
 import { NDRCallerResult, NDRShipment } from '@/types/ndr';
-import { Calendar, PhoneCall, RefreshCw, X } from 'lucide-react';
+import { PhoneCall, RefreshCw, Send, X } from 'lucide-react';
 
 interface NDRCallModalProps {
   shipment: NDRShipment | null;
@@ -12,14 +12,14 @@ interface NDRCallModalProps {
 }
 
 const CALLER_RESULTS: NDRCallerResult[] = [
-  'Connected',
-  'Not Connected',
-  'Switched Off',
-  'Wrong Number',
   'Customer Accepted',
   'Customer Refused',
   'Future Delivery',
+  'Wrong Number',
+  'Not Connected',
+  'Switched Off',
   'OTP Issue',
+  'Connected',
   'Other',
 ];
 
@@ -86,29 +86,56 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
             </div>
           )}
 
-          {/* Caller Screen Info Summary */}
+          {/* Caller Screen Detailed Information */}
           <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 text-xs space-y-2">
-            <div className="flex justify-between">
-              <span className="text-neutral-500 font-medium">AWB Number:</span>
-              <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{shipment.awb_number}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-neutral-500 block">AWB:</span>
+                <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{shipment.awb_number}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Customer:</span>
+                <span className="font-bold text-neutral-900 dark:text-neutral-100">{shipment.consignee_name || '-'}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Phone:</span>
+                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                  {(shipment.raw_data?.consignee_phone as string) || (shipment.raw_data?.phone as string) || '-'}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Address:</span>
+                <span className="font-medium text-neutral-700 dark:text-neutral-300 truncate block">
+                  {(shipment.raw_data?.delivery_address as string) || shipment.city || '-'}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-neutral-500 block">COD Amount:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">₹{shipment.amount_payable}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Executive:</span>
+                <span className="font-semibold">{shipment.delivery_executive || '-'}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Vendor:</span>
+                <span className="font-medium">{shipment.partner_name || '-'}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Attempt Count:</span>
+                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">Attempt #{shipment.total_attempts || 1}</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500 font-medium">Customer:</span>
-              <span className="font-bold text-neutral-900 dark:text-neutral-100">{shipment.consignee_name || '-'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500 font-medium">Delivery Executive:</span>
-              <span className="font-semibold text-neutral-800 dark:text-neutral-200">{shipment.delivery_executive || '-'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-500 font-medium">Original NDR Reason:</span>
+            <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+              <span className="text-neutral-500 block">Original Reason:</span>
               <span className="font-bold text-amber-600 dark:text-amber-400">{shipment.original_ndr_reason || '-'}</span>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-              Call Status / Result *
+              Call Result Dropdown *
             </label>
             <select
               value={callerResult}
@@ -144,7 +171,7 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
             </label>
             <textarea
               rows={3}
-              placeholder="Enter call notes..."
+              placeholder="Enter caller remark..."
               value={callerRemarks}
               onChange={(e) => setCallerRemarks(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-medium"
@@ -162,9 +189,9 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition flex items-center gap-1.5"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-glow transition flex items-center gap-1.5"
             >
-              {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />} Save & Send To Supervisor
+              {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Save & Send To Supervisor
             </button>
           </div>
         </form>

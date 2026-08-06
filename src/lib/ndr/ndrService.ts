@@ -109,6 +109,11 @@ export async function fetchNDRShipments(
     query = query.lte('created_at', cutoff);
   }
 
+  if (params.isToday) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    query = query.gte('created_at', `${todayStr}T00:00:00.000Z`).lte('created_at', `${todayStr}T23:59:59.999Z`);
+  }
+
   if (params.attempts && params.attempts !== 'ALL') {
     const att = params.attempts.toString();
     if (att === 'fresh' || att === '1') {
@@ -121,6 +126,7 @@ export async function fetchNDRShipments(
       query = query.gte('total_attempts', 3);
     }
   }
+
 
 
   const from = (page - 1) * limit;
@@ -652,7 +658,7 @@ export async function submitSupervisorAction(params: {
 
   const { data: currentShipment } = await supabase
     .from('ndr_shipments')
-    .select('ndr_workflow_status, raw_data')
+    .select('ndr_workflow_status, raw_data, total_attempts')
     .eq('id', shipmentId)
     .single();
 
@@ -668,6 +674,11 @@ export async function submitSupervisorAction(params: {
     raw_data: updatedRawData,
     updated_at: new Date().toISOString(),
   };
+
+  if (actionTaken === 'Approve Reattempt') {
+    updatePayload.total_attempts = (currentShipment?.total_attempts || 1) + 1;
+  }
+
 
   if (shipmentStatusCurrent) {
     updatePayload.shipment_status_current = shipmentStatusCurrent;
@@ -842,7 +853,7 @@ export async function fetchNDRSupervisorActions(shipmentId: string): Promise<NDR
 }
 
 export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics> {
-  let query = supabase.from('ndr_shipments').select('ndr_workflow_status, shipment_status_current, created_at, total_attempts');
+  let query = supabase.from('ndr_shipments').select('ndr_workflow_status, shipment_status_current, created_at, updated_at, total_attempts');
 
   if (hubId && hubId !== 'ALL') {
     query = query.eq('hub_id', hubId);
@@ -852,37 +863,65 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
   if (error) {
     console.error('Error fetching NDR metrics:', error);
     return {
+      todaysUpload: 0,
       totalActive: 0,
       freshShipments: 0,
       reattemptPending: 0,
       callingPending: 0,
       supervisorPending: 0,
       followUpToday: 0,
-      deliveredAfterNdr: 0,
+      deliveredToday: 0,
       rtoClosed: 0,
+      attempt1Count: 0,
+      attempt2Count: 0,
+      attempt3Count: 0,
+      attempt4PlusCount: 0,
+      totalOfdAttemptsToday: 0,
     };
   }
 
   const items = data || [];
+  const todayStr = new Date().toISOString().split('T')[0];
 
+  let todaysUpload = 0;
   let freshShipments = 0;
   let reattemptPending = 0;
   let callingPending = 0;
   let supervisorPending = 0;
   let followUpToday = 0;
-  let deliveredAfterNdr = 0;
+  let deliveredToday = 0;
   let rtoClosed = 0;
+
+  let attempt1Count = 0;
+  let attempt2Count = 0;
+  let attempt3Count = 0;
+  let attempt4PlusCount = 0;
+  let totalOfdAttemptsToday = 0;
 
   items.forEach((item) => {
     const wf = item.ndr_workflow_status;
     const currStat = item.shipment_status_current;
     const attempts = item.total_attempts || 1;
+    const createdDate = item.created_at ? item.created_at.split('T')[0] : '';
+    const updatedDate = item.updated_at ? item.updated_at.split('T')[0] : '';
+
+    if (createdDate === todayStr) {
+      todaysUpload++;
+      totalOfdAttemptsToday += attempts;
+      if (attempts === 1) attempt1Count++;
+      else if (attempts === 2) attempt2Count++;
+      else if (attempts === 3) attempt3Count++;
+      else if (attempts >= 4) attempt4PlusCount++;
+    }
 
     if (wf === 'UNDEL' || wf === 'Calling Pending') callingPending++;
     else if (wf === 'Supervisor Review' || wf === 'Supervisor Pending') supervisorPending++;
     else if (wf === 'Follow-up' || wf === 'Reattempt Required') followUpToday++;
-    else if (wf === 'Delivered' || currStat === 'DEL') deliveredAfterNdr++;
     else if (wf === 'RTO' || wf === 'Closed' || currStat === 'RTO') rtoClosed++;
+
+    if ((wf === 'Delivered' || currStat === 'DEL') && updatedDate === todayStr) {
+      deliveredToday++;
+    }
 
     // Fresh vs Reattempt Calculation
     if ((wf === 'UNDEL' || wf === 'Calling Pending') && attempts === 1) {
@@ -895,16 +934,23 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
   const totalActive = callingPending + supervisorPending + followUpToday;
 
   return {
+    todaysUpload,
     totalActive,
     freshShipments,
     reattemptPending,
     callingPending,
     supervisorPending,
     followUpToday,
-    deliveredAfterNdr,
+    deliveredToday,
     rtoClosed,
+    attempt1Count,
+    attempt2Count,
+    attempt3Count,
+    attempt4PlusCount,
+    totalOfdAttemptsToday,
   };
 }
+
 
 
 

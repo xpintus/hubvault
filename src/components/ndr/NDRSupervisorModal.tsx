@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { submitSupervisorAction } from '@/lib/ndr/ndrService';
 import { NDRShipment, NDRSupervisorActionType } from '@/types/ndr';
-import { RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, RefreshCw, RotateCcw, ShieldCheck, Truck, X } from 'lucide-react';
 
 interface NDRSupervisorModalProps {
   shipment: NDRShipment | null;
@@ -67,7 +67,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200">
               {errorMsg}
@@ -88,22 +88,54 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
               <span className="text-neutral-500 font-medium">Original Reason:</span>
               <span className="font-bold text-amber-600 dark:text-amber-400">{shipment.original_ndr_reason || '-'}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500 font-medium">Attempt Count:</span>
+              <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">Attempt #{shipment.total_attempts || 1}</span>
+            </div>
           </div>
 
-          {/* Supervisor Actions */}
+          {/* 3 Supervisor Decision Buttons */}
           <div>
-            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-              Action *
+            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2">
+              Supervisor Decision *
             </label>
-            <select
-              value={actionTaken}
-              onChange={(e) => setActionTaken(e.target.value as NDRSupervisorActionType)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-neutral-900 dark:text-neutral-100"
-            >
-              <option value="Approve Delivery">Approve Delivery</option>
-              <option value="Approve Reattempt">Approve Reattempt</option>
-              <option value="Approve RTO">Approve RTO</option>
-            </select>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setActionTaken('Approve Delivery')}
+                className={`p-3 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1.5 ${
+                  actionTaken === 'Approve Delivery'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/30'
+                    : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                }`}
+              >
+                <CheckCircle2 className="h-4 w-4" /> Approve Delivery
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActionTaken('Approve Reattempt')}
+                className={`p-3 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1.5 ${
+                  actionTaken === 'Approve Reattempt'
+                    ? 'bg-orange-600 text-white border-orange-600 shadow-md ring-2 ring-orange-500/30'
+                    : 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/20'
+                }`}
+              >
+                <Truck className="h-4 w-4" /> Approve Reattempt
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActionTaken('Approve RTO')}
+                className={`p-3 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1.5 ${
+                  actionTaken === 'Approve RTO'
+                    ? 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-500/30'
+                    : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30 hover:bg-red-500/20'
+                }`}
+              >
+                <RotateCcw className="h-4 w-4" /> Approve RTO
+              </button>
+            </div>
           </div>
 
           <div>
@@ -133,7 +165,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
               disabled={submitting}
               className="px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-glow transition flex items-center gap-1.5"
             >
-              {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Save Action
+              {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Save Decision
             </button>
           </div>
         </form>
