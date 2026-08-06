@@ -70,7 +70,6 @@ export interface EmployeeDRSMetrics {
   cod_value_total: number;
   cod_value_delivered: number;
 
-  // Additional V4 COD / Prepaid Metrics
   cod_ofd: number;
   cod_delivered: number;
   cod_undel: number;
@@ -207,7 +206,7 @@ export interface DRSFilterOptions {
   pincode?: string;
   reason?: string;
   otpStatus?: string;
-  minOfdThreshold?: number; // 0, 5, 10, 20, 50
+  minOfdThreshold?: number;
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
@@ -219,12 +218,42 @@ export interface DRSReportHistoryItem {
   reportDate: string;
   uploadTimestamp: string;
   uploadedBy: string;
+  hubId?: string;
   hubName: string;
   clientName: string;
   totalOfd: number;
   totalDelivered: number;
   totalUndel: number;
+  totalRto?: number;
+  totalCancel?: number;
+  firstAttemptOfd?: number;
+  firstAttemptDel?: number;
+  reattemptOfd?: number;
+  reattemptDel?: number;
   overallDeliveryPct: number;
+  codOfd?: number;
+  codDel?: number;
+  codAmount?: number;
+  prepaidOfd?: number;
+  prepaidDel?: fontFormatNumber;
+  prepaidAmount?: number;
+  averageAttempt?: number;
   rows: DRSReportRow[];
   summary: OverallDRSSummary;
+}
+
+type fontFormatNumber = number;
+
+export interface DRSReportComparison {
+  reportA: DRSReportHistoryItem;
+  reportB: DRSReportHistoryItem;
+  ofdChange: number;
+  ofdChangePct: number;
+  delChange: number;
+  delChangePct: number;
+  undelChange: number;
+  deliveryRateChange: number;
+  codAmountChange: number;
+  topExecA?: string;
+  topExecB?: string;
 }
