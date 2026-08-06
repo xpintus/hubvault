@@ -2,11 +2,13 @@ import { useAuth } from '@/lib/auth';
 import { formatDateLong } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { useNotifications } from '@/lib/notifications';
+import { useSettings } from '@/lib/settings';
+import { getSubscriptionDetails } from '@/lib/subscription';
 import { ROLE_LABELS } from '@/types';
 import { clsx } from 'clsx';
 import { AlertTriangle,Building2,Calendar,Check,ChevronDown,KeyRound,Layers,LogOut,Menu } from 'lucide-react';
 import { useCallback,useEffect,useRef,useState } from 'react';
-import { Outlet,useLocation,useNavigate } from 'react-router-dom';
+import { Link,Outlet,useLocation,useNavigate } from 'react-router-dom';
 import LicenseActivationModal from './LicenseActivationModal';
 import ConflictResolver from './offline/ConflictResolver';
 import SyncIndicator from './offline/SyncIndicator';
@@ -34,6 +36,7 @@ const TITLES: Record<string, string> = {
 
 export default function AppLayout() {
   const { profile, loading, signOut, user, refreshProfile } = useAuth();
+  const { settings } = useSettings();
   const hub = useHub();
   const { pendingPayments, unreadBuyerNotifications } = useNotifications();
   const toast = useToast();
@@ -50,6 +53,8 @@ export default function AppLayout() {
   const [licenseCountdown, setLicenseCountdown] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const hubMenuRef = useRef<HTMLDivElement>(null);
+
+  const subDetails = getSubscriptionDetails(profile, settings.subscription_grace_days);
 
   const isHubAdminPending = profile?.role === 'hub_admin' && profile?.license_status === 'pending';
   const isHubAdminExpired = profile?.role === 'hub_admin' && profile?.license_status === 'expired';
@@ -282,6 +287,51 @@ export default function AppLayout() {
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 w-full min-w-0 max-w-full overflow-x-hidden">
           <div className="max-w-7xl mx-auto w-full min-w-0">
+            {/* Subscription Warning / Expired Banner for monthly users */}
+            {profile?.role !== 'super_admin' && subDetails.isNearExpiry && (
+              <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                      ⚠️ Your subscription expires in {subDetails.daysRemaining} day{subDetails.daysRemaining === 1 ? '' : 's'}.
+                    </p>
+                    <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
+                      Renew your monthly plan to keep uninterrupted access to HubVault.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/payment"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 text-sm font-semibold transition active:scale-95 shrink-0"
+                >
+                  Renew Now
+                </Link>
+              </div>
+            )}
+
+            {profile?.role !== 'super_admin' && subDetails.status === 'expired' && (
+              <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-red-700 dark:text-red-400">
+                      🔴 Subscription Expired
+                    </p>
+                    <p className="text-xs text-red-600/80 dark:text-red-400/70">
+                      Your monthly subscription has ended. Renew your plan to unlock your workspace.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/payment"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm font-semibold transition active:scale-95 shrink-0"
+                >
+                  Renew Now
+                </Link>
+              </div>
+            )}
+
             {/* License activation banner for pending hub_admins */}
             {isHubAdminPending && (
               <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">

@@ -4,6 +4,7 @@ import { createContext,ReactNode,useCallback,useContext,useEffect,useState } fro
 import { confirm } from './confirm';
 import { setActiveUserId } from './offline/db';
 import { getQueueCount } from './offline/syncQueue';
+import { getSubscriptionStatus } from './subscription';
 import { supabase } from './supabase';
 
 interface AuthContextValue {
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (uid: string): Promise<{ profile: Profile | null; error: any }> => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, email, role, hub_id, can_create_hub, phone, company, location, created_at, is_approved, license_status, license_expires_at, license_activated_at, hub_add_credits, referral_code, referred_by, referral_earnings, hub: hubs!profiles_hub_id_fkey(*)')
+      .select('id, name, email, role, hub_id, can_create_hub, phone, company, location, created_at, is_approved, license_status, license_expires_at, license_activated_at, hub_add_credits, referral_code, referred_by, referral_earnings, plan_type, subscription_started_at, subscription_expires_at, subscription_status, last_payment_at, next_billing_at, renewal_count, hub: hubs!profiles_hub_id_fkey(*)')
       .eq('id', uid)
       .maybeSingle();
     if (error) {
@@ -122,31 +123,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         return { error: 'Your account is pending admin approval. Please contact the administrator.' };
       }
-      // Check license status for hub_admin
-      if (fetched.role === 'hub_admin' && fetched.license_status === 'expired') {
-        await supabase.auth.signOut();
-        setActiveUserId(null);
-        setSession(null);
-        setProfile(null);
-        return { error: 'Your license has expired. Please contact your administrator for a new activation code.' };
-      }
-      if (fetched.role === 'hub_admin' && fetched.license_status === 'activated' && fetched.license_expires_at && new Date(fetched.license_expires_at) < new Date()) {
-        await supabase.auth.signOut();
-        setActiveUserId(null);
-        setSession(null);
-        setProfile(null);
-        return { error: 'Your monthly subscription has expired. Renew it to continue using HubVault.' };
-      }
-      if (fetched.role === 'hub_admin' && fetched.license_status === 'pending') {
-        const expiresAt = fetched.license_expires_at ? new Date(fetched.license_expires_at) : null;
-        if (expiresAt && expiresAt < new Date()) {
+      // Super admin is exempt from license/subscription expiry
+      if (fetched.role !== 'super_admin' && fetched.role === 'hub_admin') {
+        const subStatus = getSubscriptionStatus(fetched);
+        if (subStatus === 'expired') {
           await supabase.auth.signOut();
           setActiveUserId(null);
           setSession(null);
           setProfile(null);
-          return { error: 'Your 30-day free access period has ended. Choose a plan to continue using HubVault.' };
+          return { error: 'Your monthly subscription has expired. Renew it to continue using HubVault.' };
         }
-        return { error: null };
+        if (fetched.license_status === 'pending') {
+          const expiresAt = fetched.license_expires_at ? new Date(fetched.license_expires_at) : null;
+          if (expiresAt && expiresAt < new Date()) {
+            await supabase.auth.signOut();
+            setActiveUserId(null);
+            setSession(null);
+            setProfile(null);
+            return { error: 'Your 30-day free access period has ended. Choose a plan to continue using HubVault.' };
+          }
+        }
       }
     }
     return { error: null };
@@ -198,15 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkLicenseExpired = useCallback(async (): Promise<boolean> => {
     if (!session?.user || !profile) return false;
-    if (profile.role !== 'hub_admin') return false;
-    if (profile.license_status === 'activated') {
-      return Boolean(profile.license_expires_at && new Date(profile.license_expires_at) < new Date());
-    }
-    if (profile.license_status === 'expired') return true;
-    if (profile.license_status === 'pending' && profile.license_expires_at) {
-      return new Date(profile.license_expires_at) < new Date();
-    }
-    return false;
+    if (profile.role === 'super_admin') return false;
+    return getSubscriptionStatus(profile) === 'expired';
   }, [session, profile]);
 
   return (

@@ -2,6 +2,10 @@ export type UserRole = 'super_admin' | 'hub_admin' | 'supervisor' | 'collector' 
 
 export type LicenseStatus = 'none' | 'pending' | 'activated' | 'expired';
 
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'none';
+
+export type PlanType = 'lifetime' | 'monthly';
+
 export type HubStatus = 'active' | 'inactive';
 
 export type CollectorStatus = 'active' | 'inactive';
@@ -42,6 +46,25 @@ export interface Profile {
   referral_code?: string | null;
   referred_by?: string | null;
   referral_earnings?: number;
+  plan_type?: PlanType;
+  subscription_started_at?: string | null;
+  subscription_expires_at?: string | null;
+  subscription_status?: SubscriptionStatus;
+  last_payment_at?: string | null;
+  next_billing_at?: string | null;
+  renewal_count?: number;
+}
+
+export interface SubscriptionHistory {
+  id: string;
+  user_id: string;
+  old_plan: string | null;
+  new_plan: string | null;
+  old_expiry: string | null;
+  new_expiry: string | null;
+  changed_by: string | null;
+  reason: string | null;
+  created_at: string;
 }
 
 export interface LicenseKey {
@@ -49,6 +72,7 @@ export interface LicenseKey {
   user_id: string;
   license_code: string;
   status: 'pending' | 'activated' | 'expired';
+  plan_type?: PlanType;
   generated_at: string;
   activated_at: string | null;
   expires_at: string;

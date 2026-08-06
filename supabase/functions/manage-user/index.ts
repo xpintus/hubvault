@@ -69,6 +69,31 @@ function generateLicenseCode(): string {
   return code;
 }
 
+async function logSubscriptionHistory(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string,
+  oldPlan: string | null,
+  newPlan: string | null,
+  oldExpiry: string | null,
+  newExpiry: string | null,
+  changedBy: string | null,
+  reason: string
+): Promise<void> {
+  try {
+    await adminClient.from("subscription_history").insert({
+      user_id: userId,
+      old_plan: oldPlan,
+      new_plan: newPlan,
+      old_expiry: oldExpiry,
+      new_expiry: newExpiry,
+      changed_by: changedBy,
+      reason,
+    });
+  } catch (err) {
+    console.error("logSubscriptionHistory error:", err);
+  }
+}
+
 async function createLicenseForUser(adminClient: ReturnType<typeof createClient>, userId: string, planType: "lifetime" | "monthly" = "lifetime"): Promise<string> {
   const licenseCode = generateLicenseCode();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -94,6 +119,7 @@ async function createLicenseForUser(adminClient: ReturnType<typeof createClient>
     license_expires_at: expiresAt,
     license_activated_at: null,
     plan_type: planType,
+    subscription_status: "none",
   }).eq("id", userId);
 
   if (profileErr) {
@@ -850,24 +876,16 @@ Deno.serve(async (req: Request) => {
         // Fetch caller's profile
         const { data: myProfile } = await userClient
           .from("profiles")
-          .select("id, role, license_status, license_expires_at, plan_type")
+          .select("id, role, license_status, license_expires_at, plan_type, subscription_started_at, subscription_expires_at, subscription_status, renewal_count")
           .eq("id", callerUser.user.id)
           .maybeSingle();
 
         if (!myProfile) return jsonError(404, "Profile not found");
         if (myProfile.role !== "hub_admin") return jsonError(403, "Only Hub Admins need license activation");
 
-        // Check if already activated
-        if (myProfile.license_status === "activated") {
-          return jsonError(400, "Your license is already activated");
-        }
-
-        // Check if expired
-        if (myProfile.license_expires_at && new Date(myProfile.license_expires_at) < new Date()) {
-          // Mark as expired
-          await adminClient.from("profiles").update({ license_status: "expired" }).eq("id", myProfile.id);
-          await adminClient.from("license_keys").update({ status: "expired" }).eq("user_id", myProfile.id);
-          return jsonError(410, "Your license has expired. Please contact your administrator for a new code.");
+        // Check if already activated and active lifetime
+        if (myProfile.license_status === "activated" && myProfile.plan_type === "lifetime") {
+          return jsonError(400, "Your lifetime license is already activated");
         }
 
         // Look up the license key
@@ -881,7 +899,7 @@ Deno.serve(async (req: Request) => {
 
         if (!license) return jsonError(404, "No license found for your account. Please contact your administrator.");
         if (license.status === "expired") return jsonError(410, "Your license has expired. Please contact your administrator for a new code.");
-        if (license.status === "activated") return jsonError(400, "Your license is already activated");
+        if (license.status === "activated" && license.plan_type === "lifetime") return jsonError(400, "Your lifetime license is already activated");
 
         // Validate the code (compare without dashes)
         const normalize = (s: string) => s.replace(/-/g, "").toUpperCase();
@@ -889,29 +907,91 @@ Deno.serve(async (req: Request) => {
           return jsonError(400, "Invalid license code. Please check and try again.");
         }
 
-        // Activate
         const now = new Date().toISOString();
+        const targetPlan = license.plan_type || myProfile.plan_type || "lifetime";
+
         await adminClient.from("license_keys").update({
           status: "activated",
           activated_at: now,
+          plan_type: targetPlan,
         }).eq("id", license.id);
 
-        await adminClient.from("profiles").update({
-          license_status: "activated",
-          license_activated_at: now,
-          license_expires_at: myProfile.plan_type === "monthly" ? new Date(new Date(now).setMonth(new Date(now).getMonth() + 1)).toISOString() : null,
-        }).eq("id", myProfile.id);
+        if (targetPlan === "lifetime") {
+          await adminClient.from("profiles").update({
+            license_status: "activated",
+            license_activated_at: now,
+            license_expires_at: null,
+            plan_type: "lifetime",
+            subscription_started_at: now,
+            subscription_expires_at: null,
+            subscription_status: "active",
+            last_payment_at: now,
+          }).eq("id", myProfile.id);
+
+          await logSubscriptionHistory(
+            adminClient,
+            myProfile.id,
+            myProfile.plan_type || null,
+            "lifetime",
+            myProfile.subscription_expires_at || null,
+            null,
+            myProfile.id,
+            "License activated: Lifetime Plan"
+          );
+        } else {
+          // Monthly plan
+          const currentExpiry = myProfile.subscription_expires_at ? new Date(myProfile.subscription_expires_at) : null;
+          const isCurrentlyActive = currentExpiry && currentExpiry > new Date();
+
+          let newExpiryDate: Date;
+          let startedAt: string;
+
+          if (isCurrentlyActive && currentExpiry) {
+            // Extend existing expiry by 30 days
+            newExpiryDate = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+            startedAt = myProfile.subscription_started_at || now;
+          } else {
+            // New 30 days from now
+            newExpiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            startedAt = now;
+          }
+
+          const newExpiryStr = newExpiryDate.toISOString();
+          const renewalCount = (myProfile.renewal_count || 0) + 1;
+
+          await adminClient.from("profiles").update({
+            license_status: "activated",
+            license_activated_at: now,
+            license_expires_at: newExpiryStr,
+            plan_type: "monthly",
+            subscription_started_at: startedAt,
+            subscription_expires_at: newExpiryStr,
+            subscription_status: "active",
+            last_payment_at: now,
+            next_billing_at: newExpiryStr,
+            renewal_count: renewalCount,
+          }).eq("id", myProfile.id);
+
+          await logSubscriptionHistory(
+            adminClient,
+            myProfile.id,
+            myProfile.plan_type || null,
+            "monthly",
+            myProfile.subscription_expires_at || null,
+            newExpiryStr,
+            myProfile.id,
+            isCurrentlyActive ? "Subscription extended by 30 days" : "License activated: Monthly Plan (30 days)"
+          );
+        }
 
         await adminClient.from("audit_logs").insert({
           action: "license_activated",
           performed_by: myProfile.id,
           target_user_id: myProfile.id,
-          details: "License activated successfully",
+          details: `License activated (${targetPlan} plan)`,
         });
 
-        // Credit referral commission on license activation (₹999 standard price)
-        // creditReferralCommission guards against double-crediting via status check
-        await creditReferralCommission(adminClient, myProfile.id, 999, myProfile.id);
+        await creditReferralCommission(adminClient, myProfile.id, targetPlan === "monthly" ? 99 : 999, myProfile.id);
 
         return jsonResponse(200, { message: "License activated successfully" });
       }
@@ -948,25 +1028,62 @@ Deno.serve(async (req: Request) => {
       }
 
       case "check-license": {
-        // Check the caller's license status
+        // Check caller's license status and auto-expire if past deadline + grace period
         const { data: myProfile } = await userClient
           .from("profiles")
-          .select("role, license_status, license_expires_at, license_activated_at")
+          .select("id, role, plan_type, license_status, license_expires_at, license_activated_at, subscription_status, subscription_expires_at")
           .eq("id", callerUser.user.id)
           .maybeSingle();
 
         if (!myProfile) return jsonError(404, "Profile not found");
 
-        // Auto-expire if past deadline
-        if ((myProfile.license_status === "pending" || myProfile.license_status === "activated") && myProfile.license_expires_at) {
-          if (new Date(myProfile.license_expires_at) < new Date()) {
-            await adminClient.from("profiles").update({ license_status: "expired" }).eq("id", callerUser.user.id);
-            await adminClient.from("license_keys").update({ status: "expired" }).eq("user_id", callerUser.user.id);
-            myProfile.license_status = "expired";
+        const { data: settings } = await adminClient
+          .from("app_settings")
+          .select("subscription_grace_days")
+          .eq("id", 1)
+          .maybeSingle();
+
+        const graceDays = settings?.subscription_grace_days || 0;
+
+        if (myProfile.role !== "super_admin" && myProfile.plan_type === "monthly") {
+          const expiryStr = myProfile.subscription_expires_at || myProfile.license_expires_at;
+          if (expiryStr) {
+            const expiryTime = new Date(expiryStr).getTime();
+            const graceMs = Math.max(0, graceDays) * 24 * 60 * 60 * 1000;
+            if (Date.now() > expiryTime + graceMs) {
+              await adminClient.from("profiles").update({
+                license_status: "expired",
+                subscription_status: "expired",
+              }).eq("id", myProfile.id);
+              await adminClient.from("license_keys").update({ status: "expired" }).eq("user_id", myProfile.id);
+
+              await logSubscriptionHistory(
+                adminClient,
+                myProfile.id,
+                "monthly",
+                "monthly",
+                expiryStr,
+                expiryStr,
+                null,
+                "Auto-expired via check-license"
+              );
+
+              myProfile.license_status = "expired";
+              myProfile.subscription_status = "expired";
+            }
           }
         }
 
         return jsonResponse(200, {
+          role: myProfile.role,
+          plan_type: myProfile.plan_type,
+          license_status: myProfile.license_status,
+          subscription_status: myProfile.subscription_status,
+          subscription_expires_at: myProfile.subscription_expires_at || myProfile.license_expires_at,
+          license_expires_at: myProfile.license_expires_at,
+          license_activated_at: myProfile.license_activated_at,
+        });
+      }
           role: myProfile.role,
           license_status: myProfile.license_status,
           license_expires_at: myProfile.license_expires_at,
@@ -1425,8 +1542,92 @@ Deno.serve(async (req: Request) => {
 
             return jsonResponse(200, { message: "Hub-add payment verified — 1 hub credit granted to user" });
           } else {
-            // Generate license for the user
-            const licCode = await createLicenseForUser(adminClient, reqRow.user_id, reqRow.plan_type === "monthly" ? "monthly" : "lifetime");
+            // Generate/activate license for the user
+            const targetPlan = reqRow.plan_type === "monthly" ? "monthly" : "lifetime";
+            const licCode = await createLicenseForUser(adminClient, reqRow.user_id, targetPlan);
+
+            // Directly activate profile upon admin verification of payment
+            const { data: userProf } = await adminClient
+              .from("profiles")
+              .select("plan_type, subscription_started_at, subscription_expires_at, renewal_count")
+              .eq("id", reqRow.user_id)
+              .maybeSingle();
+
+            if (targetPlan === "lifetime") {
+              await adminClient.from("profiles").update({
+                license_status: "activated",
+                license_activated_at: now,
+                license_expires_at: null,
+                plan_type: "lifetime",
+                subscription_started_at: now,
+                subscription_expires_at: null,
+                subscription_status: "active",
+                last_payment_at: now,
+              }).eq("id", reqRow.user_id);
+
+              await adminClient.from("license_keys").update({
+                status: "activated",
+                activated_at: now,
+              }).eq("user_id", reqRow.user_id);
+
+              await logSubscriptionHistory(
+                adminClient,
+                reqRow.user_id,
+                userProf?.plan_type || null,
+                "lifetime",
+                userProf?.subscription_expires_at || null,
+                null,
+                callerUser.user.id,
+                "Admin verified payment: Lifetime Plan"
+              );
+            } else {
+              // Monthly plan
+              const currentExpiry = userProf?.subscription_expires_at ? new Date(userProf.subscription_expires_at) : null;
+              const isCurrentlyActive = currentExpiry && currentExpiry > new Date();
+
+              let newExpiryDate: Date;
+              let startedAt: string;
+
+              if (isCurrentlyActive && currentExpiry) {
+                newExpiryDate = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+                startedAt = userProf?.subscription_started_at || now;
+              } else {
+                newExpiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                startedAt = now;
+              }
+
+              const newExpiryStr = newExpiryDate.toISOString();
+              const renewalCount = (userProf?.renewal_count || 0) + 1;
+
+              await adminClient.from("profiles").update({
+                license_status: "activated",
+                license_activated_at: now,
+                license_expires_at: newExpiryStr,
+                plan_type: "monthly",
+                subscription_started_at: startedAt,
+                subscription_expires_at: newExpiryStr,
+                subscription_status: "active",
+                last_payment_at: now,
+                next_billing_at: newExpiryStr,
+                renewal_count: renewalCount,
+              }).eq("id", reqRow.user_id);
+
+              await adminClient.from("license_keys").update({
+                status: "activated",
+                activated_at: now,
+              }).eq("user_id", reqRow.user_id);
+
+              await logSubscriptionHistory(
+                adminClient,
+                reqRow.user_id,
+                userProf?.plan_type || null,
+                "monthly",
+                userProf?.subscription_expires_at || null,
+                newExpiryStr,
+                callerUser.user.id,
+                isCurrentlyActive ? "Admin verified payment: Extended monthly plan by 30 days" : "Admin verified payment: Activated monthly plan (30 days)"
+              );
+            }
 
             await adminClient.from("license_payment_requests").update({
               status: "verified",
@@ -1439,13 +1640,12 @@ Deno.serve(async (req: Request) => {
               action: "license_payment_verified",
               performed_by: callerUser.user.id,
               target_user_id: reqRow.user_id,
-              details: `UPI payment verified (TXN: ${reqRow.transaction_id}) — license ${licCode} issued`,
+              details: `UPI payment verified (TXN: ${reqRow.transaction_id}) — ${targetPlan} plan activated`,
             });
 
-            // Credit 50% commission to referrer if applicable
             await creditReferralCommission(adminClient, reqRow.user_id, Number(reqRow.amount) || 0, callerUser.user.id);
 
-            return jsonResponse(200, { license_code: licCode, message: "Payment verified and license issued" });
+            return jsonResponse(200, { license_code: licCode, message: `Payment verified and ${targetPlan} plan activated` });
           }
         } else {
           // Reject
@@ -1465,6 +1665,154 @@ Deno.serve(async (req: Request) => {
 
           return jsonResponse(200, { message: "Payment request rejected" });
         }
+      }
+
+      case "admin-convert-plan": {
+        if (!isSuperAdmin) return jsonError(403, "Only Super Admins can convert plans");
+        if (req.method !== "POST") return jsonError(405, "Method not allowed");
+
+        const body = await req.json() as { user_id: string; target_plan: "lifetime" | "monthly" };
+        if (!body.user_id || !body.target_plan) return jsonError(400, "user_id and target_plan are required");
+
+        const { data: targetProf } = await adminClient
+          .from("profiles")
+          .select("id, name, plan_type, subscription_expires_at, renewal_count")
+          .eq("id", body.user_id)
+          .maybeSingle();
+
+        if (!targetProf) return jsonError(404, "User not found");
+
+        const now = new Date().toISOString();
+        if (body.target_plan === "lifetime") {
+          await adminClient.from("profiles").update({
+            plan_type: "lifetime",
+            subscription_status: "active",
+            subscription_started_at: now,
+            subscription_expires_at: null,
+            license_status: "activated",
+            license_expires_at: null,
+          }).eq("id", body.user_id);
+
+          await adminClient.from("license_keys").update({
+            plan_type: "lifetime",
+            status: "activated",
+          }).eq("user_id", body.user_id);
+
+          await logSubscriptionHistory(
+            adminClient,
+            body.user_id,
+            targetProf.plan_type || null,
+            "lifetime",
+            targetProf.subscription_expires_at || null,
+            null,
+            callerUser.user.id,
+            "Admin converted plan to Lifetime"
+          );
+        } else {
+          // Monthly
+          const newExpiryStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          await adminClient.from("profiles").update({
+            plan_type: "monthly",
+            subscription_status: "active",
+            subscription_started_at: now,
+            subscription_expires_at: newExpiryStr,
+            license_status: "activated",
+            license_expires_at: newExpiryStr,
+            next_billing_at: newExpiryStr,
+          }).eq("id", body.user_id);
+
+          await adminClient.from("license_keys").update({
+            plan_type: "monthly",
+            status: "activated",
+          }).eq("user_id", body.user_id);
+
+          await logSubscriptionHistory(
+            adminClient,
+            body.user_id,
+            targetProf.plan_type || null,
+            "monthly",
+            targetProf.subscription_expires_at || null,
+            newExpiryStr,
+            callerUser.user.id,
+            "Admin converted plan to Monthly (30 days)"
+          );
+        }
+
+        await adminClient.from("audit_logs").insert({
+          action: "admin_plan_converted",
+          performed_by: callerUser.user.id,
+          target_user_id: body.user_id,
+          details: `Converted ${targetProf.name}'s plan to ${body.target_plan}`,
+        });
+
+        return jsonResponse(200, { message: `Plan converted to ${body.target_plan}` });
+      }
+
+      case "admin-renew-subscription": {
+        if (!isSuperAdmin) return jsonError(403, "Only Super Admins can renew subscriptions");
+        if (req.method !== "POST") return jsonError(405, "Method not allowed");
+
+        const body = await req.json() as { user_id: string };
+        if (!body.user_id) return jsonError(400, "user_id is required");
+
+        const { data: targetProf } = await adminClient
+          .from("profiles")
+          .select("id, name, plan_type, subscription_expires_at, subscription_started_at, renewal_count")
+          .eq("id", body.user_id)
+          .maybeSingle();
+
+        if (!targetProf) return jsonError(404, "User not found");
+
+        const now = new Date().toISOString();
+        const currentExpiry = targetProf.subscription_expires_at ? new Date(targetProf.subscription_expires_at) : null;
+        const isCurrentlyActive = currentExpiry && currentExpiry > new Date();
+
+        let newExpiryDate: Date;
+        if (isCurrentlyActive && currentExpiry) {
+          newExpiryDate = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+        } else {
+          newExpiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        }
+
+        const newExpiryStr = newExpiryDate.toISOString();
+        const renewalCount = (targetProf.renewal_count || 0) + 1;
+
+        await adminClient.from("profiles").update({
+          plan_type: "monthly",
+          subscription_status: "active",
+          subscription_started_at: targetProf.subscription_started_at || now,
+          subscription_expires_at: newExpiryStr,
+          license_status: "activated",
+          license_expires_at: newExpiryStr,
+          last_payment_at: now,
+          next_billing_at: newExpiryStr,
+          renewal_count: renewalCount,
+        }).eq("id", body.user_id);
+
+        await adminClient.from("license_keys").update({
+          plan_type: "monthly",
+          status: "activated",
+        }).eq("user_id", body.user_id);
+
+        await logSubscriptionHistory(
+          adminClient,
+          body.user_id,
+          targetProf.plan_type || "monthly",
+          "monthly",
+          targetProf.subscription_expires_at || null,
+          newExpiryStr,
+          callerUser.user.id,
+          isCurrentlyActive ? "Admin renewed subscription (+30 days extended)" : "Admin renewed subscription (30 days from now)"
+        );
+
+        await adminClient.from("audit_logs").insert({
+          action: "admin_subscription_renewed",
+          performed_by: callerUser.user.id,
+          target_user_id: body.user_id,
+          details: `Renewed monthly subscription for ${targetProf.name} (new expiry: ${newExpiryStr})`,
+        });
+
+        return jsonResponse(200, { message: "Subscription renewed successfully", expires_at: newExpiryStr });
       }
 
       case "disable-gift-card": {

@@ -259,6 +259,46 @@ export default function Licenses() {
     return data;
   };
 
+  const handleAdminConvertPlan = async (row: LicenseAdminRow, targetPlan: 'lifetime' | 'monthly') => {
+    const ok = await confirm({
+      title: `Convert to ${targetPlan === 'lifetime' ? 'Lifetime' : 'Monthly'}?`,
+      message: `Are you sure you want to convert ${row.profile.name}'s plan to ${targetPlan === 'lifetime' ? 'Lifetime Access (never expires)' : 'Monthly Subscription (30 days)'}?`,
+      confirmLabel: 'Convert Plan',
+    });
+    if (!ok) return;
+    setActionLoading(true);
+    try {
+      await callEdgeFunction('admin-convert-plan', { user_id: row.profile.id, target_plan: targetPlan });
+      toast.success(`Plan converted to ${targetPlan}`);
+      setDetailRow(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to convert plan');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAdminRenewSubscription = async (row: LicenseAdminRow) => {
+    const ok = await confirm({
+      title: 'Renew monthly subscription?',
+      message: `Extend ${row.profile.name}'s monthly subscription by 30 days?`,
+      confirmLabel: 'Renew Subscription',
+    });
+    if (!ok) return;
+    setActionLoading(true);
+    try {
+      await callEdgeFunction('admin-renew-subscription', { user_id: row.profile.id });
+      toast.success(`Monthly subscription renewed for ${row.profile.name}`);
+      setDetailRow(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to renew subscription');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleGenerate = async (row: LicenseAdminRow) => {
     const hasKey = !!row.license;
     const ok = await confirm({
@@ -715,6 +755,76 @@ export default function Licenses() {
                 </p>
               </div>
             )}
+
+            {/* Subscription Info */}
+            <div className="rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Subscription & Plan Info</p>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-neutral-500 block">Plan Type:</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100 uppercase">{detailRow.profile.plan_type || 'lifetime'}</span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block">Subscription Status:</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100 capitalize">{detailRow.profile.subscription_status || 'active'}</span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block">Started Date:</span>
+                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{detailRow.profile.subscription_started_at ? formatDateTime(detailRow.profile.subscription_started_at) : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block">Expiry Date:</span>
+                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">{detailRow.profile.subscription_expires_at ? formatDateTime(detailRow.profile.subscription_expires_at) : 'Lifetime (Never)'}</span>
+                </div>
+                {detailRow.profile.last_payment_at && (
+                  <div>
+                    <span className="text-neutral-500 block">Last Payment:</span>
+                    <span className="font-semibold text-neutral-800 dark:text-neutral-200">{formatDateTime(detailRow.profile.last_payment_at)}</span>
+                  </div>
+                )}
+                {detailRow.profile.renewal_count !== undefined && (
+                  <div>
+                    <span className="text-neutral-500 block">Renewals:</span>
+                    <span className="font-semibold text-neutral-800 dark:text-neutral-200">{detailRow.profile.renewal_count}</span>
+                  </div>
+                )}
+              </div>
+
+              {isSuperAdmin && (
+                <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleAdminRenewSubscription(detailRow)}
+                    loading={actionLoading}
+                    icon={<RefreshCw className="h-3.5 w-3.5" />}
+                  >
+                    Renew 30 Days
+                  </Button>
+                  {detailRow.profile.plan_type === 'monthly' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAdminConvertPlan(detailRow, 'lifetime')}
+                      loading={actionLoading}
+                      icon={<ShieldCheck className="h-3.5 w-3.5" />}
+                    >
+                      Convert → Lifetime
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAdminConvertPlan(detailRow, 'monthly')}
+                      loading={actionLoading}
+                      icon={<CreditCard className="h-3.5 w-3.5" />}
+                    >
+                      Convert → Monthly
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Admin info */}
             <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3">

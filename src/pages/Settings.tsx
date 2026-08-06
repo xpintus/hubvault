@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [qrImageUrl, setQrImageUrl] = useState('');
   const [licensePrice, setLicensePrice] = useState('');
   const [hubAddPrice, setHubAddPrice] = useState('');
+  const [graceDays, setGraceDays] = useState('0');
   const [adsenseClient, setAdsenseClient] = useState('');
   const [adsenseEnabled, setAdsenseEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -29,6 +30,7 @@ export default function SettingsPage() {
       setQrImageUrl(settings.qr_image_url || '');
       setLicensePrice(String(settings.license_price));
       setHubAddPrice(String(settings.hub_add_price));
+      setGraceDays(String(settings.subscription_grace_days ?? 0));
       setAdsenseClient(settings.adsense_client || '');
       setAdsenseEnabled(settings.adsense_enabled);
     }
@@ -45,6 +47,7 @@ export default function SettingsPage() {
     }
     const lp = parseInt(licensePrice) || 0;
     const hp = parseInt(hubAddPrice) || 0;
+    const gd = Math.max(0, parseInt(graceDays) || 0);
     if (lp <= 0 || hp <= 0) {
       toast.error('Prices must be greater than zero');
       return;
@@ -58,6 +61,7 @@ export default function SettingsPage() {
         qr_image_url: qrImageUrl.trim() || null,
         license_price: lp,
         hub_add_price: hp,
+        subscription_grace_days: gd,
         adsense_client: adsenseClient.trim() || null,
         adsense_enabled: adsenseEnabled,
         updated_at: new Date().toISOString(),
@@ -171,9 +175,9 @@ export default function SettingsPage() {
           <Card className="p-6">
             <div className="flex items-center gap-2.5 mb-5">
               <IndianRupee className="h-5 w-5 text-brand-600" />
-              <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-200">License Pricing</h2>
+              <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-200">License Pricing & Subscription Grace Period</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Input
                 label="License Price (INR)"
                 name="licensePrice"
@@ -191,6 +195,15 @@ export default function SettingsPage() {
                 onChange={(e) => setHubAddPrice(e.target.value)}
                 placeholder="499"
                 hint="Price to add one extra hub."
+              />
+              <Input
+                label="Grace Period (Days)"
+                name="graceDays"
+                type="number"
+                value={graceDays}
+                onChange={(e) => setGraceDays(e.target.value)}
+                placeholder="0"
+                hint="Extra days granted after monthly expiration."
               />
             </div>
           </Card>

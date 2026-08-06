@@ -1,4 +1,4 @@
-import { createContext,ReactNode,useCallback,useContext,useEffect,useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
 export interface AppSettings {
@@ -10,6 +10,7 @@ export interface AppSettings {
   hub_add_price: number;
   adsense_client: string | null;
   adsense_enabled: boolean;
+  subscription_grace_days: number;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   hub_add_price: 499,
   adsense_client: null,
   adsense_enabled: false,
+  subscription_grace_days: 0,
 };
 
 interface SettingsContextValue {
@@ -44,7 +46,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     const { data, error } = await supabase
       .from('app_settings')
-      .select('upi_id, payee_name, qr_image_url, license_price, monthly_price, hub_add_price, adsense_client, adsense_enabled')
+      .select('upi_id, payee_name, qr_image_url, license_price, monthly_price, hub_add_price, adsense_client, adsense_enabled, subscription_grace_days')
       .eq('id', 1)
       .maybeSingle();
     if (!error && data) {
