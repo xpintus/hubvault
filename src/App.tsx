@@ -73,6 +73,8 @@ const NDRDeliveredAfterNDR = lazy(() => import('@/pages/operations/ndr/NDRDelive
 const NDRRTOQueue = lazy(() => import('@/pages/operations/ndr/NDRRTOQueue'));
 const NDRReports = lazy(() => import('@/pages/operations/ndr/NDRReports'));
 const NDRImportHistory = lazy(() => import('@/pages/operations/ndr/NDRImportHistory'));
+const DRSPerformanceReport = lazy(() => import('@/pages/operations/drs/DRSPerformanceReport'));
+
 
 import { formatDateLong } from '@/lib/format';
 import {
@@ -239,6 +241,16 @@ export default function App() {
                             <Route path="rto-queue" element={<Navigate to="/operations/ndr/shipments?workflowStatus=RTO" replace />} />
                             <Route path="import-history" element={<Navigate to="/operations/ndr/reports" replace />} />
                           </Route>
+
+                          <Route
+                            path="/operations/drs-performance"
+                            element={
+                              <Suspense fallback={<FullPageSpinner message="Loading DRS Performance Analytics…" />}>
+                                <DRSPerformanceReport />
+                              </Suspense>
+                            }
+                          />
+
 
 
                           <Route

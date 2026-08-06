@@ -6,6 +6,7 @@ import { NDRMetrics } from '@/types/ndr';
 import {
   Archive,
   ArrowRight,
+  BarChart3,
   CheckCircle2,
   Clock,
   Download,
@@ -179,6 +180,54 @@ export default function NDRDashboard() {
             </div>
           );
         })}
+      </div>
+
+      {/* DRS Daily Performance Summary Compact Block */}
+      <div className="p-6 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
+              <BarChart3 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
+                DRS Daily Performance Summary
+              </h2>
+              <p className="text-xs text-neutral-500">Live operational summary of imported DRS delivery attempts & resolutions.</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/operations/drs-performance')}
+            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-glow transition flex items-center gap-1.5 active:scale-95 self-start sm:self-auto"
+          >
+            <BarChart3 className="h-4 w-4" /> View Full DRS Report
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <span className="text-neutral-500 block font-semibold">Total OFD</span>
+            <span className="text-xl font-black text-neutral-900 dark:text-neutral-100">{metrics.todaysUpload}</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <span className="text-emerald-700 dark:text-emerald-400 block font-bold">1st Attempt DEL</span>
+            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{metrics.attempt1Count}</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/20">
+            <span className="text-orange-700 dark:text-orange-400 block font-bold">Reattempt DEL</span>
+            <span className="text-xl font-black text-orange-600 dark:text-orange-400">
+              {metrics.attempt2Count + metrics.attempt3Count + metrics.attempt4PlusCount}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+            <span className="text-indigo-700 dark:text-indigo-400 block font-bold">Total Delivered</span>
+            <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{metrics.deliveredToday}</span>
+          </div>
+        </div>
       </div>
 
       {/* Today's OFD Attempts Analytics Section */}

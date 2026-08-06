@@ -25,8 +25,10 @@ const NAV_TABS = [
   { to: '/operations/ndr/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/operations/ndr/my-queue', label: 'Calling Queue', icon: PhoneCall },
   { to: '/operations/ndr/shipments', label: 'All Shipments', icon: ListFilter },
+  { to: '/operations/drs-performance', label: 'DRS Performance', icon: FileSpreadsheet },
   { to: '/operations/ndr/reports', label: 'Reports', icon: BarChart3 },
 ];
+
 
 
 export default function NDRLayout() {
