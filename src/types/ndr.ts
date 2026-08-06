@@ -210,9 +210,11 @@ export interface NDRFilterParams {
   otpStatus?: string;
   deliveryStatus?: string;
   followUpDate?: string;
+  aging?: number;
   page?: number;
   limit?: number;
 }
+
 
 export interface ParsedNDRExcelRow {
   rowIndex: number;

@@ -33,14 +33,30 @@ export default function NDRAllShipments() {
   const [loading, setLoading] = useState(true);
 
   // Filters State
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [workflowStatus, setWorkflowStatus] = useState<NDRWorkflowStatus | 'ALL'>(
     (searchParams.get('workflowStatus') as NDRWorkflowStatus) || 'ALL'
   );
   const [vendor, setVendor] = useState(searchParams.get('vendor') || 'ALL');
   const [executive, setExecutive] = useState(searchParams.get('executive') || 'ALL');
   const [reason, setReason] = useState(searchParams.get('reason') || 'ALL');
+  const [otpStatus, setOtpStatus] = useState(searchParams.get('otpStatus') || 'ALL');
+  const [aging, setAging] = useState<number | undefined>(
+    searchParams.get('aging') ? Number(searchParams.get('aging')) : undefined
+  );
   const [page, setPage] = useState(1);
+
+  // Sync state when URL searchParams change
+  useEffect(() => {
+    setWorkflowStatus((searchParams.get('workflowStatus') as NDRWorkflowStatus) || 'ALL');
+    setVendor(searchParams.get('vendor') || 'ALL');
+    setExecutive(searchParams.get('executive') || 'ALL');
+    setReason(searchParams.get('reason') || 'ALL');
+    setOtpStatus(searchParams.get('otpStatus') || 'ALL');
+    setAging(searchParams.get('aging') ? Number(searchParams.get('aging')) : undefined);
+    if (searchParams.get('search')) setSearch(searchParams.get('search') || '');
+    setPage(1);
+  }, [searchParams]);
 
   // Active Modals & Drawers
   const [selectedShipment, setSelectedShipment] = useState<NDRShipment | null>(null);
@@ -54,12 +70,13 @@ export default function NDRAllShipments() {
     try {
       const { data, count } = await fetchNDRShipments({
         hubId: selectedHub?.id || undefined,
-
         search,
         workflowStatus,
         vendor: vendor !== 'ALL' ? vendor : undefined,
         executive: executive !== 'ALL' ? executive : undefined,
         reason: reason !== 'ALL' ? reason : undefined,
+        otpStatus: otpStatus !== 'ALL' ? otpStatus : undefined,
+        aging,
         page,
         limit: 25,
       });
@@ -74,8 +91,7 @@ export default function NDRAllShipments() {
 
   useEffect(() => {
     loadData();
-  }, [selectedHub, search, workflowStatus, vendor, executive, reason, page, refreshTrigger]);
-
+  }, [selectedHub, search, workflowStatus, vendor, executive, reason, otpStatus, aging, page, refreshTrigger]);
 
   const handleExportExcel = () => {
     exportNDRShipmentsToExcel(shipments, `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -85,8 +101,86 @@ export default function NDRAllShipments() {
     exportNDRShipmentsToCSV(shipments, `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
+  const hasActiveFilters =
+    workflowStatus !== 'ALL' ||
+    reason !== 'ALL' ||
+    otpStatus !== 'ALL' ||
+    vendor !== 'ALL' ||
+    executive !== 'ALL' ||
+    aging !== undefined ||
+    search.trim() !== '';
+
+  const clearFilter = (key: string) => {
+    if (key === 'workflowStatus') setWorkflowStatus('ALL');
+    if (key === 'reason') setReason('ALL');
+    if (key === 'otpStatus') setOtpStatus('ALL');
+    if (key === 'vendor') setVendor('ALL');
+    if (key === 'executive') setExecutive('ALL');
+    if (key === 'aging') setAging(undefined);
+    if (key === 'search') setSearch('');
+    setPage(1);
+  };
+
+  const clearAllFilters = () => {
+    setWorkflowStatus('ALL');
+    setReason('ALL');
+    setOtpStatus('ALL');
+    setVendor('ALL');
+    setExecutive('ALL');
+    setAging(undefined);
+    setSearch('');
+    setPage(1);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Active Filters Pill Banner */}
+      {hasActiveFilters && (
+        <div className="px-4 py-2.5 rounded-2xl bg-brand-50/60 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
+              <Filter className="h-3.5 w-3.5" /> Active Filters:
+            </span>
+            {workflowStatus !== 'ALL' && (
+              <span className="px-2.5 py-1 rounded-lg bg-brand-100 dark:bg-brand-800 text-brand-800 dark:text-brand-200 font-semibold flex items-center gap-1">
+                Status: {workflowStatus}
+                <button onClick={() => clearFilter('workflowStatus')} className="hover:text-rose-500 font-bold ml-1">✕</button>
+              </span>
+            )}
+            {reason !== 'ALL' && (
+              <span className="px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-semibold flex items-center gap-1">
+                Reason Filter: {reason}
+                <button onClick={() => clearFilter('reason')} className="hover:text-rose-500 font-bold ml-1">✕</button>
+              </span>
+            )}
+            {otpStatus !== 'ALL' && (
+              <span className="px-2.5 py-1 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 font-semibold flex items-center gap-1">
+                OTP Status: {otpStatus}
+                <button onClick={() => clearFilter('otpStatus')} className="hover:text-rose-500 font-bold ml-1">✕</button>
+              </span>
+            )}
+            {aging && (
+              <span className="px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 font-semibold flex items-center gap-1">
+                Aging &gt; {aging} Hours
+                <button onClick={() => clearFilter('aging')} className="hover:text-rose-500 font-bold ml-1">✕</button>
+              </span>
+            )}
+            {search.trim() && (
+              <span className="px-2.5 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
+                Search: "{search}"
+                <button onClick={() => clearFilter('search')} className="hover:text-rose-500 font-bold ml-1">✕</button>
+              </span>
+            )}
+          </div>
+          <button
+            onClick={clearAllFilters}
+            className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-bold transition"
+          >
+            Clear All
+          </button>
+        </div>
+      )}
+
       {/* Top Filter Bar */}
       <div className="p-4 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="flex flex-1 items-center gap-3 w-full">
@@ -141,6 +235,7 @@ export default function NDRAllShipments() {
           </button>
         </div>
       </div>
+
 
       {/* Main Shipments Data Table */}
       <div className="rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft overflow-hidden">

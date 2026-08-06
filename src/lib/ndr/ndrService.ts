@@ -30,6 +30,7 @@ export async function fetchNDRShipments(
     otpStatus,
     deliveryStatus,
     followUpDate,
+    aging,
     page = 1,
     limit = 50,
   } = params;
@@ -76,6 +77,10 @@ export async function fetchNDRShipments(
   if (reason && reason !== 'ALL') {
     query = query.ilike('original_ndr_reason', `%${reason}%`);
   }
+  if (aging && Number(aging) > 0) {
+    const cutoff = new Date(Date.now() - Number(aging) * 60 * 60 * 1000).toISOString();
+    query = query.lte('created_at', cutoff);
+  }
 
   if (startDate) {
     query = query.gte('created_at', `${startDate}T00:00:00.000Z`);
@@ -83,6 +88,7 @@ export async function fetchNDRShipments(
   if (endDate) {
     query = query.lte('created_at', `${endDate}T23:59:59.999Z`);
   }
+
 
   if (search && search.trim()) {
     const s = search.trim();

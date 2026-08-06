@@ -82,7 +82,7 @@ export default function NDRDashboard() {
 
   const kpiCards = [
     { label: 'Total Imported', value: metrics.totalImported, icon: Archive, color: 'text-blue-500', route: '/operations/ndr/shipments' },
-    { label: 'Calling Pending', value: metrics.callingPending, icon: PhoneCall, color: 'text-cyan-500', route: '/operations/ndr/my-queue' },
+    { label: 'Calling Pending', value: metrics.callingPending, icon: PhoneCall, color: 'text-cyan-500', route: '/operations/ndr/shipments?workflowStatus=Calling Pending' },
     { label: 'Contacted', value: metrics.contacted, icon: UserCheck, color: 'text-indigo-500', route: '/operations/ndr/shipments?workflowStatus=Customer Contacted' },
     { label: 'Supervisor Pending', value: metrics.supervisorPending, icon: ShieldCheck, color: 'text-rose-500', route: '/operations/ndr/supervisor-review' },
     { label: 'Follow-up Due', value: metrics.followUpDue, icon: Clock, color: 'text-purple-500', route: '/operations/ndr/follow-up' },
@@ -90,16 +90,17 @@ export default function NDRDashboard() {
     { label: 'Out For Delivery', value: metrics.outForDelivery, icon: PackageCheck, color: 'text-orange-500', route: '/operations/ndr/reattempt-queue' },
     { label: 'Delivered After NDR', value: metrics.deliveredAfterNdr, icon: CheckCircle2, color: 'text-emerald-500 font-bold', route: '/operations/ndr/delivered' },
     { label: 'RTO Queue', value: metrics.rto, icon: RotateCcw, color: 'text-red-500 font-bold', route: '/operations/ndr/rto-queue' },
-    { label: 'OTP Issues', value: metrics.otpIssues, icon: AlertTriangle, color: 'text-yellow-500', route: '/operations/ndr/shipments?reason=OTP' },
-    { label: 'Fake Attempt', value: metrics.fakeAttempt, icon: AlertCircle, color: 'text-rose-600 font-bold', route: '/operations/ndr/supervisor-review' },
-    { label: 'Wrong NDR', value: metrics.wrongNdr, icon: AlertCircle, color: 'text-pink-500', route: '/operations/ndr/shipments' },
-    { label: 'Future Delivery', value: metrics.futureDelivery, icon: CalendarCheck2, color: 'text-purple-600', route: '/operations/ndr/follow-up' },
-    { label: 'Customer Refused', value: metrics.customerRefused, icon: AlertTriangle, color: 'text-amber-600', route: '/operations/ndr/shipments' },
-    { label: 'Customer Unreachable', value: metrics.customerNotReachable, icon: PhoneCall, color: 'text-blue-400', route: '/operations/ndr/my-queue' },
-    { label: 'Aging > 24 Hours', value: metrics.above24Hours, icon: Clock, color: 'text-yellow-600 font-bold', route: '/operations/ndr/shipments' },
-    { label: 'Aging > 48 Hours', value: metrics.above48Hours, icon: Clock, color: 'text-orange-600 font-bold', route: '/operations/ndr/shipments' },
-    { label: 'Aging > 72 Hours', value: metrics.above72Hours, icon: Clock, color: 'text-red-600 font-bold', route: '/operations/ndr/shipments' },
+    { label: 'OTP Issues', value: metrics.otpIssues, icon: AlertTriangle, color: 'text-yellow-500', route: '/operations/ndr/shipments?otpStatus=OTP' },
+    { label: 'Fake Attempt', value: metrics.fakeAttempt, icon: AlertCircle, color: 'text-rose-600 font-bold', route: '/operations/ndr/shipments?reason=Fake' },
+    { label: 'Wrong NDR', value: metrics.wrongNdr, icon: AlertCircle, color: 'text-pink-500', route: '/operations/ndr/shipments?reason=Wrong' },
+    { label: 'Future Delivery', value: metrics.futureDelivery, icon: CalendarCheck2, color: 'text-purple-600', route: '/operations/ndr/shipments?reason=Future' },
+    { label: 'Customer Refused', value: metrics.customerRefused, icon: AlertTriangle, color: 'text-amber-600', route: '/operations/ndr/shipments?reason=Refused' },
+    { label: 'Customer Unreachable', value: metrics.customerNotReachable, icon: PhoneCall, color: 'text-blue-400', route: '/operations/ndr/shipments?reason=Reachable' },
+    { label: 'Aging > 24 Hours', value: metrics.above24Hours, icon: Clock, color: 'text-yellow-600 font-bold', route: '/operations/ndr/shipments?aging=24' },
+    { label: 'Aging > 48 Hours', value: metrics.above48Hours, icon: Clock, color: 'text-orange-600 font-bold', route: '/operations/ndr/shipments?aging=48' },
+    { label: 'Aging > 72 Hours', value: metrics.above72Hours, icon: Clock, color: 'text-red-600 font-bold', route: '/operations/ndr/shipments?aging=72' },
   ];
+
 
   return (
     <div className="space-y-6">
