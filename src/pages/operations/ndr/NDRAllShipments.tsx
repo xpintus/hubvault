@@ -83,8 +83,10 @@ export default function NDRAllShipments() {
         page,
         limit: 25,
       });
+      console.log("Shipment Query Result", data);
       setShipments(data);
       setTotalCount(count);
+
     } catch (err) {
       console.error('Failed to load NDR shipments:', err);
     } finally {

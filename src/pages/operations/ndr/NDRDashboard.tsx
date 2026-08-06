@@ -48,9 +48,13 @@ export default function NDRDashboard() {
   useEffect(() => {
     setLoading(true);
     fetchNDRMetrics(selectedHub?.id || null)
-      .then(setMetrics)
+      .then((data) => {
+        console.log("Dashboard Data", data);
+        setMetrics(data);
+      })
       .finally(() => setLoading(false));
   }, [selectedHub, refreshTrigger]);
+
 
 
   if (loading || !metrics) {

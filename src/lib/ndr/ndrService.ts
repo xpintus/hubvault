@@ -42,8 +42,6 @@ export async function fetchNDRShipments(
     .select(
       `
       *,
-      assigned_caller:assigned_caller_id(id, name, email),
-      assigned_supervisor:assigned_supervisor_id(id, name, email),
       hub:hub_id(id, name, code)
     `,
       { count: 'exact' }
@@ -58,7 +56,6 @@ export async function fetchNDRShipments(
       workflowStatus === NDR_WORKFLOW_STATUS.UNDEL ||
       workflowStatus === 'CALL_PENDING'
     ) {
-      // Calling Pending queue includes both initial UNDEL and Calling Pending
       query = query.in('ndr_workflow_status', [NDR_WORKFLOW_STATUS.UNDEL, NDR_WORKFLOW_STATUS.CALLING_PENDING]);
     } else {
       query = query.eq('ndr_workflow_status', workflowStatus);
@@ -111,14 +108,12 @@ export async function fetchNDRShipments(
     query = query.lte('created_at', cutoff);
   }
 
-
   if (startDate) {
     query = query.gte('created_at', `${startDate}T00:00:00.000Z`);
   }
   if (endDate) {
     query = query.lte('created_at', `${endDate}T23:59:59.999Z`);
   }
-
 
   if (search && search.trim()) {
     const s = search.trim();
@@ -132,17 +127,83 @@ export async function fetchNDRShipments(
 
   query = query.order('created_at', { ascending: false }).range(from, to);
 
-  const { data, count, error } = await query;
+  let { data, count, error } = await query;
   if (error) {
-    console.error('Error fetching NDR shipments:', error);
-    throw error;
+    console.error('Error fetching NDR shipments with embedded relations:', error);
+    let fallbackQuery = supabase.from('ndr_shipments').select('*', { count: 'exact' });
+
+    if (hubId && hubId !== 'ALL') {
+      fallbackQuery = fallbackQuery.eq('hub_id', hubId);
+    }
+    if (workflowStatus && workflowStatus !== 'ALL') {
+      if (
+        workflowStatus === NDR_WORKFLOW_STATUS.CALLING_PENDING ||
+        workflowStatus === NDR_WORKFLOW_STATUS.UNDEL ||
+        workflowStatus === 'CALL_PENDING'
+      ) {
+        fallbackQuery = fallbackQuery.in('ndr_workflow_status', [NDR_WORKFLOW_STATUS.UNDEL, NDR_WORKFLOW_STATUS.CALLING_PENDING]);
+      } else {
+        fallbackQuery = fallbackQuery.eq('ndr_workflow_status', workflowStatus);
+      }
+    }
+    if (vendor && vendor !== 'ALL') {
+      fallbackQuery = fallbackQuery.ilike('partner_name', `%${vendor}%`);
+    }
+    if (executive && executive !== 'ALL') {
+      fallbackQuery = fallbackQuery.ilike('delivery_executive', `%${executive}%`);
+    }
+    if (reason && reason !== 'ALL') {
+      const r = reason.toLowerCase();
+      if (r === 'fake') {
+        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%fake%,original_ndr_reason.ilike.%suspected%');
+      } else if (r === 'wrong') {
+        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%wrong%,original_ndr_reason.ilike.%invalid address%');
+      } else if (r === 'future') {
+        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%future%,original_ndr_reason.ilike.%tomorrow%');
+      } else if (r === 'refused') {
+        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%refuse%,original_ndr_reason.ilike.%denied%');
+      } else if (r === 'unreachable') {
+        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%unreachable%,original_ndr_reason.ilike.%not reachable%,original_ndr_reason.ilike.%switched off%');
+      } else {
+        fallbackQuery = fallbackQuery.ilike('original_ndr_reason', `%${reason}%`);
+      }
+    }
+    if (otpStatus && otpStatus !== 'ALL') {
+      const o = otpStatus.toLowerCase();
+      if (o === 'otp') {
+        fallbackQuery = fallbackQuery.or('otp_status.ilike.%otp%,otp_status.ilike.%failed%,otp_status.ilike.%issue%,original_ndr_reason.ilike.%otp%');
+      } else {
+        fallbackQuery = fallbackQuery.ilike('otp_status', `%${otpStatus}%`);
+      }
+    }
+    if (aging && Number(aging) > 0) {
+      const cutoff = new Date(Date.now() - Number(aging) * 60 * 60 * 1000).toISOString();
+      fallbackQuery = fallbackQuery.lte('created_at', cutoff);
+    }
+    if (search && search.trim()) {
+      const s = search.trim();
+      fallbackQuery = fallbackQuery.or(
+        `awb_number.ilike.%${s}%,consignee_name.ilike.%${s}%,client_name.ilike.%${s}%,delivery_executive.ilike.%${s}%,partner_name.ilike.%${s}%,delivery_pincode.ilike.%${s}%,drs_code.ilike.%${s}%`
+      );
+    }
+
+    fallbackQuery = fallbackQuery.order('created_at', { ascending: false }).range(from, to);
+    const fallbackRes = await fallbackQuery;
+    data = fallbackRes.data;
+    count = fallbackRes.count;
+    if (fallbackRes.error) {
+      console.error('Fallback NDR shipments query failed:', fallbackRes.error);
+    }
   }
+
+  console.log("Shipment Query Result", { count, rowsReturned: data?.length, params });
 
   return {
     data: (data as NDRShipment[]) || [],
     count: count || 0,
   };
 }
+
 
 export async function fetchExistingAWBMap(
   awbNumbers: string[],
