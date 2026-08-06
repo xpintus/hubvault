@@ -253,8 +253,13 @@ export interface NDRExcelImportPreview {
   invalidRows: ParsedNDRExcelRow[];
   duplicateRows: ParsedNDRExcelRow[];
   existingRows: ParsedNDRExcelRow[];
+  delSkippedRows: ParsedNDRExcelRow[];
+  undelEligibleRows: ParsedNDRExcelRow[];
   warningRows: ParsedNDRExcelRow[];
   missingAwbRows: ParsedNDRExcelRow[];
   totalRows: number;
+  undelEligibleCount: number;
+  delSkippedCount: number;
   readyToImportCount: number;
 }
+

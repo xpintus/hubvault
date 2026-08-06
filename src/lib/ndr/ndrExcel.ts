@@ -220,6 +220,8 @@ export async function parseNDRExcelFile(
   const invalidRows: ParsedNDRExcelRow[] = [];
   const duplicateRows: ParsedNDRExcelRow[] = [];
   const existingRows: ParsedNDRExcelRow[] = [];
+  const delSkippedRows: ParsedNDRExcelRow[] = [];
+  const undelEligibleRows: ParsedNDRExcelRow[] = [];
   const warningRows: ParsedNDRExcelRow[] = [];
   const missingAwbRows: ParsedNDRExcelRow[] = [];
 
@@ -277,8 +279,6 @@ export async function parseNDRExcelFile(
     }
 
     const isDuplicateInFile = waybill_no ? seenAWBsInFile.has(waybill_no) : false;
-    if (waybill_no) seenAWBsInFile.add(waybill_no);
-
     const isExistingInDB = waybill_no ? existingAWBsInDB.has(waybill_no) : false;
 
     const parsedRow: ParsedNDRExcelRow = {
@@ -312,6 +312,16 @@ export async function parseNDRExcelFile(
       isExistingInDB,
     };
 
+    // Only UNDEL shipments are eligible for NDR import
+    const isUndel = String(shipment_status).trim().toUpperCase() === 'UNDEL';
+    if (!isUndel) {
+      delSkippedRows.push(parsedRow);
+      return; // Skip DEL shipments from NDR import
+    }
+
+    undelEligibleRows.push(parsedRow);
+    if (waybill_no) seenAWBsInFile.add(waybill_no);
+
     if (errors.length > 0) {
       invalidRows.push(parsedRow);
       if (!waybill_no) missingAwbRows.push(parsedRow);
@@ -319,7 +329,6 @@ export async function parseNDRExcelFile(
       duplicateRows.push(parsedRow);
     } else if (isExistingInDB) {
       existingRows.push(parsedRow);
-      validRows.push(parsedRow);
     } else {
       validRows.push(parsedRow);
     }
@@ -334,11 +343,16 @@ export async function parseNDRExcelFile(
     invalidRows,
     duplicateRows,
     existingRows,
+    delSkippedRows,
+    undelEligibleRows,
     warningRows,
     missingAwbRows,
     totalRows: rawRows.length,
+    undelEligibleCount: undelEligibleRows.length,
+    delSkippedCount: delSkippedRows.length,
     readyToImportCount: validRows.length,
   };
+
 }
 
 /**

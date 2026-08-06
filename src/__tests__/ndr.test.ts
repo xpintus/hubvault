@@ -130,4 +130,25 @@ describe('NDR Management Utility & Parsing Tests', () => {
       importNDRBatch('test.xlsx', [], null, 'user-1', 'Admin', 'hub_admin')
     ).rejects.toThrow('Please select a hub before importing the NDR report.');
   });
+
+  it('correctly filters UNDEL eligible rows and skips DEL rows from preview', async () => {
+    const sampleRows = [
+      { waybill_no: 'AWB001', shipment_status: 'UNDEL', amount_payable: '248' },
+      { waybill_no: 'AWB002', shipment_status: 'DEL', amount_payable: '500' },
+      { waybill_no: 'AWB003', shipment_status: 'DEL', amount_payable: '350' },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    const arrayBuf = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const file = new File([arrayBuf], 'del_undel.xlsx');
+
+    const preview = await parseNDRExcelFile(file);
+    expect(preview.totalRows).toBe(3);
+    expect(preview.undelEligibleCount).toBe(1);
+    expect(preview.delSkippedCount).toBe(2);
+    expect(preview.readyToImportCount).toBe(1);
+  });
 });
+

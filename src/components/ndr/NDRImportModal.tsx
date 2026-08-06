@@ -238,32 +238,37 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
                 Import Validation Summary
               </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
                 <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center">
-                  <p className="text-xs text-neutral-500 font-medium">Total Rows</p>
-                  <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{preview.totalRows}</p>
+                  <p className="text-[11px] text-neutral-500 font-medium">Total Rows</p>
+                  <p className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{preview.totalRows}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Valid Rows</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{preview.validRows.length}</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">UNDEL Eligible</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{preview.undelEligibleCount}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-center">
+                  <p className="text-[11px] text-purple-600 dark:text-purple-400 font-medium">DEL Skipped</p>
+                  <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{preview.delSkippedCount}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
-                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">File Duplicates</p>
-                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{preview.duplicateRows.length}</p>
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">File Duplicates</p>
+                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{preview.duplicateRows.length}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-center">
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Existing AWBs</p>
-                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{preview.existingRows.length}</p>
+                  <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">Existing Active NDR</p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{preview.existingRows.length}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center">
-                  <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">Invalid Rows</p>
-                  <p className="text-xl font-bold text-rose-600 dark:text-rose-400">{preview.invalidRows.length}</p>
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">Invalid Rows</p>
+                  <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{preview.invalidRows.length}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20 text-center">
-                  <p className="text-xs text-brand-600 dark:text-brand-400 font-medium">Ready to Import</p>
-                  <p className="text-xl font-bold text-brand-600 dark:text-brand-400">{preview.readyToImportCount}</p>
+                  <p className="text-[11px] text-brand-600 dark:text-brand-400 font-medium">Ready to Import</p>
+                  <p className="text-lg font-bold text-brand-600 dark:text-brand-400">{preview.readyToImportCount}</p>
                 </div>
               </div>
+
 
               {/* Sample Data Table Preview */}
               <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
