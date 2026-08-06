@@ -78,6 +78,10 @@ export interface NDRShipment {
 
   // Audit & Metadata
   raw_data?: Record<string, unknown>;
+  last_caller_remark?: string;
+  last_supervisor_remark?: string;
+  last_caller_result?: string;
+  last_supervisor_action?: string;
   created_by?: string | null;
   created_at: string;
   updated_at: string;
@@ -87,8 +91,9 @@ export interface NDRShipment {
   assigned_supervisor?: { id: string; name: string; email?: string } | null;
   hub?: { id: string; name: string; code: string } | null;
   last_call_log?: NDRCallLog | null;
-  last_supervisor_action?: NDRSupervisorAction | null;
+  last_supervisor_log?: NDRSupervisorAction | null;
 }
+
 
 export interface NDRImportBatch {
   id: string;

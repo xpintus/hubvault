@@ -10,29 +10,25 @@ interface NDRStatusBadgeProps {
 export const NDRStatusBadge: React.FC<NDRStatusBadgeProps> = ({ status, size = 'md' }) => {
   const getBadgeStyle = (s: string) => {
     switch (s) {
-      case 'UNDEL':
-        return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
       case 'Calling Pending':
-        return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
-      case 'Customer Contacted':
-        return 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20';
-      case 'Reattempt Required':
-        return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+      case 'UNDEL':
+        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 font-semibold';
+      case 'Supervisor Pending':
       case 'Supervisor Review':
-        return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 font-semibold animate-pulse';
+        return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 font-semibold';
+      case 'Follow-up':
+      case 'Reattempt Required':
       case 'Reattempt Approved':
-        return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20';
-      case 'Out For Delivery':
-        return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20';
+        return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 font-semibold';
       case 'Delivered':
       case 'DEL':
-        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold';
+        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-bold';
       case 'RTO':
-        return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 font-bold';
+        return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30 font-bold';
       case 'Closed':
-        return 'bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/20';
+        return 'bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30';
       default:
-        return 'bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/20';
+        return 'bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30';
     }
   };
 

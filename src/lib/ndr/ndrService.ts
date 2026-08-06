@@ -198,12 +198,21 @@ export async function fetchNDRShipments(
     }
   }
 
-  console.log("Shipment Query Result", { count, rowsReturned: data?.length, params });
+  const rawList = (data as NDRShipment[]) || [];
+  rawList.forEach((s) => {
+    if (s.raw_data) {
+      s.last_caller_remark = (s.raw_data.last_caller_remark as string) || undefined;
+      s.last_supervisor_remark = (s.raw_data.last_supervisor_remark as string) || undefined;
+      s.last_caller_result = (s.raw_data.last_caller_result as string) || undefined;
+      s.last_supervisor_action = (s.raw_data.last_supervisor_action as string) || undefined;
+    }
+  });
 
   return {
-    data: (data as NDRShipment[]) || [],
+    data: rawList,
     count: count || 0,
   };
+
 }
 
 
@@ -542,12 +551,18 @@ export async function logNDRCall(params: {
   }
 
 
-  // Get current status for timeline
+  // Get current status for timeline & raw_data
   const { data: currentShipment } = await supabase
     .from('ndr_shipments')
-    .select('ndr_workflow_status')
+    .select('ndr_workflow_status, raw_data')
     .eq('id', shipmentId)
     .single();
+
+  const updatedRawData = {
+    ...(currentShipment?.raw_data || {}),
+    last_caller_remark: params.callerRemarks || null,
+    last_caller_result: callerResult,
+  };
 
   // Update Shipment
   const { error: shipErr } = await supabase
@@ -555,6 +570,7 @@ export async function logNDRCall(params: {
     .update({
       ndr_workflow_status: newWorkflowStatus,
       assigned_caller_id: callerId || undefined,
+      raw_data: updatedRawData,
       updated_at: new Date().toISOString(),
     })
     .eq('id', shipmentId);
@@ -631,13 +647,20 @@ export async function submitSupervisorAction(params: {
 
   const { data: currentShipment } = await supabase
     .from('ndr_shipments')
-    .select('ndr_workflow_status')
+    .select('ndr_workflow_status, raw_data')
     .eq('id', shipmentId)
     .single();
+
+  const updatedRawData = {
+    ...(currentShipment?.raw_data || {}),
+    last_supervisor_remark: params.supervisorRemarks || null,
+    last_supervisor_action: actionTaken,
+  };
 
   const updatePayload: Record<string, unknown> = {
     ndr_workflow_status: newWorkflowStatus,
     assigned_supervisor_id: supervisorId || undefined,
+    raw_data: updatedRawData,
     updated_at: new Date().toISOString(),
   };
 
@@ -649,6 +672,7 @@ export async function submitSupervisorAction(params: {
     .from('ndr_shipments')
     .update(updatePayload)
     .eq('id', shipmentId);
+
 
 
   await supabase.from('ndr_timeline_logs').insert({

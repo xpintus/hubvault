@@ -118,7 +118,36 @@ export const NDRTimelineDrawer: React.FC<NDRTimelineDrawerProps> = ({ shipment, 
                 <span className="font-bold text-brand-600 dark:text-brand-400">Cycle #{shipment.ndr_cycle}</span>
               </div>
             </div>
+
+            {/* Audit Tracking Block */}
+            <div className="pt-3 border-t border-neutral-200/60 dark:border-neutral-800/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
+              <div>
+                <span className="text-neutral-400 block">Created Time</span>
+                <span className="font-mono text-neutral-700 dark:text-neutral-300">
+                  {new Date(shipment.created_at).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400 block">Last Updated Time</span>
+                <span className="font-mono text-neutral-700 dark:text-neutral-300">
+                  {new Date(shipment.updated_at).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400 block">Current Status</span>
+                <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                  {shipment.ndr_workflow_status}
+                </span>
+              </div>
+              <div>
+                <span className="text-neutral-400 block">Live Shipment Status</span>
+                <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                  {shipment.shipment_status_current}
+                </span>
+              </div>
+            </div>
           </div>
+
 
           {/* Section 2: Latest Call & Supervisor Logs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
