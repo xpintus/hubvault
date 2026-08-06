@@ -21,8 +21,9 @@ export default function NDRReattemptQueue() {
         limit: 100,
       });
       const reattemptItems = data.filter(
-        (s) => s.ndr_workflow_status === 'Reattempt Approved' || s.ndr_workflow_status === 'Out For Delivery'
+        (s) => s.ndr_workflow_status === 'Follow-up'
       );
+
       setShipments(reattemptItems);
     } catch (err) {
       console.error('Failed to load reattempt queue:', err);

@@ -202,7 +202,6 @@ export default function NDRAllShipments() {
               className="w-full pl-10 pr-4 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-medium text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
             />
           </div>
-
           <select
             value={workflowStatus}
             onChange={(e) => {
@@ -211,19 +210,13 @@ export default function NDRAllShipments() {
             }}
             className="px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
           >
-            <option value="ALL">All Workflow Statuses</option>
-            <option value={NDR_WORKFLOW_STATUS.UNDEL}>UNDEL</option>
+            <option value="ALL">All Statuses</option>
             <option value={NDR_WORKFLOW_STATUS.CALLING_PENDING}>Calling Pending</option>
-            <option value={NDR_WORKFLOW_STATUS.CUSTOMER_CONTACTED}>Customer Contacted</option>
-            <option value={NDR_WORKFLOW_STATUS.REATTEMPT_REQUIRED}>Reattempt Required</option>
-            <option value={NDR_WORKFLOW_STATUS.SUPERVISOR_REVIEW}>Supervisor Review</option>
-            <option value={NDR_WORKFLOW_STATUS.REATTEMPT_APPROVED}>Reattempt Approved</option>
-            <option value={NDR_WORKFLOW_STATUS.OUT_FOR_DELIVERY}>Out For Delivery</option>
+            <option value={NDR_WORKFLOW_STATUS.SUPERVISOR_PENDING}>Supervisor Pending</option>
+            <option value={NDR_WORKFLOW_STATUS.FOLLOW_UP}>Follow-up</option>
             <option value={NDR_WORKFLOW_STATUS.DELIVERED}>Delivered</option>
             <option value={NDR_WORKFLOW_STATUS.RTO}>RTO</option>
-            <option value={NDR_WORKFLOW_STATUS.CLOSED}>Closed</option>
           </select>
-
         </div>
 
         <div className="flex items-center gap-2">
@@ -242,7 +235,6 @@ export default function NDRAllShipments() {
         </div>
       </div>
 
-
       {/* Main Shipments Data Table */}
       <div className="rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft overflow-hidden">
         {loading ? (
@@ -257,23 +249,27 @@ export default function NDRAllShipments() {
             <table className="w-full text-left text-xs">
               <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
-                  <th className="px-4 py-3">AWB / DRS</th>
-                  <th className="px-4 py-3">Consignee & Client</th>
-                  <th className="px-4 py-3">Executive & Vendor</th>
+                  <th className="px-4 py-3">AWB</th>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Executive</th>
                   <th className="px-4 py-3">Original Reason</th>
-                  <th className="px-4 py-3">Pincode</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Workflow Status</th>
+                  <th className="px-4 py-3">Shipment Status</th>
+                  <th className="px-4 py-3">Updated Time</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                 {shipments.map((s) => (
-                  <tr key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition">
-                    <td className="px-4 py-3">
-                      <p className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{s.awb_number}</p>
-                      <p className="text-[11px] text-neutral-400 font-mono">{s.drs_code || '-'}</p>
-                    </td>
+                  <tr 
+                    key={s.id} 
+                    onClick={() => {
+                      setSelectedShipment(s);
+                      setTimelineOpen(true);
+                    }}
+                    className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition cursor-pointer"
+                  >
+                    <td className="px-4 py-3 font-mono font-bold text-neutral-900 dark:text-neutral-100">{s.awb_number}</td>
 
                     <td className="px-4 py-3">
                       <p className="font-semibold text-neutral-900 dark:text-neutral-100">{s.consignee_name || '-'}</p>
@@ -289,19 +285,19 @@ export default function NDRAllShipments() {
                       {s.original_ndr_reason || '-'}
                     </td>
 
-                    <td className="px-4 py-3 font-mono text-neutral-700 dark:text-neutral-300 font-semibold">
-                      {s.delivery_pincode || '-'}
-                    </td>
-
-                    <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100">
-                      ₹{s.amount_payable}
-                    </td>
-
                     <td className="px-4 py-3">
                       <NDRStatusBadge status={s.ndr_workflow_status} size="sm" />
                     </td>
 
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 font-bold text-neutral-800 dark:text-neutral-200">
+                      {s.shipment_status_current}
+                    </td>
+
+                    <td className="px-4 py-3 text-neutral-500 font-mono">
+                      {new Date(s.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => {
@@ -309,7 +305,7 @@ export default function NDRAllShipments() {
                             setTimelineOpen(true);
                           }}
                           className="p-1.5 rounded-lg text-neutral-500 hover:text-brand-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                          title="View Timeline History"
+                          title="View Operational Timeline"
                         >
                           <History className="h-4 w-4" />
                         </button>
@@ -320,7 +316,7 @@ export default function NDRAllShipments() {
                             setCallModalOpen(true);
                           }}
                           className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30"
-                          title="Log Call Remarks"
+                          title="Call Customer"
                         >
                           <PhoneCall className="h-4 w-4" />
                         </button>
@@ -335,18 +331,8 @@ export default function NDRAllShipments() {
                         >
                           <ShieldCheck className="h-4 w-4" />
                         </button>
-
-                        <button
-                          onClick={() => {
-                            setSelectedShipment(s);
-                            setDeliveryModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                          title="Mark Delivered After NDR"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </button>
                       </div>
+
                     </td>
                   </tr>
                 ))}

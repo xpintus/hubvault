@@ -1,14 +1,9 @@
-// Shared constants for NDR Workflow Statuses and Reason Filters
-// Do NOT use hardcoded display strings in Supabase queries.
+// Streamlined enterprise NDR workflow statuses & reason constants
 
 export const NDR_WORKFLOW_STATUS = {
-  UNDEL: 'UNDEL',
   CALLING_PENDING: 'Calling Pending',
-  CUSTOMER_CONTACTED: 'Customer Contacted',
-  REATTEMPT_REQUIRED: 'Reattempt Required',
-  SUPERVISOR_REVIEW: 'Supervisor Review',
-  REATTEMPT_APPROVED: 'Reattempt Approved',
-  OUT_FOR_DELIVERY: 'Out For Delivery',
+  SUPERVISOR_PENDING: 'Supervisor Pending',
+  FOLLOW_UP: 'Follow-up',
   DELIVERED: 'Delivered',
   RTO: 'RTO',
   CLOSED: 'Closed',

@@ -1,39 +1,27 @@
 export type NDRWorkflowStatus =
-  | 'UNDEL'
   | 'Calling Pending'
-  | 'Customer Contacted'
-  | 'Reattempt Required'
-  | 'Supervisor Review'
-  | 'Reattempt Approved'
-  | 'Out For Delivery'
+  | 'Supervisor Pending'
+  | 'Follow-up'
   | 'Delivered'
   | 'RTO'
   | 'Closed';
 
 export type NDRCallerResult =
-  | 'Customer Not Reachable'
-  | 'Phone Switched Off'
+  | 'Connected'
+  | 'Not Connected'
+  | 'Switched Off'
   | 'Wrong Number'
-  | 'Customer Refused Order'
-  | 'Customer Denied Refusal'
-  | 'Customer Did Not Receive Call'
-  | 'Customer Wants Tomorrow Delivery'
-  | 'Future Delivery Requested'
-  | 'Address Issue'
-  | 'Payment Issue'
+  | 'Customer Accepted'
+  | 'Customer Refused'
+  | 'Future Delivery'
   | 'OTP Issue'
-  | 'Customer Already Received'
-  | 'Duplicate Order'
-  | 'Fake Order'
-  | 'Customer Wants RTO'
   | 'Other';
 
 export type NDRSupervisorActionType =
+  | 'Approve Delivery'
   | 'Approve Reattempt'
-  | 'Reject Reattempt'
-  | 'Recommend RTO'
-  | 'Close NDR'
-  | 'Mark Delivered';
+  | 'Approve RTO';
+
 
 export interface NDRShipment {
   id: string;
@@ -174,25 +162,14 @@ export interface NDRTimelineLog {
 }
 
 export interface NDRMetrics {
-  totalImported: number;
+  totalActive: number;
   callingPending: number;
-  contacted: number;
   supervisorPending: number;
-  followUpDue: number;
-  reattemptApproved: number;
-  outForDelivery: number;
+  followUpToday: number;
   deliveredAfterNdr: number;
-  rto: number;
-  otpIssues: number;
-  fakeAttempt: number;
-  wrongNdr: number;
-  futureDelivery: number;
-  customerRefused: number;
-  customerNotReachable: number;
-  above24Hours: number;
-  above48Hours: number;
-  above72Hours: number;
+  rtoClosed: number;
 }
+
 
 export interface NDRFilterParams {
   search?: string;

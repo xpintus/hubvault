@@ -21,13 +21,11 @@ export default function NDRCallingQueue() {
       // Calling Queue holds UNDEL & Calling Pending shipments
       const { data } = await fetchNDRShipments({
         hubId: selectedHub?.id || undefined,
-
+        workflowStatus: 'Calling Pending',
         limit: 100,
       });
-      const callingItems = data.filter(
-        (s) => s.ndr_workflow_status === 'UNDEL' || s.ndr_workflow_status === 'Calling Pending'
-      );
-      setShipments(callingItems);
+      setShipments(data);
+
     } catch (err) {
       console.error('Failed calling queue load:', err);
     } finally {

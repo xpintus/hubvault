@@ -229,16 +229,17 @@ export default function App() {
                           >
                             <Route index element={<Navigate to="/operations/ndr/dashboard" replace />} />
                             <Route path="dashboard" element={<NDRDashboard />} />
-                            <Route path="shipments" element={<NDRAllShipments />} />
                             <Route path="my-queue" element={<NDRCallingQueue />} />
-                            <Route path="follow-up" element={<NDRFollowUpDue />} />
-                            <Route path="supervisor-review" element={<NDRSupervisorReview />} />
-                            <Route path="reattempt-queue" element={<NDRReattemptQueue />} />
-                            <Route path="delivered" element={<NDRDeliveredAfterNDR />} />
-                            <Route path="rto-queue" element={<NDRRTOQueue />} />
+                            <Route path="shipments" element={<NDRAllShipments />} />
                             <Route path="reports" element={<NDRReports />} />
-                            <Route path="import-history" element={<NDRImportHistory />} />
+                            <Route path="follow-up" element={<Navigate to="/operations/ndr/shipments?workflowStatus=Follow-up" replace />} />
+                            <Route path="supervisor-review" element={<Navigate to="/operations/ndr/shipments?workflowStatus=Supervisor Pending" replace />} />
+                            <Route path="reattempt-queue" element={<Navigate to="/operations/ndr/shipments?workflowStatus=Follow-up" replace />} />
+                            <Route path="delivered" element={<Navigate to="/operations/ndr/shipments?workflowStatus=Delivered" replace />} />
+                            <Route path="rto-queue" element={<Navigate to="/operations/ndr/shipments?workflowStatus=RTO" replace />} />
+                            <Route path="import-history" element={<Navigate to="/operations/ndr/reports" replace />} />
                           </Route>
+
 
                           <Route
                             path="/reports"

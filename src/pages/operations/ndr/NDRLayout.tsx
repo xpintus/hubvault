@@ -23,16 +23,11 @@ import { clsx } from 'clsx';
 
 const NAV_TABS = [
   { to: '/operations/ndr/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/operations/ndr/my-queue', label: 'Calling Queue', icon: PhoneCall },
   { to: '/operations/ndr/shipments', label: 'All Shipments', icon: ListFilter },
-  { to: '/operations/ndr/my-queue', label: 'My Calling Queue', icon: PhoneCall },
-  { to: '/operations/ndr/follow-up', label: 'Follow-up Due', icon: Clock },
-  { to: '/operations/ndr/supervisor-review', label: 'Supervisor Review', icon: ShieldCheck },
-  { to: '/operations/ndr/reattempt-queue', label: 'Reattempt Queue', icon: Truck },
-  { to: '/operations/ndr/delivered', label: 'Delivered After NDR', icon: CheckCircle2 },
-  { to: '/operations/ndr/rto-queue', label: 'RTO Queue', icon: RotateCcw },
   { to: '/operations/ndr/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/operations/ndr/import-history', label: 'Import History', icon: History },
 ];
+
 
 export default function NDRLayout() {
   const { selectedHub } = useHub();
