@@ -12,22 +12,28 @@ interface NDRCallModalProps {
 }
 
 const CALLER_RESULTS: NDRCallerResult[] = [
-  'Customer Accepted',
-  'Customer Refused',
-  'Future Delivery',
+  'Customer Refused to Accept',
+  'Customer Refused OTP',
+  'Customer Not Reachable',
+  'Phone Switched Off',
   'Wrong Number',
-  'Not Connected',
-  'Switched Off',
+  'Future Delivery Requested',
+  'Customer Wants Reattempt',
+  'Customer Already Received',
+  'Fake Order',
+  'Address Issue',
+  'Payment Issue',
   'OTP Issue',
-  'Connected',
+  'Delivery Executive Did Not Visit',
   'Other',
 ];
 
 export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, onClose, onSuccess }) => {
   const { profile } = useAuth();
-  const [callerResult, setCallerResult] = useState<NDRCallerResult>('Customer Accepted');
+  const [callerResult, setCallerResult] = useState<NDRCallerResult>('Customer Wants Reattempt');
   const [callerRemarks, setCallerRemarks] = useState('');
   const [nextFollowupDate, setNextFollowupDate] = useState('');
+  const [alternateNumber, setAlternateNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -43,11 +49,12 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
         callerId: profile?.id || null,
         callerName: profile?.name || 'Calling Executive',
         userRole: profile?.role || 'collector',
-        callConnected: callerResult !== 'Not Connected' && callerResult !== 'Switched Off',
+        callConnected: callerResult !== 'Customer Not Reachable' && callerResult !== 'Phone Switched Off' && callerResult !== 'Wrong Number',
         attemptNumber: (shipment.total_attempts || 1) + 1,
         callerResult,
         callerRemarks,
-        nextFollowupDate: callerResult === 'Future Delivery' ? nextFollowupDate : undefined,
+        alternateNumber: alternateNumber.trim() || undefined,
+        nextFollowupDate: nextFollowupDate || undefined,
       });
       onSuccess();
       onClose();
@@ -61,7 +68,7 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-lg flex flex-col rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden">
+      <div className="w-full max-w-lg flex flex-col rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-3">
@@ -69,7 +76,7 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
               <PhoneCall className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Calling Screen</h2>
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Customer Calling Screen</h2>
               <p className="text-xs text-neutral-500 font-mono">AWB: {shipment.awb_number}</p>
             </div>
           </div>
@@ -79,7 +86,7 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200">
               {errorMsg}
@@ -90,52 +97,60 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
           <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 text-xs space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="text-neutral-500 block">AWB:</span>
+                <span className="text-neutral-500 block">AWB Number:</span>
                 <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{shipment.awb_number}</span>
               </div>
               <div>
-                <span className="text-neutral-500 block">Customer:</span>
+                <span className="text-neutral-500 block">Customer Name:</span>
                 <span className="font-bold text-neutral-900 dark:text-neutral-100">{shipment.consignee_name || '-'}</span>
               </div>
               <div>
-                <span className="text-neutral-500 block">Phone:</span>
+                <span className="text-neutral-500 block">Phone Mobile:</span>
                 <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
                   {(shipment.raw_data?.consignee_phone as string) || (shipment.raw_data?.phone as string) || '-'}
                 </span>
               </div>
               <div>
-                <span className="text-neutral-500 block">Address:</span>
+                <span className="text-neutral-500 block">Delivery Address:</span>
                 <span className="font-medium text-neutral-700 dark:text-neutral-300 truncate block">
                   {(shipment.raw_data?.delivery_address as string) || shipment.city || '-'}
                 </span>
               </div>
 
               <div>
-                <span className="text-neutral-500 block">COD Amount:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">₹{shipment.amount_payable}</span>
+                <span className="text-neutral-500 block">Payment Type & COD:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{shipment.payment_type} (₹{shipment.amount_payable})</span>
               </div>
               <div>
-                <span className="text-neutral-500 block">Executive:</span>
+                <span className="text-neutral-500 block">Delivery Executive:</span>
                 <span className="font-semibold">{shipment.delivery_executive || '-'}</span>
               </div>
               <div>
-                <span className="text-neutral-500 block">Vendor:</span>
+                <span className="text-neutral-500 block">Partner / Vendor:</span>
                 <span className="font-medium">{shipment.partner_name || '-'}</span>
               </div>
               <div>
                 <span className="text-neutral-500 block">Attempt Count:</span>
                 <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">Attempt #{shipment.total_attempts || 1}</span>
               </div>
+              <div>
+                <span className="text-neutral-500 block">OTP Status:</span>
+                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{shipment.otp_status || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block">Last Attempt Date:</span>
+                <span className="font-mono font-semibold">{shipment.last_attempt_date ? new Date(shipment.last_attempt_date).toLocaleDateString() : '-'}</span>
+              </div>
             </div>
             <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-              <span className="text-neutral-500 block">Original Reason:</span>
+              <span className="text-neutral-500 block font-semibold">Original DRS NDR Reason:</span>
               <span className="font-bold text-amber-600 dark:text-amber-400">{shipment.original_ndr_reason || '-'}</span>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-              Call Result Dropdown *
+              Call Result *
             </label>
             <select
               value={callerResult}
@@ -150,20 +165,32 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
             </select>
           </div>
 
-          {callerResult === 'Future Delivery' && (
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                Next Follow-up Date *
+                Next Follow-up Date (Optional)
               </label>
               <input
                 type="date"
                 value={nextFollowupDate}
                 onChange={(e) => setNextFollowupDate(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold"
-                required
               />
             </div>
-          )}
+
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                Alternate Number (Optional)
+              </label>
+              <input
+                type="tel"
+                placeholder="Alternate phone..."
+                value={alternateNumber}
+                onChange={(e) => setAlternateNumber(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold"
+              />
+            </div>
+          </div>
 
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">

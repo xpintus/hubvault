@@ -10,12 +10,20 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  HelpCircle,
+  MapPin,
+  MessageSquareX,
   PhoneCall,
+  PhoneOff,
   RefreshCw,
   RotateCcw,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Truck,
+  UserX,
+  Wallet,
+  XCircle,
 } from 'lucide-react';
 
 export default function NDRDashboard() {
@@ -30,7 +38,6 @@ export default function NDRDashboard() {
     setLoading(true);
     fetchNDRMetrics(selectedHub?.id || null)
       .then((data) => {
-        console.log('Dashboard Data', data);
         setMetrics(data);
       })
       .finally(() => setLoading(false));
@@ -63,16 +70,32 @@ export default function NDRDashboard() {
       route: '/operations/ndr/shipments',
     },
     {
-      label: 'Fresh Shipments (Attempt 1)',
-      value: metrics.freshShipments,
-      icon: Sparkles,
-      color: 'text-emerald-500 font-bold',
-      bgColor: 'bg-emerald-500/10 border-emerald-500/20 shadow-sm',
-      route: '/operations/ndr/shipments?attempts=fresh',
-      badge: 'Highest Priority',
+      label: 'Calling Pending',
+      value: metrics.callingPending,
+      icon: PhoneCall,
+      color: 'text-purple-600 font-bold',
+      bgColor: 'bg-purple-500/10 border-purple-500/20 shadow-sm',
+      route: '/operations/ndr/calling-queue',
+      badge: 'Action Required',
     },
     {
-      label: 'Reattempt Pending (Attempt 2+)',
+      label: 'Supervisor Pending',
+      value: metrics.supervisorPending,
+      icon: ShieldCheck,
+      color: 'text-rose-500 font-bold',
+      bgColor: 'bg-rose-500/10 border-rose-500/20',
+      route: '/operations/ndr/supervisor-review',
+    },
+    {
+      label: 'Follow-up Today',
+      value: metrics.followUpToday,
+      icon: Clock,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500/10 border-amber-500/20',
+      route: '/operations/ndr/shipments?workflowStatus=Follow-up',
+    },
+    {
+      label: 'Reattempt Pending',
       value: metrics.reattemptPending,
       icon: Truck,
       color: 'text-orange-500 font-bold',
@@ -80,28 +103,12 @@ export default function NDRDashboard() {
       route: '/operations/ndr/shipments?attempts=reattempt',
     },
     {
-      label: 'Supervisor Pending',
-      value: metrics.supervisorPending,
-      icon: ShieldCheck,
-      color: 'text-rose-500',
-      bgColor: 'bg-rose-500/10 border-rose-500/20',
-      route: '/operations/ndr/shipments?workflowStatus=Supervisor Pending',
-    },
-    {
-      label: 'Follow-up Today',
-      value: metrics.followUpToday,
-      icon: Clock,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10 border-purple-500/20',
-      route: '/operations/ndr/shipments?workflowStatus=Follow-up',
-    },
-    {
-      label: 'Delivered Today',
+      label: 'Delivered After NDR',
       value: metrics.deliveredToday,
       icon: CheckCircle2,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-500/10 border-emerald-500/20',
-      route: '/operations/ndr/shipments?workflowStatus=Delivered&isToday=true',
+      route: '/operations/ndr/delivered-after-ndr',
     },
     {
       label: 'RTO Closed',
@@ -109,44 +116,104 @@ export default function NDRDashboard() {
       icon: RotateCcw,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10 border-red-500/20',
-      route: '/operations/ndr/shipments?workflowStatus=RTO',
+      route: '/operations/ndr/rto-queue',
     },
   ];
 
-  const attemptBreakdown = [
+  const reasonKpis = [
     {
-      label: 'Attempt 1',
-      count: metrics.attempt1Count,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-500/10 border-emerald-500/20',
-      route: '/operations/ndr/shipments?attempts=1&isToday=true',
-    },
-    {
-      label: 'Attempt 2',
-      count: metrics.attempt2Count,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-500/10 border-orange-500/20',
-      route: '/operations/ndr/shipments?attempts=2&isToday=true',
-    },
-    {
-      label: 'Attempt 3',
-      count: metrics.attempt3Count,
-      color: 'text-red-600 dark:text-red-400',
+      label: 'Customer Refused to Accept',
+      count: metrics.customerRefusedToAccept,
+      icon: UserX,
+      color: 'text-red-600',
       bgColor: 'bg-red-500/10 border-red-500/20',
-      route: '/operations/ndr/shipments?attempts=3&isToday=true',
+      reason: 'Customer Refused to Accept',
     },
     {
-      label: 'Attempt 4+',
-      count: metrics.attempt4PlusCount,
-      color: 'text-rose-700 dark:text-rose-400',
+      label: 'Customer Refused OTP',
+      count: metrics.customerRefusedOtp,
+      icon: MessageSquareX,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-500/10 border-orange-500/20',
+      reason: 'Customer Refused OTP',
+    },
+    {
+      label: 'Customer Not Reachable',
+      count: metrics.customerNotReachable,
+      icon: PhoneOff,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-500/10 border-amber-500/20',
+      reason: 'Customer Not Reachable',
+    },
+    {
+      label: 'Phone Switched Off',
+      count: metrics.phoneSwitchedOff,
+      icon: PhoneOff,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-500/10 border-purple-500/20',
+      reason: 'Phone Switched Off',
+    },
+    {
+      label: 'Future Delivery Requested',
+      count: metrics.futureDeliveryRequested,
+      icon: Clock,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-500/10 border-blue-500/20',
+      reason: 'Future Delivery Requested',
+    },
+    {
+      label: 'Fake Order',
+      count: metrics.fakeOrder,
+      icon: ShieldAlert,
+      color: 'text-rose-600',
       bgColor: 'bg-rose-500/10 border-rose-500/20',
-      route: '/operations/ndr/shipments?attempts=3+&isToday=true',
+      reason: 'Fake Order',
+    },
+    {
+      label: 'Address Issue',
+      count: metrics.addressIssue,
+      icon: MapPin,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-500/10 border-indigo-500/20',
+      reason: 'Address Issue',
+    },
+    {
+      label: 'Payment Issue',
+      count: metrics.paymentIssue,
+      icon: Wallet,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-500/10 border-emerald-500/20',
+      reason: 'Payment Issue',
+    },
+    {
+      label: 'OTP Issue',
+      count: metrics.otpIssue,
+      icon: MessageSquareX,
+      color: 'text-cyan-600',
+      bgColor: 'bg-cyan-500/10 border-cyan-500/20',
+      reason: 'OTP Issue',
+    },
+    {
+      label: 'DE Did Not Visit',
+      count: metrics.deDidNotVisit,
+      icon: XCircle,
+      color: 'text-red-700',
+      bgColor: 'bg-red-600/10 border-red-600/20',
+      reason: 'Delivery Executive Did Not Visit',
+    },
+    {
+      label: 'Other Reasons',
+      count: metrics.otherReasons,
+      icon: HelpCircle,
+      color: 'text-neutral-600',
+      bgColor: 'bg-neutral-500/10 border-neutral-500/20',
+      reason: 'Other',
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* 8 Essential Operational Summary KPI Cards */}
+      {/* 8 Operational Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiCards.map((card) => {
           const Icon = card.icon;
@@ -164,7 +231,7 @@ export default function NDRDashboard() {
               </div>
 
               {card.badge && (
-                <span className="inline-block mt-2 self-start px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white uppercase tracking-wider">
+                <span className="inline-block mt-2 self-start px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-600 text-white uppercase tracking-wider">
                   {card.badge}
                 </span>
               )}
@@ -182,88 +249,42 @@ export default function NDRDashboard() {
         })}
       </div>
 
-      {/* DRS Daily Performance Summary Compact Block */}
+      {/* 11 Reason-Wise KPI Cards */}
       <div className="p-6 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-              <BarChart3 className="h-5 w-5" />
+        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-brand-500/10 text-brand-600">
+              <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                DRS Daily Performance Summary
+                Reason-Wise NDR Analytics
               </h2>
-              <p className="text-xs text-neutral-500">Live operational summary of imported DRS delivery attempts & resolutions.</p>
+              <p className="text-xs text-neutral-500">Click any reason card to view filtered NDR shipments.</p>
             </div>
-          </div>
-
-          <button
-            onClick={() => navigate('/operations/drs-performance')}
-            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-glow transition flex items-center gap-1.5 active:scale-95 self-start sm:self-auto"
-          >
-            <BarChart3 className="h-4 w-4" /> View Full DRS Report
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
-            <span className="text-neutral-500 block font-semibold">Total OFD</span>
-            <span className="text-xl font-black text-neutral-900 dark:text-neutral-100">{metrics.todaysUpload}</span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <span className="text-emerald-700 dark:text-emerald-400 block font-bold">1st Attempt DEL</span>
-            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{metrics.attempt1Count}</span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/20">
-            <span className="text-orange-700 dark:text-orange-400 block font-bold">Reattempt DEL</span>
-            <span className="text-xl font-black text-orange-600 dark:text-orange-400">
-              {metrics.attempt2Count + metrics.attempt3Count + metrics.attempt4PlusCount}
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-            <span className="text-indigo-700 dark:text-indigo-400 block font-bold">Total Delivered</span>
-            <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{metrics.deliveredToday}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Today's OFD Attempts Analytics Section */}
-      <div className="p-6 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-              <Truck className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                Today's OFD Attempts Analytics
-              </h2>
-              <p className="text-xs text-neutral-500">Distribution and attempt totals calculated from today's imported DRS files.</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold">
-            Total OFD Attempts Today: <span className="text-sm font-black">{metrics.totalOfdAttemptsToday}</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {attemptBreakdown.map((item) => (
-            <div
-              key={item.label}
-              onClick={() => navigate(item.route)}
-              className={`p-4 rounded-xl border transition cursor-pointer group flex flex-col justify-between hover:shadow-md ${item.bgColor}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">{item.label}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          {reasonKpis.map((r) => {
+            const Icon = r.icon;
+            return (
+              <div
+                key={r.label}
+                onClick={() => navigate(`/operations/ndr/shipments?reason=${encodeURIComponent(r.reason)}`)}
+                className={`p-4 rounded-xl border transition cursor-pointer group flex flex-col justify-between hover:shadow-md ${r.bgColor}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 line-clamp-1">{r.label}</span>
+                  <Icon className={`h-4 w-4 ${r.color} group-hover:scale-110 transition-transform`} />
+                </div>
+                <div className="mt-3 flex items-baseline justify-between">
+                  <span className={`text-2xl font-black ${r.color}`}>{r.count}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
-              <span className={`text-2xl font-black mt-2 ${item.color}`}>{item.count}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

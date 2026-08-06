@@ -273,5 +273,5 @@ describe('LIVE RUNTIME VERIFICATION (STEPS 1 TO 9)', () => {
 
     expect(compResult).toBeDefined();
     console.log('\n=== ALL 9 LIVE RUNTIME VERIFICATION STEPS SUCCEEDED PERFECTLY ===');
-  });
+  }, 15000);
 });

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { NDR_REASON_FILTERS, NDR_WORKFLOW_STATUS } from './ndrConstants';
+import { normalizeNDRReason } from './ndrReasonNormalizer';
 
 import {
   NDRCallLog,
@@ -26,6 +27,7 @@ export async function fetchNDRShipments(
     status,
     workflowStatus,
     reason,
+    normalizedReason,
     callerId,
     supervisorId,
     paymentType,
@@ -50,6 +52,7 @@ export async function fetchNDRShipments(
   if (hubId && hubId !== 'ALL') {
     query = query.eq('hub_id', hubId);
   }
+
   if (workflowStatus && workflowStatus !== 'ALL') {
     if (
       workflowStatus === NDR_WORKFLOW_STATUS.CALLING_PENDING ||
@@ -88,22 +91,12 @@ export async function fetchNDRShipments(
   if (deliveryStatus && deliveryStatus !== 'ALL') {
     query = query.eq('shipment_status_current', deliveryStatus);
   }
-  if (reason && reason !== 'ALL') {
-    const r = reason.toLowerCase();
-    if (r === 'fake') {
-      query = query.or('original_ndr_reason.ilike.%fake%,original_ndr_reason.ilike.%suspected%');
-    } else if (r === 'wrong') {
-      query = query.or('original_ndr_reason.ilike.%wrong%,original_ndr_reason.ilike.%invalid address%');
-    } else if (r === 'future') {
-      query = query.or('original_ndr_reason.ilike.%future%,original_ndr_reason.ilike.%tomorrow%');
-    } else if (r === 'refused') {
-      query = query.or('original_ndr_reason.ilike.%refuse%,original_ndr_reason.ilike.%denied%');
-    } else if (r === 'unreachable') {
-      query = query.or('original_ndr_reason.ilike.%unreachable%,original_ndr_reason.ilike.%not reachable%,original_ndr_reason.ilike.%switched off%');
-    } else {
-      query = query.ilike('original_ndr_reason', `%${reason}%`);
-    }
+
+  const effectiveReason = normalizedReason || (reason && reason !== 'ALL' ? reason : undefined);
+  if (effectiveReason && effectiveReason !== 'ALL') {
+    query = query.or(`normalized_ndr_reason.eq.${effectiveReason},original_ndr_reason.ilike.%${effectiveReason}%`);
   }
+
   if (aging && Number(aging) > 0) {
     const cutoff = new Date(Date.now() - Number(aging) * 60 * 60 * 1000).toISOString();
     query = query.lte('created_at', cutoff);
@@ -127,7 +120,12 @@ export async function fetchNDRShipments(
     }
   }
 
-
+  if (search && search.trim()) {
+    const s = search.trim();
+    query = query.or(
+      `awb_number.ilike.%${s}%,consignee_name.ilike.%${s}%,client_name.ilike.%${s}%,delivery_executive.ilike.%${s}%,partner_name.ilike.%${s}%,delivery_pincode.ilike.%${s}%,drs_code.ilike.%${s}%`
+    );
+  }
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -138,75 +136,18 @@ export async function fetchNDRShipments(
     query = query.order('created_at', { ascending: false }).range(from, to);
   }
 
-
   let { data, count, error } = await query;
   if (error) {
-    console.error('Error fetching NDR shipments with embedded relations:', error);
+    console.error('Error fetching NDR shipments:', error);
     let fallbackQuery = supabase.from('ndr_shipments').select('*', { count: 'exact' });
-
-    if (hubId && hubId !== 'ALL') {
-      fallbackQuery = fallbackQuery.eq('hub_id', hubId);
-    }
+    if (hubId && hubId !== 'ALL') fallbackQuery = fallbackQuery.eq('hub_id', hubId);
     if (workflowStatus && workflowStatus !== 'ALL') {
-      if (
-        workflowStatus === NDR_WORKFLOW_STATUS.CALLING_PENDING ||
-        workflowStatus === 'UNDEL' ||
-        workflowStatus === 'CALL_PENDING'
-      ) {
-        fallbackQuery = fallbackQuery.in('ndr_workflow_status', ['UNDEL', NDR_WORKFLOW_STATUS.CALLING_PENDING]);
-      } else {
-        fallbackQuery = fallbackQuery.eq('ndr_workflow_status', workflowStatus);
-      }
-
+      fallbackQuery = fallbackQuery.eq('ndr_workflow_status', workflowStatus);
     }
-    if (vendor && vendor !== 'ALL') {
-      fallbackQuery = fallbackQuery.ilike('partner_name', `%${vendor}%`);
-    }
-    if (executive && executive !== 'ALL') {
-      fallbackQuery = fallbackQuery.ilike('delivery_executive', `%${executive}%`);
-    }
-    if (reason && reason !== 'ALL') {
-      const r = reason.toLowerCase();
-      if (r === 'fake') {
-        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%fake%,original_ndr_reason.ilike.%suspected%');
-      } else if (r === 'wrong') {
-        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%wrong%,original_ndr_reason.ilike.%invalid address%');
-      } else if (r === 'future') {
-        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%future%,original_ndr_reason.ilike.%tomorrow%');
-      } else if (r === 'refused') {
-        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%refuse%,original_ndr_reason.ilike.%denied%');
-      } else if (r === 'unreachable') {
-        fallbackQuery = fallbackQuery.or('original_ndr_reason.ilike.%unreachable%,original_ndr_reason.ilike.%not reachable%,original_ndr_reason.ilike.%switched off%');
-      } else {
-        fallbackQuery = fallbackQuery.ilike('original_ndr_reason', `%${reason}%`);
-      }
-    }
-    if (otpStatus && otpStatus !== 'ALL') {
-      const o = otpStatus.toLowerCase();
-      if (o === 'otp') {
-        fallbackQuery = fallbackQuery.or('otp_status.ilike.%otp%,otp_status.ilike.%failed%,otp_status.ilike.%issue%,original_ndr_reason.ilike.%otp%');
-      } else {
-        fallbackQuery = fallbackQuery.ilike('otp_status', `%${otpStatus}%`);
-      }
-    }
-    if (aging && Number(aging) > 0) {
-      const cutoff = new Date(Date.now() - Number(aging) * 60 * 60 * 1000).toISOString();
-      fallbackQuery = fallbackQuery.lte('created_at', cutoff);
-    }
-    if (search && search.trim()) {
-      const s = search.trim();
-      fallbackQuery = fallbackQuery.or(
-        `awb_number.ilike.%${s}%,consignee_name.ilike.%${s}%,client_name.ilike.%${s}%,delivery_executive.ilike.%${s}%,partner_name.ilike.%${s}%,delivery_pincode.ilike.%${s}%,drs_code.ilike.%${s}%`
-      );
-    }
-
     fallbackQuery = fallbackQuery.order('created_at', { ascending: false }).range(from, to);
     const fallbackRes = await fallbackQuery;
     data = fallbackRes.data;
     count = fallbackRes.count;
-    if (fallbackRes.error) {
-      console.error('Fallback NDR shipments query failed:', fallbackRes.error);
-    }
   }
 
   const rawList = (data as NDRShipment[]) || [];
@@ -223,9 +164,7 @@ export async function fetchNDRShipments(
     data: rawList,
     count: count || 0,
   };
-
 }
-
 
 export async function fetchExistingAWBMap(
   awbNumbers: string[],
@@ -234,7 +173,6 @@ export async function fetchExistingAWBMap(
   if (awbNumbers.length === 0) return new Map();
 
   let query = supabase.from('ndr_shipments').select('*').in('awb_number', awbNumbers);
-
   if (hubId) {
     query = query.eq('hub_id', hubId);
   }
@@ -261,21 +199,8 @@ export async function importNDRBatch(
   userRole: string | null,
   onProgress?: (message: string) => void
 ): Promise<{ batchId: string; importedCount: number; updatedCount: number }> {
-  // 1. Hub ID check
   if (!hubId) {
     throw new Error('Please select a hub before importing the NDR report.');
-  }
-
-  // 2. Migration & Table Existence Check
-  const { error: checkErr } = await supabase.from('ndr_shipments').select('id').limit(1);
-  if (checkErr) {
-    if (
-      checkErr.code === '42P01' ||
-      checkErr.message?.includes('does not exist') ||
-      checkErr.message?.includes('relation "public.ndr_shipments"')
-    ) {
-      throw new Error('NDR database migration has not been applied. Required table ndr_shipments was not found.');
-    }
   }
 
   const validRows = rows.filter((r) => r.errors.length === 0 && !r.isDuplicateInFile);
@@ -283,7 +208,6 @@ export async function importNDRBatch(
     throw new Error('No valid shipment rows were found ready to import.');
   }
 
-  // 3. Create batch record with status 'processing'
   const { data: batch, error: batchErr } = await supabase
     .from('ndr_import_batches')
     .insert({
@@ -302,304 +226,198 @@ export async function importNDRBatch(
     .select()
     .single();
 
-  if (batchErr) {
-    console.error('NDR import failed creating batch', {
-      message: batchErr.message,
-      code: batchErr.code,
-      details: batchErr.details,
-      hint: batchErr.hint,
-    });
-    throw new Error(batchErr.message || 'Failed to create import batch record.');
-  }
+  if (batchErr) throw batchErr;
 
-  try {
-    onProgress?.('Checking existing AWBs in database...');
-    const awbList = validRows.map((r) => r.waybill_no);
-    const existingMap = await fetchExistingAWBMap(awbList, hubId);
+  let importedCount = 0;
+  let updatedCount = 0;
 
-    const newInserts: Partial<NDRShipment>[] = [];
-    const updates: { id: string; payload: Partial<NDRShipment>; timeline: Partial<NDRTimelineLog> }[] = [];
-    const timelineLogs: Partial<NDRTimelineLog>[] = [];
+  const awbList = validRows.map((r) => r.waybill_no);
+  const existingMap = await fetchExistingAWBMap(awbList, hubId);
 
-    let importedCount = 0;
-    let updatedCount = 0;
+  const newInserts: any[] = [];
+  const updates: { id: string; payload: any; timeline: any }[] = [];
+  const timelineLogs: any[] = [];
 
-    for (const r of validRows) {
-      const existing = existingMap.get(r.waybill_no);
+  for (const r of validRows) {
+    const existing = existingMap.get(r.waybill_no);
+    const normReason = normalizeNDRReason(r.reason);
 
-      if (existing) {
-        updatedCount++;
-        const isClosed = existing.ndr_workflow_status === 'Closed';
-        const newCycle = isClosed ? existing.ndr_cycle + 1 : existing.ndr_cycle;
-        const newWorkflowStatus: NDRWorkflowStatus = 'Calling Pending';
+    if (existing) {
+      updatedCount++;
+      const nextAttempt = Math.max(existing.total_attempts || 1, r.total_attemps || 1);
 
-
-        const updatePayload: Partial<NDRShipment> = {
+      updates.push({
+        id: existing.id,
+        payload: {
+          total_attempts: nextAttempt,
+          last_attempt_date: r.last_attempt_date || r.POD_date || new Date().toISOString(),
+          otp_status: r.otp_details || existing.otp_status,
           drs_code: r.drs_code || existing.drs_code,
-          delivery_executive: r.Employee_name || existing.delivery_executive,
-          partner_name: r.partner_name || existing.partner_name,
-          hub_location: r.LOCATION || existing.hub_location,
-          city: r.city || existing.city,
-          state: r.state || existing.state,
-          amount_payable: r.amount_payable || existing.amount_payable,
-          payment_type: r.payment_type || existing.payment_type,
-          last_attempt_date: r.last_attempt_date || new Date().toISOString(),
-          total_attempts: r.total_attemps || existing.total_attempts + 1,
-          delivery_pincode: r.delivery_pincode || existing.delivery_pincode,
-          drs_status: r.drs_status || existing.drs_status,
-          shipment_status_current: 'UNDEL',
-          ndr_workflow_status: newWorkflowStatus,
-          ndr_cycle: newCycle,
-          import_batch_id: batch.id,
+          original_ndr_reason: r.reason || existing.original_ndr_reason,
+          normalized_ndr_reason: normReason,
           updated_at: new Date().toISOString(),
-        };
-
-        const timelineEntry: Partial<NDRTimelineLog> = {
+        },
+        timeline: {
           shipment_id: existing.id,
           event_type: 'import',
-          action_title: isClosed ? `Re-imported NDR (Cycle ${newCycle})` : 'Re-imported Open NDR',
+          action_title: 'Re-imported from Excel',
           user_id: userId,
           user_name: userName || 'Operations Staff',
           user_role: userRole || 'hub_admin',
           previous_status: existing.ndr_workflow_status,
-          new_status: newWorkflowStatus,
-          remarks: `Updated from file "${filename}". ${isClosed ? 'New NDR Cycle initiated.' : 'Updated operational details.'}`,
-          meta_data: { filename, batch_id: batch.id, cycle: newCycle },
-        };
-
-        updates.push({ id: existing.id, payload: updatePayload, timeline: timelineEntry });
-      } else {
-        importedCount++;
-        const newShipmentId = crypto.randomUUID();
-        const insertPayload: Partial<NDRShipment> = {
-          id: newShipmentId,
-          awb_number: r.waybill_no,
-          drs_code: r.drs_code,
-          client_name: r.customer_name,
-          consignee_name: r.consignee,
-          delivery_executive: r.Employee_name,
-          partner_name: r.partner_name,
-          hub_location: r.LOCATION,
-          city: r.city,
-          state: r.state,
-          payment_type: r.payment_type || 'COD',
-          amount_payable: r.amount_payable,
-
-          shipment_status_original: r.shipment_status || 'UNDEL',
-          original_ndr_reason: r.reason,
-          otp_status: r.otp_details,
-          drs_status: r.drs_status,
-          drs_date: r.drs_date || null,
-          first_attempt_date: r.first_attempt_date || new Date().toISOString(),
-          last_attempt_date: r.last_attempt_date || new Date().toISOString(),
-          total_attempts: r.total_attemps || 1,
-          delivery_pincode: r.delivery_pincode,
-          is_mobility: r.is_mobility,
-
-          shipment_status_current: 'UNDEL',
-          ndr_workflow_status: 'Calling Pending',
-
-          hub_id: hubId,
-          import_batch_id: batch.id,
-          ndr_cycle: 1,
-          raw_data: {
-            drs_code: r.drs_code,
-            waybill_no: r.waybill_no,
-            Employee_name: r.Employee_name,
-            partner_name: r.partner_name,
-            LOCATION: r.LOCATION,
-            city: r.city,
-            customer_name: r.customer_name,
-            consignee: r.consignee,
-            reason: r.reason,
-            otp_details: r.otp_details,
-          },
-          created_by: userId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        newInserts.push(insertPayload);
-
-        timelineLogs.push({
-          shipment_id: newShipmentId,
-          event_type: 'import',
-          action_title: 'Imported from Excel',
-          user_id: userId,
-          user_name: userName || 'Operations Staff',
-          user_role: userRole || 'hub_admin',
-          previous_status: undefined,
-          new_status: 'UNDEL',
-          remarks: `Imported via file "${filename}"`,
+          new_status: existing.ndr_workflow_status,
+          remarks: `Updated via file "${filename}". Attempts: ${nextAttempt}`,
           meta_data: { filename, batch_id: batch.id },
-        });
-      }
+        },
+      });
+    } else {
+      importedCount++;
+      const newShipmentId = crypto.randomUUID ? crypto.randomUUID() : `ndr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      newInserts.push({
+        id: newShipmentId,
+        awb_number: r.waybill_no,
+        drs_code: r.drs_code,
+        client_name: r.customer_name,
+        consignee_name: r.consignee,
+        delivery_executive: r.Employee_name,
+        partner_name: r.partner_name,
+        hub_location: r.LOCATION,
+        city: r.city,
+        state: r.state,
+        payment_type: r.payment_type?.toUpperCase().includes('COD') ? 'COD' : 'PREPAID',
+        amount_payable: r.amount_payable || 0,
+        shipment_status_original: 'UNDEL',
+        original_ndr_reason: r.reason,
+        normalized_ndr_reason: normReason,
+        otp_status: r.otp_details,
+        drs_status: r.drs_status,
+        drs_date: r.drs_date || new Date().toISOString(),
+        first_attempt_date: r.first_attempt_date || new Date().toISOString(),
+        last_attempt_date: r.last_attempt_date || new Date().toISOString(),
+        total_attempts: r.total_attemps || 1,
+        delivery_pincode: r.delivery_pincode,
+        is_mobility: r.is_mobility,
+        shipment_status_current: 'UNDEL',
+        ndr_workflow_status: 'Calling Pending',
+        hub_id: hubId,
+        import_batch_id: batch.id,
+        ndr_cycle: 1,
+        created_by: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      timelineLogs.push({
+        shipment_id: newShipmentId,
+        event_type: 'import',
+        action_title: 'Imported from Excel',
+        user_id: userId,
+        user_name: userName || 'Operations Staff',
+        user_role: userRole || 'hub_admin',
+        previous_status: undefined,
+        new_status: 'Calling Pending',
+        remarks: `Imported via file "${filename}"`,
+        meta_data: { filename, batch_id: batch.id },
+      });
     }
-
-    // Execute Inserts in chunks of 200
-    const CHUNK_SIZE = 200;
-    if (newInserts.length > 0) {
-      for (let i = 0; i < newInserts.length; i += CHUNK_SIZE) {
-        const chunk = newInserts.slice(i, i + CHUNK_SIZE);
-        onProgress?.(`Importing ${Math.min(i + chunk.length, newInserts.length)} of ${newInserts.length} new shipments...`);
-        const { error: insErr } = await supabase.from('ndr_shipments').insert(chunk);
-        if (insErr) {
-          console.error('NDR shipment chunk insert error:', {
-            message: insErr.message,
-            code: insErr.code,
-            details: insErr.details,
-            hint: insErr.hint,
-          });
-          throw insErr;
-        }
-      }
-    }
-
-    // Execute Updates & Timeline entries
-    if (updates.length > 0) {
-      onProgress?.(`Updating ${updates.length} existing NDR shipments...`);
-      for (const item of updates) {
-        const { error: updErr } = await supabase.from('ndr_shipments').update(item.payload).eq('id', item.id);
-        if (updErr) {
-          console.error('NDR shipment update error:', updErr);
-          throw updErr;
-        }
-        timelineLogs.push(item.timeline);
-      }
-    }
-
-    // Insert Timeline logs in chunks of 200
-    if (timelineLogs.length > 0) {
-      onProgress?.('Recording audit timeline entries...');
-      for (let i = 0; i < timelineLogs.length; i += CHUNK_SIZE) {
-        const chunk = timelineLogs.slice(i, i + CHUNK_SIZE);
-        const { error: timeErr } = await supabase.from('ndr_timeline_logs').insert(chunk);
-        if (timeErr) {
-          console.error('NDR timeline insert error:', timeErr);
-          throw timeErr;
-        }
-      }
-    }
-
-    // Mark batch completed
-    await supabase
-      .from('ndr_import_batches')
-      .update({ status: 'completed' })
-      .eq('id', batch.id);
-
-    return { batchId: batch.id, importedCount, updatedCount };
-  } catch (err: any) {
-    // Mark batch failed on error
-    await supabase
-      .from('ndr_import_batches')
-      .update({ status: 'failed', error_message: err.message || 'Import process failed' })
-      .eq('id', batch.id);
-
-    console.error('NDR import batch execution failed:', {
-      message: err.message,
-      code: err.code,
-      details: err.details,
-      hint: err.hint,
-    });
-    throw err;
   }
-}
 
+  const CHUNK_SIZE = 200;
+  if (newInserts.length > 0) {
+    for (let i = 0; i < newInserts.length; i += CHUNK_SIZE) {
+      const chunk = newInserts.slice(i, i + CHUNK_SIZE);
+      await supabase.from('ndr_shipments').insert(chunk);
+    }
+  }
+
+  if (updates.length > 0) {
+    for (const item of updates) {
+      await supabase.from('ndr_shipments').update(item.payload).eq('id', item.id);
+      timelineLogs.push(item.timeline);
+    }
+  }
+
+  if (timelineLogs.length > 0) {
+    for (let i = 0; i < timelineLogs.length; i += CHUNK_SIZE) {
+      const chunk = timelineLogs.slice(i, i + CHUNK_SIZE);
+      await supabase.from('ndr_timeline_logs').insert(chunk);
+    }
+  }
+
+  await supabase.from('ndr_import_batches').update({ status: 'completed' }).eq('id', batch.id);
+  return { batchId: batch.id, importedCount, updatedCount };
+}
 
 export async function logNDRCall(params: {
   shipmentId: string;
   callerId: string | null;
   callerName: string | null;
-  userRole: string | null;
+  userRole?: string | null;
   callConnected: boolean;
   attemptNumber: number;
-  customerResponse?: string;
-  callerResult: NDRCallLog['caller_result'];
-  customerVerifiedReason?: string;
-  customerComplaint?: string;
-  customerWantsDelivery?: boolean;
-  preferredDeliveryDate?: string;
+  callerResult: string;
+  callerRemarks?: string;
   alternateNumber?: string;
   nextFollowupDate?: string;
-  callerRemarks?: string;
-  callDuration?: string;
 }): Promise<void> {
-  const { shipmentId, callerId, callerName, userRole, callerResult } = params;
+  const { shipmentId, callerId, callerName, userRole, callConnected, attemptNumber, callerResult, callerRemarks, alternateNumber, nextFollowupDate } = params;
 
-  // Insert Call Log
-  const { data: callLog, error: callErr } = await supabase
+  const { data: act, error: logErr } = await supabase
     .from('ndr_call_logs')
     .insert({
       shipment_id: shipmentId,
       caller_id: callerId,
-      caller_name: callerName || 'Calling Executive',
+      caller_name: callerName || 'Operations Call Executive',
       call_date: new Date().toISOString().split('T')[0],
-      call_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      call_connected: params.callConnected,
-      attempt_number: params.attemptNumber,
-      customer_response: params.customerResponse || null,
+      call_connected: callConnected,
+      attempt_number: attemptNumber,
       caller_result: callerResult,
-      customer_verified_reason: params.customerVerifiedReason || null,
-      customer_complaint: params.customerComplaint || null,
-      customer_wants_delivery: params.customerWantsDelivery ?? true,
-      preferred_delivery_date: params.preferredDeliveryDate || null,
-      alternate_number: params.alternateNumber || null,
-      next_followup_date: params.nextFollowupDate || null,
-      caller_remarks: params.callerRemarks || null,
-      call_duration: params.callDuration || null,
+      caller_remarks: callerRemarks || null,
+      alternate_number: alternateNumber || null,
+      next_followup_date: nextFollowupDate || null,
     })
     .select()
     .single();
 
-  if (callErr) throw callErr;
+  if (logErr) throw logErr;
 
-  // Determine new workflow status based on caller result
-  let newWorkflowStatus: NDRWorkflowStatus = 'Supervisor Pending';
-  if (callerResult === 'Future Delivery') {
-    newWorkflowStatus = 'Follow-up';
-  } else if (callerResult === 'Not Connected' || callerResult === 'Switched Off') {
-    newWorkflowStatus = 'Calling Pending';
-  }
+  const newWorkflow = nextFollowupDate ? 'Follow-up' : 'Supervisor Pending';
 
-
-  // Get current status for timeline & raw_data
   const { data: currentShipment } = await supabase
     .from('ndr_shipments')
-    .select('ndr_workflow_status, raw_data')
+    .select('ndr_workflow_status, raw_data, total_attempts')
     .eq('id', shipmentId)
     .single();
 
   const updatedRawData = {
     ...(currentShipment?.raw_data || {}),
-    last_caller_remark: params.callerRemarks || null,
+    last_caller_remark: callerRemarks || null,
     last_caller_result: callerResult,
+    alternate_number: alternateNumber || null,
   };
 
-  // Update Shipment
-  const { error: shipErr } = await supabase
+  await supabase
     .from('ndr_shipments')
     .update({
-      ndr_workflow_status: newWorkflowStatus,
+      ndr_workflow_status: newWorkflow,
       assigned_caller_id: callerId || undefined,
       raw_data: updatedRawData,
       updated_at: new Date().toISOString(),
     })
     .eq('id', shipmentId);
 
-  if (shipErr) throw shipErr;
-
-  // Log Timeline Event
   await supabase.from('ndr_timeline_logs').insert({
     shipment_id: shipmentId,
     event_type: 'caller_update',
     action_title: `Call Logged: ${callerResult}`,
     user_id: callerId,
-    user_name: callerName || 'Calling Executive',
-    user_role: userRole || 'collector',
+    user_name: callerName || 'Call Executive',
+    user_role: userRole || 'caller',
     previous_status: currentShipment?.ndr_workflow_status,
-    new_status: newWorkflowStatus,
-    remarks: params.callerRemarks || `Outcome: ${callerResult}`,
-    meta_data: { call_log_id: callLog.id, caller_result: callerResult },
+    new_status: newWorkflow,
+    remarks: callerRemarks || `Result: ${callerResult}`,
+    meta_data: { call_log_id: act.id, result: callerResult, followup: nextFollowupDate },
   });
 }
 
@@ -607,36 +425,24 @@ export async function submitSupervisorAction(params: {
   shipmentId: string;
   supervisorId: string | null;
   supervisorName: string | null;
-  userRole: string | null;
-  supervisorCalledCustomer?: boolean;
-  deliveryExecutiveReasonCorrect?: boolean;
-  fakeAttemptSuspected?: boolean;
-  otpMisuseSuspected?: boolean;
-  escalateDeliveryExecutive?: boolean;
-  escalateVendor?: boolean;
-  actionTaken: NDRSupervisorAction['action_taken'];
+  userRole?: string | null;
+  actionTaken: 'Approve Delivery' | 'Approve Reattempt' | 'Approve RTO';
   supervisorRemarks?: string;
-  nextActionDate?: string;
 }): Promise<void> {
+  const { shipmentId, supervisorId, supervisorName, userRole, actionTaken, supervisorRemarks } = params;
 
-  const { shipmentId, supervisorId, supervisorName, userRole, actionTaken } = params;
+  if (!supervisorRemarks || !supervisorRemarks.trim()) {
+    throw new Error('Supervisor Remark is mandatory.');
+  }
 
-  // Insert Supervisor Action
   const { data: act, error: actErr } = await supabase
     .from('ndr_supervisor_actions')
     .insert({
       shipment_id: shipmentId,
       supervisor_id: supervisorId,
       supervisor_name: supervisorName || 'Operations Supervisor',
-      supervisor_called_customer: params.supervisorCalledCustomer,
-      delivery_executive_reason_correct: params.deliveryExecutiveReasonCorrect,
-      fake_attempt_suspected: params.fakeAttemptSuspected,
-      otp_misuse_suspected: params.otpMisuseSuspected,
-      escalate_delivery_executive: params.escalateDeliveryExecutive,
-      escalate_vendor: params.escalateVendor,
       action_taken: actionTaken,
-      supervisor_remarks: params.supervisorRemarks || null,
-      next_action_date: params.nextActionDate || null,
+      supervisor_remarks: supervisorRemarks.trim(),
     })
     .select()
     .single();
@@ -645,15 +451,21 @@ export async function submitSupervisorAction(params: {
 
   let newWorkflowStatus: NDRWorkflowStatus = 'Supervisor Pending';
   let shipmentStatusCurrent: string | undefined = undefined;
+  let finalAction: string | undefined = undefined;
+  let deliveredAfterNdr: boolean = false;
 
   if (actionTaken === 'Approve Delivery') {
     newWorkflowStatus = 'Delivered';
     shipmentStatusCurrent = 'DEL';
+    finalAction = 'Delivered After NDR';
+    deliveredAfterNdr = true;
   } else if (actionTaken === 'Approve Reattempt') {
     newWorkflowStatus = 'Follow-up';
+    shipmentStatusCurrent = 'UNDEL';
   } else if (actionTaken === 'Approve RTO') {
     newWorkflowStatus = 'RTO';
     shipmentStatusCurrent = 'RTO';
+    finalAction = 'RTO Approved';
   }
 
   const { data: currentShipment } = await supabase
@@ -664,7 +476,7 @@ export async function submitSupervisorAction(params: {
 
   const updatedRawData = {
     ...(currentShipment?.raw_data || {}),
-    last_supervisor_remark: params.supervisorRemarks || null,
+    last_supervisor_remark: supervisorRemarks,
     last_supervisor_action: actionTaken,
   };
 
@@ -675,21 +487,18 @@ export async function submitSupervisorAction(params: {
     updated_at: new Date().toISOString(),
   };
 
+  if (shipmentStatusCurrent) updatePayload.shipment_status_current = shipmentStatusCurrent;
+  if (finalAction) updatePayload.final_action = finalAction;
+  if (deliveredAfterNdr) updatePayload.delivered_after_ndr = deliveredAfterNdr;
+
   if (actionTaken === 'Approve Reattempt') {
     updatePayload.total_attempts = (currentShipment?.total_attempts || 1) + 1;
-  }
-
-
-  if (shipmentStatusCurrent) {
-    updatePayload.shipment_status_current = shipmentStatusCurrent;
   }
 
   await supabase
     .from('ndr_shipments')
     .update(updatePayload)
     .eq('id', shipmentId);
-
-
 
   await supabase.from('ndr_timeline_logs').insert({
     shipment_id: shipmentId,
@@ -700,7 +509,7 @@ export async function submitSupervisorAction(params: {
     user_role: userRole || 'supervisor',
     previous_status: currentShipment?.ndr_workflow_status,
     new_status: newWorkflowStatus,
-    remarks: params.supervisorRemarks || `Action: ${actionTaken}`,
+    remarks: supervisorRemarks,
     meta_data: { action_id: act.id, action_taken: actionTaken },
   });
 }
@@ -711,7 +520,6 @@ export async function markNDRDelivered(params: {
   userName: string | null;
   userRole?: string | null;
   deliveredDate: string;
-
   deliveredByText?: string;
   podReference: string;
   codCollectedAmount: number;
@@ -719,10 +527,8 @@ export async function markNDRDelivered(params: {
   codExceptionRemark?: string;
   deliveryRemarks?: string;
 }): Promise<void> {
-  const { shipmentId, userId, userName, userRole, deliveredDate, podReference, codCollectedAmount, expectedAmount } =
-    params;
+  const { shipmentId, userId, userName, userRole, deliveredDate, podReference, codCollectedAmount, expectedAmount } = params;
 
-  // Validate COD mismatch
   const isMismatch = Math.abs(codCollectedAmount - expectedAmount) > 0.01;
   if (isMismatch && (!params.codExceptionRemark || !params.codExceptionRemark.trim())) {
     throw new Error('COD Collected amount differs from expected payable amount. Exception remark is required.');
@@ -739,6 +545,8 @@ export async function markNDRDelivered(params: {
     .update({
       shipment_status_current: 'DEL',
       ndr_workflow_status: 'Closed',
+      final_action: 'Delivered After NDR',
+      delivered_after_ndr: true,
       delivered_date: new Date(deliveredDate).toISOString(),
       delivered_by: userId,
       delivered_user: params.deliveredByText || userName || 'Delivery Agent',
@@ -792,6 +600,7 @@ export async function approveNDRRTO(params: {
     .update({
       shipment_status_current: 'RTO',
       ndr_workflow_status: 'Closed',
+      final_action: 'RTO Approved',
       rto_date: new Date().toISOString(),
       rto_reason: rtoReason,
       rto_remarks: rtoRemarks || null,
@@ -823,10 +632,7 @@ export async function fetchNDRTimeline(shipmentId: string): Promise<NDRTimelineL
     .eq('shipment_id', shipmentId)
     .order('created_at', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching NDR timeline:', error);
-    return [];
-  }
+  if (error) return [];
   return (data as NDRTimelineLog[]) || [];
 }
 
@@ -853,7 +659,7 @@ export async function fetchNDRSupervisorActions(shipmentId: string): Promise<NDR
 }
 
 export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics> {
-  let query = supabase.from('ndr_shipments').select('ndr_workflow_status, shipment_status_current, created_at, updated_at, total_attempts');
+  let query = supabase.from('ndr_shipments').select('ndr_workflow_status, shipment_status_current, created_at, updated_at, total_attempts, original_ndr_reason, normalized_ndr_reason');
 
   if (hubId && hubId !== 'ALL') {
     query = query.eq('hub_id', hubId);
@@ -877,6 +683,17 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
       attempt3Count: 0,
       attempt4PlusCount: 0,
       totalOfdAttemptsToday: 0,
+      customerRefusedToAccept: 0,
+      customerRefusedOtp: 0,
+      customerNotReachable: 0,
+      phoneSwitchedOff: 0,
+      futureDeliveryRequested: 0,
+      fakeOrder: 0,
+      addressIssue: 0,
+      paymentIssue: 0,
+      otpIssue: 0,
+      deDidNotVisit: 0,
+      otherReasons: 0,
     };
   }
 
@@ -897,6 +714,18 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
   let attempt3Count = 0;
   let attempt4PlusCount = 0;
   let totalOfdAttemptsToday = 0;
+
+  let customerRefusedToAccept = 0;
+  let customerRefusedOtp = 0;
+  let customerNotReachable = 0;
+  let phoneSwitchedOff = 0;
+  let futureDeliveryRequested = 0;
+  let fakeOrder = 0;
+  let addressIssue = 0;
+  let paymentIssue = 0;
+  let otpIssue = 0;
+  let deDidNotVisit = 0;
+  let otherReasons = 0;
 
   items.forEach((item) => {
     const wf = item.ndr_workflow_status;
@@ -923,12 +752,25 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
       deliveredToday++;
     }
 
-    // Fresh vs Reattempt Calculation
     if ((wf === 'UNDEL' || wf === 'Calling Pending') && attempts === 1) {
       freshShipments++;
     } else if ((wf === 'UNDEL' || wf === 'Calling Pending' || wf === 'Follow-up') && attempts >= 2) {
       reattemptPending++;
     }
+
+    // Reason-wise calculation
+    const category = normalizeNDRReason(item.normalized_ndr_reason || item.original_ndr_reason);
+    if (category === 'Customer Refused to Accept') customerRefusedToAccept++;
+    else if (category === 'Customer Refused OTP') customerRefusedOtp++;
+    else if (category === 'Customer Not Reachable') customerNotReachable++;
+    else if (category === 'Phone Switched Off') phoneSwitchedOff++;
+    else if (category === 'Future Delivery Requested') futureDeliveryRequested++;
+    else if (category === 'Fake Order') fakeOrder++;
+    else if (category === 'Address Issue') addressIssue++;
+    else if (category === 'Payment Issue') paymentIssue++;
+    else if (category === 'OTP Issue') otpIssue++;
+    else if (category === 'Delivery Executive Did Not Visit') deDidNotVisit++;
+    else otherReasons++;
   });
 
   const totalActive = callingPending + supervisorPending + followUpToday;
@@ -948,12 +790,19 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
     attempt3Count,
     attempt4PlusCount,
     totalOfdAttemptsToday,
+    customerRefusedToAccept,
+    customerRefusedOtp,
+    customerNotReachable,
+    phoneSwitchedOff,
+    futureDeliveryRequested,
+    fakeOrder,
+    addressIssue,
+    paymentIssue,
+    otpIssue,
+    deDidNotVisit,
+    otherReasons,
   };
 }
-
-
-
-
 
 export async function fetchImportBatches(hubId?: string | null): Promise<NDRImportBatch[]> {
   let query = supabase.from('ndr_import_batches').select('*').order('created_at', { ascending: false });
@@ -963,9 +812,6 @@ export async function fetchImportBatches(hubId?: string | null): Promise<NDRImpo
   }
 
   const { data, error } = await query;
-  if (error) {
-    console.error('Error fetching import batches:', error);
-    return [];
-  }
+  if (error) return [];
   return (data as NDRImportBatch[]) || [];
 }

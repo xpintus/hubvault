@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
+import { useNavigate } from 'react-router-dom';
+import { NDRAutoSyncResult, syncDRSUndelToNDR } from '@/lib/ndr/ndrAutoSync';
 import {
   computeClientDRSMetrics,
   computeEmployeeDRSMetrics,
@@ -135,6 +137,9 @@ export default function DRSPerformanceReport() {
       });
   }, []);
 
+  const navigate = useNavigate();
+  const [ndrSyncResult, setNdrSyncResult] = useState<NDRAutoSyncResult | null>(null);
+
   const handleFileUpload = async (uploadedFile: File) => {
     setParsingProgress('Reading DRS file...');
     try {
@@ -197,8 +202,16 @@ export default function DRSPerformanceReport() {
       setSummary(overall);
       setUniqueRows(parsed.uniqueRows);
       setHistoryList(updatedHistory);
+
+      setParsingProgress('Auto-syncing UNDEL shipments to NDR...');
+      const syncResult = await syncDRSUndelToNDR(parsed.uniqueRows, selectedHub?.id, profile, {
+        fileName: uploadedFile.name,
+        reportDate: dateStr,
+      });
+      setNdrSyncResult(syncResult);
+
       setParsingProgress(null);
-      setToastMsg('DRS File uploaded, snapshot saved & restored automatically!');
+      setToastMsg(`DRS Uploaded! ${syncResult.undelSentToNdr} UNDEL shipments auto-synced to NDR.`);
     } catch (err: any) {
       console.error('DRS parse error:', err);
       alert(`Failed to parse file: ${err.message || 'Invalid format'}`);
@@ -467,6 +480,38 @@ export default function DRSPerformanceReport() {
           )}
         </div>
       </header>
+
+      {/* NDR AUTO-SYNC RESULT BANNER */}
+      {ndrSyncResult && (
+        <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-brand-600 text-white font-bold">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
+                DRS → NDR Auto-Sync Complete
+              </h4>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600 dark:text-neutral-300 font-mono mt-0.5">
+                <span>UNDEL Sent to NDR: <strong className="text-brand-600 font-bold">{ndrSyncResult.undelSentToNdr}</strong></span>
+                <span>•</span>
+                <span>New NDR Created: <strong className="text-emerald-600 font-bold">{ndrSyncResult.newNdrCreated}</strong></span>
+                <span>•</span>
+                <span>Existing NDR Updated: <strong className="text-blue-600 font-bold">{ndrSyncResult.existingNdrUpdated}</strong></span>
+                <span>•</span>
+                <span>Duplicates Skipped: <strong className="text-neutral-500 font-bold">{ndrSyncResult.duplicatesSkipped}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/operations/ndr/shipments')}
+            className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95 shrink-0"
+          >
+            <ChevronRight className="h-4 w-4" /> View NDR Cases
+          </button>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* NAVIGATION TABS (ROUNDED PILL TABS)                        */}

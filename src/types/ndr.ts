@@ -7,21 +7,25 @@ export type NDRWorkflowStatus =
   | 'Closed';
 
 export type NDRCallerResult =
-  | 'Connected'
-  | 'Not Connected'
-  | 'Switched Off'
+  | 'Customer Refused to Accept'
+  | 'Customer Refused OTP'
+  | 'Customer Not Reachable'
+  | 'Phone Switched Off'
   | 'Wrong Number'
-  | 'Customer Accepted'
-  | 'Customer Refused'
-  | 'Future Delivery'
+  | 'Future Delivery Requested'
+  | 'Customer Wants Reattempt'
+  | 'Customer Already Received'
+  | 'Fake Order'
+  | 'Address Issue'
+  | 'Payment Issue'
   | 'OTP Issue'
+  | 'Delivery Executive Did Not Visit'
   | 'Other';
 
 export type NDRSupervisorActionType =
   | 'Approve Delivery'
   | 'Approve Reattempt'
   | 'Approve RTO';
-
 
 export interface NDRShipment {
   id: string;
@@ -40,6 +44,7 @@ export interface NDRShipment {
   // Original Preserved Data
   shipment_status_original: string;
   original_ndr_reason: string | null;
+  normalized_ndr_reason?: string | null;
   otp_status: string | null;
   drs_status: string | null;
   drs_date: string | null;
@@ -52,6 +57,8 @@ export interface NDRShipment {
   // Workflow Data
   shipment_status_current: string;
   ndr_workflow_status: NDRWorkflowStatus;
+  final_action?: string | null;
+  delivered_after_ndr?: boolean;
 
   // Assignments
   assigned_caller_id: string | null;
@@ -93,7 +100,6 @@ export interface NDRShipment {
   last_call_log?: NDRCallLog | null;
   last_supervisor_log?: NDRSupervisorAction | null;
 }
-
 
 export interface NDRImportBatch {
   id: string;
@@ -181,8 +187,20 @@ export interface NDRMetrics {
   attempt3Count: number;
   attempt4PlusCount: number;
   totalOfdAttemptsToday: number;
-}
 
+  // Reason-wise KPIs
+  customerRefusedToAccept: number;
+  customerRefusedOtp: number;
+  customerNotReachable: number;
+  phoneSwitchedOff: number;
+  futureDeliveryRequested: number;
+  fakeOrder: number;
+  addressIssue: number;
+  paymentIssue: number;
+  otpIssue: number;
+  deDidNotVisit: number;
+  otherReasons: number;
+}
 
 export interface NDRFilterParams {
   search?: string;
@@ -197,6 +215,7 @@ export interface NDRFilterParams {
   isToday?: boolean;
 
   reason?: string;
+  normalizedReason?: string;
   callerId?: string;
   supervisorId?: string;
   paymentType?: string;
@@ -207,9 +226,6 @@ export interface NDRFilterParams {
   page?: number;
   limit?: number;
 }
-
-
-
 
 export interface ParsedNDRExcelRow {
   rowIndex: number;
@@ -256,4 +272,3 @@ export interface NDRExcelImportPreview {
   delSkippedCount: number;
   readyToImportCount: number;
 }
-
