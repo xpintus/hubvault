@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { NDR_REASON_FILTERS, NDR_WORKFLOW_STATUS } from './ndrConstants';
+
 import {
   NDRCallLog,
   NDRFilterParams,
@@ -51,7 +53,16 @@ export async function fetchNDRShipments(
     query = query.eq('hub_id', hubId);
   }
   if (workflowStatus && workflowStatus !== 'ALL') {
-    query = query.eq('ndr_workflow_status', workflowStatus);
+    if (
+      workflowStatus === NDR_WORKFLOW_STATUS.CALLING_PENDING ||
+      workflowStatus === NDR_WORKFLOW_STATUS.UNDEL ||
+      workflowStatus === 'CALL_PENDING'
+    ) {
+      // Calling Pending queue includes both initial UNDEL and Calling Pending
+      query = query.in('ndr_workflow_status', [NDR_WORKFLOW_STATUS.UNDEL, NDR_WORKFLOW_STATUS.CALLING_PENDING]);
+    } else {
+      query = query.eq('ndr_workflow_status', workflowStatus);
+    }
   }
   if (vendor && vendor !== 'ALL') {
     query = query.ilike('partner_name', `%${vendor}%`);
@@ -69,18 +80,37 @@ export async function fetchNDRShipments(
     query = query.eq('payment_type', paymentType);
   }
   if (otpStatus && otpStatus !== 'ALL') {
-    query = query.ilike('otp_status', `%${otpStatus}%`);
+    const o = otpStatus.toLowerCase();
+    if (o === 'otp') {
+      query = query.or('otp_status.ilike.%otp%,otp_status.ilike.%failed%,otp_status.ilike.%issue%,original_ndr_reason.ilike.%otp%');
+    } else {
+      query = query.ilike('otp_status', `%${otpStatus}%`);
+    }
   }
   if (deliveryStatus && deliveryStatus !== 'ALL') {
     query = query.eq('shipment_status_current', deliveryStatus);
   }
   if (reason && reason !== 'ALL') {
-    query = query.ilike('original_ndr_reason', `%${reason}%`);
+    const r = reason.toLowerCase();
+    if (r === 'fake') {
+      query = query.or('original_ndr_reason.ilike.%fake%,original_ndr_reason.ilike.%suspected%');
+    } else if (r === 'wrong') {
+      query = query.or('original_ndr_reason.ilike.%wrong%,original_ndr_reason.ilike.%invalid address%');
+    } else if (r === 'future') {
+      query = query.or('original_ndr_reason.ilike.%future%,original_ndr_reason.ilike.%tomorrow%');
+    } else if (r === 'refused') {
+      query = query.or('original_ndr_reason.ilike.%refuse%,original_ndr_reason.ilike.%denied%');
+    } else if (r === 'unreachable') {
+      query = query.or('original_ndr_reason.ilike.%unreachable%,original_ndr_reason.ilike.%not reachable%,original_ndr_reason.ilike.%switched off%');
+    } else {
+      query = query.ilike('original_ndr_reason', `%${reason}%`);
+    }
   }
   if (aging && Number(aging) > 0) {
     const cutoff = new Date(Date.now() - Number(aging) * 60 * 60 * 1000).toISOString();
     query = query.lte('created_at', cutoff);
   }
+
 
   if (startDate) {
     query = query.gte('created_at', `${startDate}T00:00:00.000Z`);

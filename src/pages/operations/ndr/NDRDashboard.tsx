@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useHub } from '@/lib/hubContext';
 import { fetchNDRMetrics } from '@/lib/ndr/ndrService';
+import { NDR_REASON_FILTERS, NDR_WORKFLOW_STATUS } from '@/lib/ndr/ndrConstants';
 import { NDRMetrics } from '@/types/ndr';
+
 import {
   AlertCircle,
   AlertTriangle,
@@ -77,29 +79,31 @@ export default function NDRDashboard() {
     { name: 'OTP Issues', value: metrics.otpIssues || 1, color: '#eab308' },
     { name: 'Fake Attempt', value: metrics.fakeAttempt || 1, color: '#ef4444' },
     { name: 'Future Delivery', value: metrics.futureDelivery || 1, color: '#8b5cf6' },
-    { name: 'Wrong NDR', value: metrics.wrongNdr || 1, color: '#ec4899' },
   ];
 
   const kpiCards = [
+
+
     { label: 'Total Imported', value: metrics.totalImported, icon: Archive, color: 'text-blue-500', route: '/operations/ndr/shipments' },
-    { label: 'Calling Pending', value: metrics.callingPending, icon: PhoneCall, color: 'text-cyan-500', route: '/operations/ndr/shipments?workflowStatus=Calling Pending' },
-    { label: 'Contacted', value: metrics.contacted, icon: UserCheck, color: 'text-indigo-500', route: '/operations/ndr/shipments?workflowStatus=Customer Contacted' },
+    { label: 'Calling Pending', value: metrics.callingPending, icon: PhoneCall, color: 'text-cyan-500', route: `/operations/ndr/shipments?workflowStatus=${encodeURIComponent(NDR_WORKFLOW_STATUS.CALLING_PENDING)}` },
+    { label: 'Contacted', value: metrics.contacted, icon: UserCheck, color: 'text-indigo-500', route: `/operations/ndr/shipments?workflowStatus=${encodeURIComponent(NDR_WORKFLOW_STATUS.CUSTOMER_CONTACTED)}` },
     { label: 'Supervisor Pending', value: metrics.supervisorPending, icon: ShieldCheck, color: 'text-rose-500', route: '/operations/ndr/supervisor-review' },
     { label: 'Follow-up Due', value: metrics.followUpDue, icon: Clock, color: 'text-purple-500', route: '/operations/ndr/follow-up' },
     { label: 'Reattempt Approved', value: metrics.reattemptApproved, icon: Truck, color: 'text-amber-500', route: '/operations/ndr/reattempt-queue' },
     { label: 'Out For Delivery', value: metrics.outForDelivery, icon: PackageCheck, color: 'text-orange-500', route: '/operations/ndr/reattempt-queue' },
     { label: 'Delivered After NDR', value: metrics.deliveredAfterNdr, icon: CheckCircle2, color: 'text-emerald-500 font-bold', route: '/operations/ndr/delivered' },
     { label: 'RTO Queue', value: metrics.rto, icon: RotateCcw, color: 'text-red-500 font-bold', route: '/operations/ndr/rto-queue' },
-    { label: 'OTP Issues', value: metrics.otpIssues, icon: AlertTriangle, color: 'text-yellow-500', route: '/operations/ndr/shipments?otpStatus=OTP' },
-    { label: 'Fake Attempt', value: metrics.fakeAttempt, icon: AlertCircle, color: 'text-rose-600 font-bold', route: '/operations/ndr/shipments?reason=Fake' },
-    { label: 'Wrong NDR', value: metrics.wrongNdr, icon: AlertCircle, color: 'text-pink-500', route: '/operations/ndr/shipments?reason=Wrong' },
-    { label: 'Future Delivery', value: metrics.futureDelivery, icon: CalendarCheck2, color: 'text-purple-600', route: '/operations/ndr/shipments?reason=Future' },
-    { label: 'Customer Refused', value: metrics.customerRefused, icon: AlertTriangle, color: 'text-amber-600', route: '/operations/ndr/shipments?reason=Refused' },
-    { label: 'Customer Unreachable', value: metrics.customerNotReachable, icon: PhoneCall, color: 'text-blue-400', route: '/operations/ndr/shipments?reason=Reachable' },
+    { label: 'OTP Issues', value: metrics.otpIssues, icon: AlertTriangle, color: 'text-yellow-500', route: `/operations/ndr/shipments?otpStatus=${NDR_REASON_FILTERS.OTP}` },
+    { label: 'Fake Attempt', value: metrics.fakeAttempt, icon: AlertCircle, color: 'text-rose-600 font-bold', route: `/operations/ndr/shipments?reason=${NDR_REASON_FILTERS.FAKE}` },
+    { label: 'Wrong NDR', value: metrics.wrongNdr, icon: AlertCircle, color: 'text-pink-500', route: `/operations/ndr/shipments?reason=${NDR_REASON_FILTERS.WRONG}` },
+    { label: 'Future Delivery', value: metrics.futureDelivery, icon: CalendarCheck2, color: 'text-purple-600', route: `/operations/ndr/shipments?reason=${NDR_REASON_FILTERS.FUTURE}` },
+    { label: 'Customer Refused', value: metrics.customerRefused, icon: AlertTriangle, color: 'text-amber-600', route: `/operations/ndr/shipments?reason=${NDR_REASON_FILTERS.REFUSED}` },
+    { label: 'Customer Unreachable', value: metrics.customerNotReachable, icon: PhoneCall, color: 'text-blue-400', route: `/operations/ndr/shipments?reason=${NDR_REASON_FILTERS.UNREACHABLE}` },
     { label: 'Aging > 24 Hours', value: metrics.above24Hours, icon: Clock, color: 'text-yellow-600 font-bold', route: '/operations/ndr/shipments?aging=24' },
     { label: 'Aging > 48 Hours', value: metrics.above48Hours, icon: Clock, color: 'text-orange-600 font-bold', route: '/operations/ndr/shipments?aging=48' },
     { label: 'Aging > 72 Hours', value: metrics.above72Hours, icon: Clock, color: 'text-red-600 font-bold', route: '/operations/ndr/shipments?aging=72' },
   ];
+
 
 
   return (

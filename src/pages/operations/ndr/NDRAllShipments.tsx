@@ -3,7 +3,10 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { exportNDRShipmentsToCSV, exportNDRShipmentsToExcel } from '@/lib/ndr/ndrExcel';
+import { NDR_WORKFLOW_STATUS } from '@/lib/ndr/ndrConstants';
 import { NDRFilterParams, NDRShipment, NDRWorkflowStatus } from '@/types/ndr';
+
+
 import { NDRStatusBadge } from '@/components/ndr/NDRStatusBadge';
 import { NDRTimelineDrawer } from '@/components/ndr/NDRTimelineDrawer';
 import { NDRCallModal } from '@/components/ndr/NDRCallModal';
@@ -207,17 +210,18 @@ export default function NDRAllShipments() {
             className="px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
           >
             <option value="ALL">All Workflow Statuses</option>
-            <option value="UNDEL">UNDEL</option>
-            <option value="Calling Pending">Calling Pending</option>
-            <option value="Customer Contacted">Customer Contacted</option>
-            <option value="Reattempt Required">Reattempt Required</option>
-            <option value="Supervisor Review">Supervisor Review</option>
-            <option value="Reattempt Approved">Reattempt Approved</option>
-            <option value="Out For Delivery">Out For Delivery</option>
-            <option value="Delivered">Delivered</option>
-            <option value="RTO">RTO</option>
-            <option value="Closed">Closed</option>
+            <option value={NDR_WORKFLOW_STATUS.UNDEL}>UNDEL</option>
+            <option value={NDR_WORKFLOW_STATUS.CALLING_PENDING}>Calling Pending</option>
+            <option value={NDR_WORKFLOW_STATUS.CUSTOMER_CONTACTED}>Customer Contacted</option>
+            <option value={NDR_WORKFLOW_STATUS.REATTEMPT_REQUIRED}>Reattempt Required</option>
+            <option value={NDR_WORKFLOW_STATUS.SUPERVISOR_REVIEW}>Supervisor Review</option>
+            <option value={NDR_WORKFLOW_STATUS.REATTEMPT_APPROVED}>Reattempt Approved</option>
+            <option value={NDR_WORKFLOW_STATUS.OUT_FOR_DELIVERY}>Out For Delivery</option>
+            <option value={NDR_WORKFLOW_STATUS.DELIVERED}>Delivered</option>
+            <option value={NDR_WORKFLOW_STATUS.RTO}>RTO</option>
+            <option value={NDR_WORKFLOW_STATUS.CLOSED}>Closed</option>
           </select>
+
         </div>
 
         <div className="flex items-center gap-2">

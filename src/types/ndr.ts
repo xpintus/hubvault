@@ -202,7 +202,8 @@ export interface NDRFilterParams {
   vendor?: string;
   executive?: string;
   status?: string;
-  workflowStatus?: NDRWorkflowStatus | 'ALL';
+  workflowStatus?: NDRWorkflowStatus | 'ALL' | string;
+
   reason?: string;
   callerId?: string;
   supervisorId?: string;
