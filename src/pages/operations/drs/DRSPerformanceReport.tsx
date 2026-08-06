@@ -57,9 +57,11 @@ import {
   PieChart as PieIcon,
   RefreshCw,
   RotateCcw,
+  Save,
   Search,
   ShieldAlert,
   Sparkles,
+  Target,
   Trash2,
   TrendingUp,
   Truck,
@@ -377,53 +379,49 @@ export default function DRSPerformanceReport() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 p-4 md:p-8 space-y-6 max-w-[1700px] mx-auto transition-colors font-sans antialiased">
       {/* ========================================================= */}
-      {/* LINEAR / STACK OVERVIEW HEADER                            */}
+      {/* HEADER: REPORT METADATA & ACTION CONTROLS                */}
       {/* ========================================================= */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center font-black">
-              <LayoutDashboard className="h-4 w-4" />
+            <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center font-black">
+              <BarChart3 className="h-4 w-4" />
             </div>
             <h1 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-              DRS Performance Analytics
+              {summary?.fileName || 'DRS Performance Analytics Dashboard'}
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 uppercase tracking-wider">
-              V5 Enterprise
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-brand-500/10 text-brand-600 border border-brand-500/20 uppercase tracking-wider">
+              Power BI Edition
             </span>
           </div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium flex items-center gap-2">
-            <span>Hub: <strong className="text-neutral-700 dark:text-neutral-300">{selectedHub?.name || 'Main Hub'}</strong></span>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-neutral-400" /> Report Date: <strong className="text-neutral-800 dark:text-neutral-200">{summary?.reportDate || 'N/A'}</strong></span>
             <span>•</span>
-            <span>Date: <strong className="text-neutral-700 dark:text-neutral-300">{summary?.reportDate || 'No Report Loaded'}</strong></span>
-            {activeItem && (
-              <>
-                <span>•</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Auto-Restored ({activeItem.fileName})
-                </span>
-              </>
-            )}
-          </p>
+            <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-neutral-400" /> Hub: <strong className="text-neutral-800 dark:text-neutral-200">{selectedHub?.name || activeItem?.hubName || 'Main Hub'}</strong></span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-neutral-400" /> File: <strong className="text-neutral-800 dark:text-neutral-200">{summary?.fileName || 'N/A'}</strong></span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-neutral-400" /> Updated: <strong className="text-neutral-800 dark:text-neutral-200">{activeItem?.uploadTimestamp || 'Just now'}</strong></span>
+          </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Action Controls & Search Box */}
         <div className="flex flex-wrap items-center gap-2">
           {summary && (
-            <div className="relative min-w-[200px]">
+            <div className="relative min-w-[220px]">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
               <input
                 type="text"
                 placeholder="Search AWBs, Executive..."
                 value={filters.search}
                 onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-medium focus:ring-1 focus:ring-neutral-900 dark:focus:ring-neutral-100 outline-none"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none"
               />
             </div>
           )}
 
-          <label className="px-3.5 py-2 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition hover:opacity-90 cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95">
-            <Upload className="h-3.5 w-3.5" /> Upload DRS
+          <label className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md transition cursor-pointer flex items-center gap-1.5 active:scale-95">
+            <Upload className="h-4 w-4" /> Upload DRS
             <input
               type="file"
               accept=".xlsx, .xls, .csv"
@@ -440,30 +438,30 @@ export default function DRSPerformanceReport() {
             <>
               <button
                 onClick={handleManualSaveSnapshot}
-                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
+                className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
               >
-                Save
+                <Save className="h-4 w-4" /> Save Snapshot
               </button>
 
               <button
                 onClick={handleOpenComparison}
-                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
               >
-                <Columns className="h-3.5 w-3.5" /> Compare
+                <Columns className="h-4 w-4" /> Compare
               </button>
 
               <button
                 onClick={handleExportExcel}
-                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+                <FileSpreadsheet className="h-4 w-4" /> Export Excel
               </button>
 
               <button
                 onClick={handleExportPDF}
-                className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-rose-600 dark:text-rose-400 text-xs font-bold transition flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700"
+                className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
               >
-                <FileText className="h-3.5 w-3.5" /> PDF
+                <FileText className="h-4 w-4" /> Export PDF
               </button>
             </>
           )}
@@ -471,31 +469,61 @@ export default function DRSPerformanceReport() {
       </header>
 
       {/* ========================================================= */}
+      {/* NAVIGATION TABS (ROUNDED PILL TABS)                        */}
+      {/* ========================================================= */}
+      <div className="overflow-x-auto no-scrollbar">
+        <nav className="flex space-x-1.5 min-w-max p-1 bg-neutral-200/50 dark:bg-neutral-900 rounded-full border border-neutral-200/80 dark:border-neutral-800">
+          {[
+            { id: 'OVERVIEW', label: 'Overview' },
+            { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
+            { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
+            { id: 'REATTEMPT', label: 'Reattempt' },
+            { id: 'COD', label: 'COD' },
+            { id: 'PREPAID', label: 'Prepaid' },
+            { id: 'CLIENT', label: `Client (${clientMetrics.length})` },
+            { id: 'HISTORY', label: `Report History (${historyList.length})` },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as TabType)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
+                activeTab === t.id
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-300/60 dark:hover:bg-neutral-800'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* ========================================================= */}
       {/* INITIAL EMPTY / LOADING STATE                             */}
       {/* ========================================================= */}
       {isLoading ? (
-        <div className="p-12 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
-          <RefreshCw className="h-8 w-8 animate-spin text-neutral-400 mx-auto" />
-          <p className="text-xs font-medium text-neutral-500">Auto-restoring latest DRS report snapshot...</p>
+        <div className="p-16 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
+          <RefreshCw className="h-8 w-8 animate-spin text-brand-600 mx-auto" />
+          <p className="text-xs font-bold text-neutral-500">Restoring report snapshot...</p>
         </div>
       ) : !summary ? (
         <div className="p-16 rounded-2xl bg-white dark:bg-neutral-900 border border-dashed border-neutral-300 dark:border-neutral-800 text-center space-y-4 shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 mx-auto flex items-center justify-center">
-            <Upload className="h-6 w-6" />
+          <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center">
+            <Upload className="h-8 w-8" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">No Active DRS Report Loaded</h3>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Upload DRS Performance Report</h3>
             <p className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
-              Upload a daily DRS Excel report to generate analytics and save permanent snapshots.
+              Select a daily DRS Excel or CSV file to calculate executive analytics and save permanent snapshots.
             </p>
           </div>
           {parsingProgress ? (
-            <div className="py-4 flex flex-col items-center gap-2 text-neutral-600 dark:text-neutral-300">
+            <div className="py-4 flex flex-col items-center gap-2 text-brand-600">
               <RefreshCw className="h-6 w-6 animate-spin" />
               <span className="text-xs font-bold">{parsingProgress}</span>
             </div>
           ) : (
-            <label className="inline-block px-5 py-2.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-bold transition hover:opacity-90 cursor-pointer shadow-md active:scale-95">
+            <label className="inline-block px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition shadow-md cursor-pointer active:scale-95">
               Choose File
               <input
                 type="file"
@@ -513,244 +541,207 @@ export default function DRSPerformanceReport() {
       ) : (
         <>
           {/* ========================================================= */}
-          {/* REQUIREMENT 1: EXACTLY 6 PRIMARY KPI CARDS               */}
-          {/* ========================================================= */}
-          {filteredSummary && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {/* Card 1: Total OFD */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
-                <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">Total OFD</span>
-                <span className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 block font-mono">
-                  {filteredSummary.totalOfd}
-                </span>
-                <span className="text-[10px] text-neutral-400 font-medium block">Unique Shipments</span>
-              </div>
-
-              {/* Card 2: Delivered */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
-                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Delivered</span>
-                <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 block font-mono">
-                  {filteredSummary.totalDelivered}
-                </span>
-                <span className="text-[10px] text-emerald-600/80 font-medium block">{filteredSummary.overallDeliveryPct}% Delivered</span>
-              </div>
-
-              {/* Card 3: Pending */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
-                <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">Pending</span>
-                <span className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 block font-mono">
-                  {filteredSummary.totalUndel}
-                </span>
-                <span className="text-[10px] text-rose-600/80 font-medium block">Active Undelivered</span>
-              </div>
-
-              {/* Card 4: Overall Delivery % */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
-                <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider block">Overall Delivery %</span>
-                <span className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 block font-mono">
-                  {filteredSummary.overallDeliveryPct}%
-                </span>
-                <span className="text-[10px] text-neutral-400 font-medium block">Target benchmark: 80%</span>
-              </div>
-
-              {/* Card 5: First Attempt % */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
-                <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">First Attempt %</span>
-                <span className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 block font-mono">
-                  {filteredSummary.firstAttemptDeliveryPct}%
-                </span>
-                <span className="text-[10px] text-blue-600/80 font-medium block">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd}</span>
-              </div>
-
-              {/* Card 6: Reattempt % */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-1">
-                <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">Reattempt %</span>
-                <span className="text-2xl font-bold tracking-tight text-purple-600 dark:text-purple-400 block font-mono">
-                  {filteredSummary.reattemptDeliveryPct}%
-                </span>
-                <span className="text-[10px] text-purple-600/80 font-medium block">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd}</span>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* NAVIGATION TABS (LINEAR STYLE)                            */}
-          {/* ========================================================= */}
-          <div className="border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto no-scrollbar">
-            <nav className="flex space-x-1 min-w-max pb-1">
-              {[
-                { id: 'OVERVIEW', label: 'Overview' },
-                { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
-                { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
-                { id: 'REATTEMPT', label: 'Reattempt' },
-                { id: 'COD', label: 'COD' },
-                { id: 'PREPAID', label: 'Prepaid' },
-                { id: 'CLIENT', label: `Client (${clientMetrics.length})` },
-                { id: 'HISTORY', label: `Report History (${historyList.length})` },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id as TabType)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    activeTab === t.id
-                      ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
-                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* ========================================================= */}
-          {/* TAB: OVERVIEW EXECUTIVE SECTIONS                         */}
+          {/* TAB 1: OVERVIEW PAGE                                      */}
           {/* ========================================================= */}
           {activeTab === 'OVERVIEW' && filteredSummary && (
             <div className="space-y-6">
-              {/* REQUIREMENT 2: SEPARATE SECTIONS                         */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* SECTION 1: COD ANALYTICS */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                      <CreditCard className="h-4 w-4 text-purple-600" /> COD Analytics
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                      COD FAD: {paymentMetrics.codFadPercent}%
-                    </span>
+              {/* ----------------------------------------------------- */}
+              {/* 6 PRIMARY KPI CARDS (HEIGHT: 135–140PX, VALUE: 42PX BOLD) */}
+              {/* ----------------------------------------------------- */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                {/* 1. Total OFD */}
+                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                    <span>Total OFD</span>
+                    <Package className="h-4 w-4 text-neutral-400" />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <span className="text-neutral-400 block font-medium">COD OFD</span>
-                      <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{paymentMetrics.codOfd}</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-400 block font-medium">Delivered</span>
-                      <span className="font-mono font-bold text-emerald-600">{paymentMetrics.codDelivered}</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-400 block font-medium">Pending</span>
-                      <span className="font-mono font-bold text-amber-600">{paymentMetrics.codPending}</span>
-                    </div>
-                  </div>
-                  <div className="pt-1 text-xs font-mono font-semibold text-neutral-600 dark:text-neutral-300 flex justify-between">
-                    <span>Collected: ₹{paymentMetrics.codDeliveredAmount.toLocaleString()}</span>
-                    <span>Total: ₹{paymentMetrics.codTotalAmount.toLocaleString()}</span>
-                  </div>
+                  <span className="text-[42px] font-black tracking-tight leading-none text-neutral-900 dark:text-neutral-100 font-mono">
+                    {filteredSummary.totalOfd}
+                  </span>
+                  <span className="text-[10px] text-neutral-400 font-medium">Unique AWBs</span>
                 </div>
 
-                {/* SECTION 2: PREPAID ANALYTICS */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                      <CreditCard className="h-4 w-4 text-blue-600" /> Prepaid Analytics
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                      Prepaid FAD: {paymentMetrics.prepaidFadPercent}%
-                    </span>
+                {/* 2. Delivered */}
+                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                    <span>Delivered</span>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <span className="text-neutral-400 block font-medium">Prepaid OFD</span>
-                      <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{paymentMetrics.prepaidOfd}</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-400 block font-medium">Delivered</span>
-                      <span className="font-mono font-bold text-emerald-600">{paymentMetrics.prepaidDelivered}</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-400 block font-medium">Pending</span>
-                      <span className="font-mono font-bold text-amber-600">{paymentMetrics.prepaidPending}</span>
-                    </div>
-                  </div>
-                  <div className="pt-1 text-xs font-mono font-semibold text-neutral-600 dark:text-neutral-300">
-                    Total Prepaid Value: ₹{paymentMetrics.prepaidTotalAmount.toLocaleString()}
-                  </div>
+                  <span className="text-[42px] font-black tracking-tight leading-none text-emerald-600 dark:text-emerald-400 font-mono">
+                    {filteredSummary.totalDelivered}
+                  </span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">{filteredSummary.overallDeliveryPct}% Rate</span>
                 </div>
 
-                {/* SECTION 3: DELIVERY TREND & EFFICIENCY */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-emerald-600" /> Delivery Trend
-                    </h3>
-                    <span className="font-mono text-xs font-bold text-emerald-600">{filteredSummary.overallDeliveryPct}%</span>
+                {/* 3. Pending */}
+                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                    <span>Pending</span>
+                    <Clock className="h-4 w-4 text-rose-600" />
                   </div>
-                  <div className="space-y-2 pt-1 text-xs">
-                    <div className="flex justify-between font-medium">
-                      <span className="text-neutral-500">Benchmark Target</span>
+                  <span className="text-[42px] font-black tracking-tight leading-none text-rose-600 dark:text-rose-400 font-mono">
+                    {filteredSummary.totalUndel}
+                  </span>
+                  <span className="text-[10px] text-rose-600 font-semibold">Active UNDEL</span>
+                </div>
+
+                {/* 4. Overall Delivery % */}
+                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                    <span>Overall %</span>
+                    <TrendingUp className="h-4 w-4 text-brand-600" />
+                  </div>
+                  <span className="text-[42px] font-black tracking-tight leading-none text-neutral-900 dark:text-neutral-100 font-mono">
+                    {filteredSummary.overallDeliveryPct}%
+                  </span>
+                  <span className="text-[10px] text-neutral-400 font-medium">Efficiency</span>
+                </div>
+
+                {/* 5. First Attempt % */}
+                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                    <span>1st Attempt %</span>
+                    <Target className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-[42px] font-black tracking-tight leading-none text-blue-600 dark:text-blue-400 font-mono">
+                    {filteredSummary.firstAttemptDeliveryPct}%
+                  </span>
+                  <span className="text-[10px] text-blue-600 font-semibold">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd}</span>
+                </div>
+
+                {/* 6. Reattempt % */}
+                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                    <span>Reattempt %</span>
+                    <RotateCcw className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <span className="text-[42px] font-black tracking-tight leading-none text-purple-600 dark:text-purple-400 font-mono">
+                    {filteredSummary.reattemptDeliveryPct}%
+                  </span>
+                  <span className="text-[10px] text-purple-600 font-semibold">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd}</span>
+                </div>
+              </div>
+
+              {/* ----------------------------------------------------- */}
+              {/* EXECUTIVE SECTIONS (TREND, DONUT, EMPLOYEES, NDR, COD, PREPAID) */}
+              {/* ----------------------------------------------------- */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
+                {/* 1. Delivery Trend Chart */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-emerald-600" /> Delivery Trend Efficiency
+                    </h3>
+                    <span className="font-mono font-bold text-emerald-600">{filteredSummary.overallDeliveryPct}%</span>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500 font-medium">Target Efficiency</span>
                       <span className="font-mono font-bold text-neutral-700 dark:text-neutral-300">80.00%</span>
                     </div>
-                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-3 rounded-full overflow-hidden">
                       <div
                         className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(filteredSummary.overallDeliveryPct, 100)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-neutral-400 block font-mono">
-                      Average Attempts per Shipment: {filteredSummary.averageAttempts}
-                    </span>
+                    <span className="text-[11px] text-neutral-400 block font-mono">Average Attempts per AWB: {filteredSummary.averageAttempts}</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* SECTION 4: EMPLOYEE RANKING */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                {/* 2. Delivery Status Donut / Pie Breakdown */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                      <User className="h-4 w-4 text-brand-600" /> Top Executive Leaderboard
+                    <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
+                      <PieIcon className="h-4 w-4 text-brand-600" /> Delivery Status Breakdown
                     </h3>
-                    <button
-                      onClick={() => setActiveTab('EMPLOYEE')}
-                      className="text-[11px] font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 flex items-center gap-1"
-                    >
-                      View All <ChevronRight className="h-3 w-3" />
-                    </button>
                   </div>
-                  <div className="space-y-2 text-xs">
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-emerald-600">Delivered</span>
+                      <span className="font-mono font-bold">{filteredSummary.totalDelivered} ({filteredSummary.overallDeliveryPct}%)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-rose-600">Undelivered</span>
+                      <span className="font-mono font-bold">{filteredSummary.totalUndel}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-purple-600">RTO</span>
+                      <span className="font-mono font-bold">{filteredSummary.totalRto}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-neutral-500">Cancelled</span>
+                      <span className="font-mono font-bold">{filteredSummary.totalCancelled}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Top 5 Employees */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                      <User className="h-4 w-4 text-brand-600" /> Top 5 Employees
+                    </h3>
+                    <button onClick={() => setActiveTab('EMPLOYEE')} className="text-[11px] font-semibold text-brand-600 hover:underline">View All</button>
+                  </div>
+                  <div className="space-y-1.5">
                     {filteredEmployeeMetrics.slice(0, 5).map((e, idx) => (
-                      <div
-                        key={e.employee_name}
-                        onClick={() => {
-                          setSelectedEmployee(e);
-                          setDrawerOpen(true);
-                        }}
-                        className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-neutral-400 text-xs">#{idx + 1}</span>
-                          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{e.employee_name}</span>
-                        </div>
-                        <div className="flex items-center gap-3 font-mono">
-                          <span className="text-neutral-500">{e.total_delivered} / {e.total_ofd} DEL</span>
-                          <span className="font-bold text-emerald-600">{e.overall_delivery_pct}%</span>
-                        </div>
+                      <div key={e.employee_name} className="flex items-center justify-between p-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/40">
+                        <span className="font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[160px]">#{idx + 1} {e.employee_name}</span>
+                        <span className="font-mono font-bold text-emerald-600">{e.overall_delivery_pct}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* SECTION 5: TOP NDR REASONS */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm space-y-3">
+                {/* 4. Top NDR Reasons */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                      <ShieldAlert className="h-4 w-4 text-rose-600" /> Top NDR Failure Reasons
+                    <h3 className="font-bold text-rose-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                      <ShieldAlert className="h-4 w-4" /> Top NDR Reasons
                     </h3>
-                    <span className="text-[11px] font-mono font-bold text-rose-600">{filteredSummary.totalUndel} UNDEL</span>
                   </div>
-                  <div className="space-y-2 text-xs">
-                    {reasonMetrics.length === 0 ? (
-                      <div className="py-4 text-center text-neutral-400">No NDR failure reasons in current report</div>
-                    ) : (
-                      reasonMetrics.slice(0, 5).map((r) => (
-                        <div key={r.reason} className="flex items-center justify-between p-2 rounded-xl bg-rose-500/5 border border-rose-500/10">
-                          <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[220px]">{r.reason}</span>
-                          <span className="font-mono font-bold text-rose-600">{r.count} AWBs ({r.percentage}%)</span>
-                        </div>
-                      ))
-                    )}
+                  <div className="space-y-1.5">
+                    {reasonMetrics.slice(0, 5).map((r) => (
+                      <div key={r.reason} className="flex items-center justify-between p-1.5 rounded-lg bg-rose-500/5">
+                        <span className="truncate max-w-[170px] font-semibold text-neutral-800 dark:text-neutral-200">{r.reason}</span>
+                        <span className="font-bold font-mono text-rose-600">{r.count} AWBs</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. COD Summary */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="font-bold text-purple-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4" /> COD Summary
+                    </h3>
+                    <span className="font-mono font-bold text-purple-600">FAD: {paymentMetrics.codFadPercent}%</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="text-neutral-400 block">COD OFD</span><span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">{paymentMetrics.codOfd}</span></div>
+                    <div><span className="text-neutral-400 block">Delivered</span><span className="font-bold font-mono text-emerald-600">{paymentMetrics.codDelivered}</span></div>
+                  </div>
+                  <div className="pt-1 font-mono font-bold text-neutral-700 dark:text-neutral-300">
+                    Collected: ₹{paymentMetrics.codDeliveredAmount.toLocaleString()}
+                  </div>
+                </div>
+
+                {/* 6. Prepaid Summary */}
+                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                    <h3 className="font-bold text-blue-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4" /> Prepaid Summary
+                    </h3>
+                    <span className="font-mono font-bold text-blue-600">FAD: {paymentMetrics.prepaidFadPercent}%</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="text-neutral-400 block">Prepaid OFD</span><span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">{paymentMetrics.prepaidOfd}</span></div>
+                    <div><span className="text-neutral-400 block">Delivered</span><span className="font-bold font-mono text-emerald-600">{paymentMetrics.prepaidDelivered}</span></div>
+                  </div>
+                  <div className="pt-1 font-mono font-bold text-neutral-700 dark:text-neutral-300">
+                    Total Value: ₹{paymentMetrics.prepaidTotalAmount.toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -758,23 +749,24 @@ export default function DRSPerformanceReport() {
           )}
 
           {/* ========================================================= */}
-          {/* TAB: EMPLOYEE TABLE                                       */}
+          {/* TAB 2: EMPLOYEE PAGE (DEFAULT SORT OVERALL % DESC)       */}
           {/* ========================================================= */}
           {activeTab === 'EMPLOYEE' && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm overflow-hidden text-xs">
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800 sticky top-0">
                     <tr>
                       <th className="px-4 py-3">Rank</th>
-                      <th className="px-4 py-3">Employee Executive</th>
-                      <th className="px-4 py-3 font-bold">Total OFD</th>
+                      <th className="px-4 py-3">Employee</th>
+                      <th className="px-4 py-3 font-bold">OFD</th>
                       <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
-                      <th className="px-4 py-3">UNDEL</th>
+                      <th className="px-4 py-3 font-bold text-rose-600">Pending</th>
                       <th className="px-4 py-3 font-semibold text-blue-600">1st Attempt %</th>
                       <th className="px-4 py-3 font-semibold text-purple-600">Reattempt %</th>
                       <th className="px-4 py-3 font-black text-emerald-600">Overall %</th>
-                      <th className="px-4 py-3 text-right">COD Collection</th>
+                      <th className="px-4 py-3 text-right">COD</th>
+                      <th className="px-4 py-3 text-right">Prepaid</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -787,9 +779,9 @@ export default function DRSPerformanceReport() {
                         }}
                         className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 cursor-pointer transition"
                       >
-                        <td className="px-4 py-3 font-mono text-neutral-400 font-semibold">#{idx + 1}</td>
+                        <td className="px-4 py-3 font-mono font-semibold text-neutral-400">#{idx + 1}</td>
                         <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-neutral-500" /> {e.employee_name}
+                          <User className="h-3.5 w-3.5 text-brand-600" /> {e.employee_name}
                         </td>
                         <td className="px-4 py-3 font-bold font-mono">{e.total_ofd}</td>
                         <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.total_delivered}</td>
@@ -797,7 +789,8 @@ export default function DRSPerformanceReport() {
                         <td className="px-4 py-3 font-mono font-bold text-blue-600">{e.first_attempt_delivery_pct}%</td>
                         <td className="px-4 py-3 font-mono font-bold text-purple-600">{e.reattempt_delivery_pct}%</td>
                         <td className="px-4 py-3 font-mono font-black text-emerald-600">{e.overall_delivery_pct}%</td>
-                        <td className="px-4 py-3 font-mono font-semibold text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-mono text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-mono text-right">{e.prepaid_ofd} AWBs</td>
                       </tr>
                     ))}
                   </tbody>
@@ -807,20 +800,296 @@ export default function DRSPerformanceReport() {
           )}
 
           {/* ========================================================= */}
-          {/* REQUIREMENT 6: REPORT HISTORY PERSISTENCE & ACTIONS       */}
+          {/* TAB 3: FIRST ATTEMPT PAGE                                 */}
+          {/* ========================================================= */}
+          {activeTab === 'FIRST_ATTEMPT' && filteredSummary && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-1">
+                  <span className="text-neutral-500 font-semibold block text-xs">First Attempt OFD</span>
+                  <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 font-mono">{filteredSummary.firstAttemptOfd}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm space-y-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold block text-xs">Delivered</span>
+                  <span className="text-2xl font-black text-emerald-600 font-mono">{filteredSummary.firstAttemptDelivered}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-sm space-y-1">
+                  <span className="text-rose-700 dark:text-rose-400 font-semibold block text-xs">Pending</span>
+                  <span className="text-2xl font-black text-rose-600 font-mono">{filteredSummary.firstAttemptUndel}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 shadow-sm space-y-1">
+                  <span className="text-blue-700 dark:text-blue-400 font-semibold block text-xs">Delivery %</span>
+                  <span className="text-2xl font-black text-blue-600 font-mono">{filteredSummary.firstAttemptDeliveryPct}%</span>
+                </div>
+              </div>
+
+              {/* Employee Table */}
+              <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                      <tr>
+                        <th className="px-4 py-3">Rank</th>
+                        <th className="px-4 py-3">Employee</th>
+                        <th className="px-4 py-3 font-bold">1st OFD</th>
+                        <th className="px-4 py-3 font-bold text-emerald-600">1st Delivered</th>
+                        <th className="px-4 py-3 font-bold text-rose-600">1st Pending</th>
+                        <th className="px-4 py-3 font-black text-blue-600">1st Delivery %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {filteredEmployeeMetrics.map((e, idx) => (
+                        <tr key={e.employee_name} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                          <td className="px-4 py-3 font-mono font-semibold text-neutral-400">#{idx + 1}</td>
+                          <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100">{e.employee_name}</td>
+                          <td className="px-4 py-3 font-bold font-mono">{e.first_attempt_ofd}</td>
+                          <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.first_attempt_delivered}</td>
+                          <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.first_attempt_undel}</td>
+                          <td className="px-4 py-3 font-mono font-black text-blue-600">{e.first_attempt_delivery_pct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 4: REATTEMPT PAGE                                     */}
+          {/* ========================================================= */}
+          {activeTab === 'REATTEMPT' && filteredSummary && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-1">
+                  <span className="text-neutral-500 font-semibold block text-xs">Reattempt OFD</span>
+                  <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 font-mono">{filteredSummary.reattemptOfd}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm space-y-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold block text-xs">Delivered</span>
+                  <span className="text-2xl font-black text-emerald-600 font-mono">{filteredSummary.reattemptDelivered}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-sm space-y-1">
+                  <span className="text-rose-700 dark:text-rose-400 font-semibold block text-xs">Pending</span>
+                  <span className="text-2xl font-black text-rose-600 font-mono">{filteredSummary.reattemptUndel}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 shadow-sm space-y-1">
+                  <span className="text-purple-700 dark:text-purple-400 font-semibold block text-xs">Delivery %</span>
+                  <span className="text-2xl font-black text-purple-600 font-mono">{filteredSummary.reattemptDeliveryPct}%</span>
+                </div>
+              </div>
+
+              {/* Employee Table */}
+              <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                      <tr>
+                        <th className="px-4 py-3">Rank</th>
+                        <th className="px-4 py-3">Employee</th>
+                        <th className="px-4 py-3 font-bold">Reattempt OFD</th>
+                        <th className="px-4 py-3 font-bold text-emerald-600">Reattempt Delivered</th>
+                        <th className="px-4 py-3 font-bold text-rose-600">Reattempt Pending</th>
+                        <th className="px-4 py-3 font-black text-purple-600">Reattempt Delivery %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {filteredEmployeeMetrics.map((e, idx) => (
+                        <tr key={e.employee_name} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                          <td className="px-4 py-3 font-mono font-semibold text-neutral-400">#{idx + 1}</td>
+                          <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100">{e.employee_name}</td>
+                          <td className="px-4 py-3 font-bold font-mono">{e.reattempt_ofd}</td>
+                          <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.reattempt_delivered}</td>
+                          <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.reattempt_undel}</td>
+                          <td className="px-4 py-3 font-mono font-black text-purple-600">{e.reattempt_delivery_pct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 5: COD PAGE                                           */}
+          {/* ========================================================= */}
+          {activeTab === 'COD' && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-1">
+                  <span className="text-neutral-500 font-semibold block text-xs">COD OFD</span>
+                  <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 font-mono">{paymentMetrics.codOfd}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm space-y-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold block text-xs">COD Delivered</span>
+                  <span className="text-2xl font-black text-emerald-600 font-mono">{paymentMetrics.codDelivered}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-sm space-y-1">
+                  <span className="text-rose-700 dark:text-rose-400 font-semibold block text-xs">COD Pending</span>
+                  <span className="text-2xl font-black text-rose-600 font-mono">{paymentMetrics.codPending}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 shadow-sm space-y-1">
+                  <span className="text-purple-700 dark:text-purple-400 font-semibold block text-xs">COD FAD %</span>
+                  <span className="text-2xl font-black text-purple-600 font-mono">{paymentMetrics.codFadPercent}%</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-600/10 border border-emerald-600/20 shadow-sm space-y-1">
+                  <span className="text-emerald-800 dark:text-emerald-300 font-bold block text-xs">COD Amount</span>
+                  <span className="text-xl font-black text-emerald-600 font-mono">₹{paymentMetrics.codDeliveredAmount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Employee Table */}
+              <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                      <tr>
+                        <th className="px-4 py-3">Rank</th>
+                        <th className="px-4 py-3">Employee</th>
+                        <th className="px-4 py-3 font-bold">COD OFD</th>
+                        <th className="px-4 py-3 font-bold text-emerald-600">COD Delivered</th>
+                        <th className="px-4 py-3 font-bold text-rose-600">COD Pending</th>
+                        <th className="px-4 py-3 font-black text-purple-600">COD FAD %</th>
+                        <th className="px-4 py-3 text-right">COD Collection (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {filteredEmployeeMetrics.map((e, idx) => (
+                        <tr key={e.employee_name} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                          <td className="px-4 py-3 font-mono font-semibold text-neutral-400">#{idx + 1}</td>
+                          <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100">{e.employee_name}</td>
+                          <td className="px-4 py-3 font-bold font-mono">{e.cod_ofd}</td>
+                          <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.cod_delivered}</td>
+                          <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.cod_pending}</td>
+                          <td className="px-4 py-3 font-mono font-black text-purple-600">{e.cod_fad_percent}%</td>
+                          <td className="px-4 py-3 font-mono font-bold text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 6: PREPAID PAGE                                       */}
+          {/* ========================================================= */}
+          {activeTab === 'PREPAID' && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-1">
+                  <span className="text-neutral-500 font-semibold block text-xs">Prepaid OFD</span>
+                  <span className="text-2xl font-black text-neutral-900 dark:text-neutral-100 font-mono">{paymentMetrics.prepaidOfd}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm space-y-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold block text-xs">Delivered</span>
+                  <span className="text-2xl font-black text-emerald-600 font-mono">{paymentMetrics.prepaidDelivered}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-sm space-y-1">
+                  <span className="text-rose-700 dark:text-rose-400 font-semibold block text-xs">Pending</span>
+                  <span className="text-2xl font-black text-rose-600 font-mono">{paymentMetrics.prepaidPending}</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 shadow-sm space-y-1">
+                  <span className="text-blue-700 dark:text-blue-400 font-semibold block text-xs">FAD %</span>
+                  <span className="text-2xl font-black text-blue-600 font-mono">{paymentMetrics.prepaidFadPercent}%</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-blue-600/10 border border-blue-600/20 shadow-sm space-y-1">
+                  <span className="text-blue-800 dark:text-blue-300 font-bold block text-xs">Amount</span>
+                  <span className="text-xl font-black text-blue-600 font-mono">₹{paymentMetrics.prepaidTotalAmount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Employee Table */}
+              <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                      <tr>
+                        <th className="px-4 py-3">Rank</th>
+                        <th className="px-4 py-3">Employee</th>
+                        <th className="px-4 py-3 font-bold">Prepaid OFD</th>
+                        <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
+                        <th className="px-4 py-3 font-bold text-rose-600">Pending</th>
+                        <th className="px-4 py-3 font-black text-blue-600">FAD %</th>
+                        <th className="px-4 py-3 text-right">Prepaid Amount (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {filteredEmployeeMetrics.map((e, idx) => (
+                        <tr key={e.employee_name} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                          <td className="px-4 py-3 font-mono font-semibold text-neutral-400">#{idx + 1}</td>
+                          <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100">{e.employee_name}</td>
+                          <td className="px-4 py-3 font-bold font-mono">{e.prepaid_ofd}</td>
+                          <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.prepaid_delivered}</td>
+                          <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.prepaid_pending}</td>
+                          <td className="px-4 py-3 font-mono font-black text-blue-600">{e.prepaid_fad_percent}%</td>
+                          <td className="px-4 py-3 font-mono font-bold text-right">₹{e.prepaid_amount_total.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 7: CLIENT PAGE                                        */}
+          {/* ========================================================= */}
+          {activeTab === 'CLIENT' && (
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+                    <tr>
+                      <th className="px-4 py-3">Client Name</th>
+                      <th className="px-4 py-3 font-bold">Total OFD</th>
+                      <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
+                      <th className="px-4 py-3 font-bold text-rose-600">Undelivered</th>
+                      <th className="px-4 py-3 font-black text-emerald-600">Overall Delivery %</th>
+                      <th className="px-4 py-3">COD OFD / DEL</th>
+                      <th className="px-4 py-3">Prepaid OFD / DEL</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    {clientMetrics.map((c) => (
+                      <tr key={c.client_name} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                        <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100">{c.client_name}</td>
+                        <td className="px-4 py-3 font-bold font-mono">{c.total_ofd}</td>
+                        <td className="px-4 py-3 font-bold font-mono text-emerald-600">{c.total_delivered}</td>
+                        <td className="px-4 py-3 font-semibold font-mono text-rose-600">{c.total_undel}</td>
+                        <td className="px-4 py-3 font-mono font-black text-emerald-600">{c.overall_delivery_pct}%</td>
+                        <td className="px-4 py-3 font-mono text-purple-600">{c.cod_ofd} / {c.cod_delivered}</td>
+                        <td className="px-4 py-3 font-mono text-blue-600">{c.prepaid_ofd} / {c.prepaid_delivered}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 8: REPORT HISTORY PAGE                                */}
           {/* ========================================================= */}
           {activeTab === 'HISTORY' && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm p-5 space-y-4 text-xs">
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm p-5 space-y-4 text-xs">
               <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
                 <span className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
-                  <History className="h-4 w-4 text-neutral-500" /> Permanent Saved DRS Report Snapshots ({historyList.length})
+                  <History className="h-4 w-4 text-neutral-500" /> Permanent Saved Reports ({historyList.length})
                 </span>
 
                 <button
                   onClick={handleOpenComparison}
-                  className="px-3 py-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl bg-brand-600 text-white font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
                 >
-                  <Columns className="h-3.5 w-3.5" /> Compare 2 Snapshots
+                  <Columns className="h-3.5 w-3.5" /> Compare 2 Reports
                 </button>
               </div>
 
@@ -831,9 +1100,9 @@ export default function DRSPerformanceReport() {
                   <table className="w-full text-left">
                     <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
                       <tr>
-                        <th className="px-4 py-3">Report Date</th>
+                        <th className="px-4 py-3">Date</th>
                         <th className="px-4 py-3">Hub</th>
-                        <th className="px-4 py-3">Client</th>
+                        <th className="px-4 py-3">File Name</th>
                         <th className="px-4 py-3 font-bold">OFD</th>
                         <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
                         <th className="px-4 py-3 font-black text-emerald-600">Delivery %</th>
@@ -848,7 +1117,7 @@ export default function DRSPerformanceReport() {
                           <tr
                             key={h.id}
                             className={`hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition ${
-                              isActive ? 'bg-neutral-100/60 dark:bg-neutral-800/60 font-semibold' : ''
+                              isActive ? 'bg-brand-500/5 dark:bg-brand-950/20 font-semibold' : ''
                             }`}
                           >
                             <td className="px-4 py-3 font-bold font-mono text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
@@ -856,7 +1125,7 @@ export default function DRSPerformanceReport() {
                               {h.reportDate}
                             </td>
                             <td className="px-4 py-3">{h.hubName}</td>
-                            <td className="px-4 py-3">{h.clientName}</td>
+                            <td className="px-4 py-3 truncate max-w-[200px]">{h.fileName}</td>
                             <td className="px-4 py-3 font-bold font-mono">{h.totalOfd}</td>
                             <td className="px-4 py-3 font-bold font-mono text-emerald-600">{h.totalDelivered}</td>
                             <td className="px-4 py-3 font-mono font-black text-emerald-600">{h.overallDeliveryPct}%</td>
@@ -867,7 +1136,7 @@ export default function DRSPerformanceReport() {
                                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
                                   isActive
                                     ? 'bg-emerald-600 text-white'
-                                    : 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90'
+                                    : 'bg-brand-600 text-white hover:bg-brand-500'
                                 }`}
                               >
                                 {isActive ? 'Active' : 'Open'}
@@ -903,25 +1172,10 @@ export default function DRSPerformanceReport() {
               )}
             </div>
           )}
-
-          {/* OTHER TABS FALLBACK (CLIENT, COD, PREPAID, FIRST ATTEMPT, REATTEMPT) */}
-          {['FIRST_ATTEMPT', 'REATTEMPT', 'COD', 'PREPAID', 'CLIENT'].includes(activeTab) && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 shadow-sm p-6 text-xs space-y-3">
-              <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                {activeTab} Breakdown View ({filteredUniqueRows.length} AWBs)
-              </h3>
-              <p className="text-neutral-500">
-                Consuming unified active report payload without recalculating raw data.
-              </p>
-              <div className="pt-2 font-mono text-neutral-600 dark:text-neutral-400">
-                Active Report ID: <span className="font-bold text-neutral-900 dark:text-neutral-100">{activeItem?.id}</span> | OFD: {filteredSummary?.totalOfd} | Delivered: {filteredSummary?.totalDelivered}
-              </div>
-            </div>
-          )}
         </>
       )}
 
-      {/* COMPARE MODAL */}
+      {/* COMPARE SNAPSHOTS MODAL */}
       {compareModalOpen && compareReportA && compareReportB && comparisonResult && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-3xl p-6 space-y-4">
