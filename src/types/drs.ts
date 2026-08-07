@@ -11,6 +11,8 @@ export interface DRSReportRow {
   state: string;
   customer_name: string; // Client Name
   consignee: string; // Customer Name
+  consignee_phone?: string; // Phone Number
+  delivery_address?: string; // Address
   shipment_status_raw: string;
   shipment_status_normalized: NormalizedShipmentStatus;
   amount_payable: number;

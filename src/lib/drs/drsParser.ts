@@ -21,7 +21,7 @@ export function findHeaderKey(rowKeys: string[], aliases: string[]): string | un
 export function normalizeStatus(rawStatus: unknown): NormalizedShipmentStatus {
   const s = String(rawStatus ?? '').trim().toUpperCase().replace(/[\s_\-]+/g, ' ');
   if (['DEL', 'DELIVERED'].includes(s)) return 'Delivered';
-  if (['UNDEL', 'UNDELIVERED'].includes(s)) return 'Undelivered';
+  if (['UNDEL', 'UNDELIVERED', 'UN DELIVERED', 'UNDELIVERED ATTEMPT', 'NOT DELIVERED', 'ATTEMPTED', 'FAILED'].includes(s) || s.includes('UNDEL')) return 'Undelivered';
   if (['CANCEL', 'CANCELLED', 'CANCELED'].includes(s)) return 'Cancelled';
   if (['RTO', 'RETURN TO ORIGIN', 'RETURNED'].includes(s)) return 'RTO';
   return 'Unknown';
@@ -78,6 +78,8 @@ export async function parseDRSFile(file: File): Promise<{
   const keyState = getKey(['state', 'destination_state', 'destinationstate']);
   const keyCustomer = getKey(['customer_name', 'client_name', 'client', 'customername', 'clientname']);
   const keyConsignee = getKey(['consignee', 'consignee_name', 'customer', 'receiver_name', 'consigneename', 'receivername']);
+  const keyPhone = getKey(['consignee_phone', 'phone', 'mobile', 'contact_number', 'customer_phone', 'phone_no', 'phone_number', 'consignee_mobile', 'customer_mobile', 'consigneephone', 'customerphone']);
+  const keyAddress = getKey(['delivery_address', 'address', 'consignee_address', 'shipping_address', 'destination_address', 'address_line', 'customer_address', 'deliveryaddress', 'consigneeaddress']);
   
   // CRITICAL: Shipment delivery status MUST use 'status' / 'shipment_status' and NEVER 'drs_status'
   const keyStatus = getKey(['status', 'shipment_status', 'shipmentstatus', 'delivery_status', 'deliverystatus']);
@@ -119,6 +121,8 @@ export async function parseDRSFile(file: File): Promise<{
       state: String(keyState ? r[keyState] : '').trim(),
       customer_name: String(keyCustomer ? r[keyCustomer] : '').trim() || 'Client',
       consignee: String(keyConsignee ? r[keyConsignee] : '').trim(),
+      consignee_phone: String(keyPhone ? r[keyPhone] : '').trim(),
+      delivery_address: String(keyAddress ? r[keyAddress] : '').trim(),
       shipment_status_raw: rawStat,
       shipment_status_normalized: normalizeStatus(rawStat),
       amount_payable: parseFloat(String(keyAmount ? r[keyAmount] : '0')) || 0,

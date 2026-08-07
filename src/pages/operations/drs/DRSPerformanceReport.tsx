@@ -159,10 +159,12 @@ export default function DRSPerformanceReport() {
   const [ndrSyncResult, setNdrSyncResult] = useState<NDRAutoSyncResult | null>(null);
 
   const handleFileUpload = async (uploadedFile: File) => {
+    console.log(`[DRS Upload Started] File: ${uploadedFile.name}`);
     setParsingProgress('Reading DRS file...');
     try {
       setParsingProgress('Parsing AWBs...');
       const parsed = await parseDRSFile(uploadedFile);
+      console.log(`[Rows Parsed] Raw Count: ${parsed.rawRowCount}, Valid Rows: ${parsed.rows.length}, Unique AWBs: ${parsed.uniqueRows.length}`);
 
       setParsingProgress('Calculating Analytics Engine...');
       const dateStr = new Date().toISOString().split('T')[0];
@@ -222,11 +224,17 @@ export default function DRSPerformanceReport() {
       setHistoryList(updatedHistory);
 
       setParsingProgress('Auto-syncing UNDEL shipments to NDR...');
+      console.log(`[Sync Started] Triggering syncDRSUndelToNDR for ${parsed.uniqueRows.length} unique rows.`);
       const syncResult = await syncDRSUndelToNDR(parsed.uniqueRows, selectedHub?.id, profile, {
         fileName: uploadedFile.name,
         reportDate: dateStr,
       });
       setNdrSyncResult(syncResult);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ndr-data-updated'));
+        window.dispatchEvent(new Event('drs-data-updated'));
+      }
 
       setParsingProgress(null);
       setToastMsg(`DRS Uploaded! ${syncResult.undelSentToNdr} UNDEL shipments auto-synced to NDR.`);

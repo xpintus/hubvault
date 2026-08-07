@@ -23,13 +23,36 @@ export function normalizeNDRReason(rawReason: string | null | undefined): Normal
   const r = rawReason.trim().toLowerCase();
   if (!r) return 'Other';
 
-  if (r.includes('refuse') && r.includes('otp')) return 'Customer Refused OTP';
-  if (r.includes('denied otp') || r.includes('otp refused') || r.includes('otp not shared')) return 'Customer Refused OTP';
+  // OTP Refusal check
+  if (
+    r.includes('refuse') && r.includes('otp') ||
+    r.includes('denied otp') ||
+    r.includes('otp refused') ||
+    r.includes('otp not shared') ||
+    r.includes('customer refused otp')
+  ) {
+    return 'Customer Refused OTP';
+  }
 
-  if (r.includes('refus') || r.includes('denied delivery') || r.includes('denied order')) return 'Customer Refused to Accept';
+  // Refused to Accept / Reject check
+  if (
+    r.includes('customer refused') ||
+    r.includes('customer reject') ||
+    r.includes('refus') ||
+    r.includes('reject') ||
+    r.includes('denied delivery') ||
+    r.includes('denied order') ||
+    r.includes('denied')
+  ) {
+    return 'Customer Refused to Accept';
+  }
 
-  if (r.includes('switched off') || r.includes('power off')) return 'Phone Switched Off';
+  // Phone Switched Off
+  if (r.includes('switched off') || r.includes('power off') || r.includes('switch off')) {
+    return 'Phone Switched Off';
+  }
 
+  // Customer Not Reachable
   if (
     r.includes('unreachable') ||
     r.includes('not reachable') ||
@@ -42,26 +65,59 @@ export function normalizeNDRReason(rawReason: string | null | undefined): Normal
     return 'Customer Not Reachable';
   }
 
-  if (r.includes('wrong number') || r.includes('invalid number') || r.includes('wrong phone')) return 'Wrong Number';
+  // Wrong Number
+  if (r.includes('wrong number') || r.includes('invalid number') || r.includes('wrong phone')) {
+    return 'Wrong Number';
+  }
 
-  if (r.includes('future') || r.includes('tomorrow') || r.includes('postpone') || r.includes('reschedule') || r.includes('next week')) {
+  // Future Delivery
+  if (
+    r.includes('future') ||
+    r.includes('tomorrow') ||
+    r.includes('postpone') ||
+    r.includes('reschedule') ||
+    r.includes('next week')
+  ) {
     return 'Future Delivery Requested';
   }
 
-  if (r.includes('want reattempt') || r.includes('wants reattempt') || r.includes('reattempt requested')) return 'Customer Wants Reattempt';
+  // Wants Reattempt
+  if (r.includes('want reattempt') || r.includes('wants reattempt') || r.includes('reattempt requested')) {
+    return 'Customer Wants Reattempt';
+  }
 
-  if (r.includes('already received') || r.includes('already delivered') || r.includes('already got')) return 'Customer Already Received';
+  // Already Received
+  if (r.includes('already received') || r.includes('already delivered') || r.includes('already got')) {
+    return 'Customer Already Received';
+  }
 
-  if (r.includes('fake')) return 'Fake Order';
+  // Fake Order
+  if (r.includes('fake')) {
+    return 'Fake Order';
+  }
 
-  if (r.includes('address') || r.includes('location') || r.includes('pincode') || r.includes('landmark') || r.includes('locality')) {
+  // Address Issue
+  if (
+    r.includes('address') ||
+    r.includes('location') ||
+    r.includes('pincode') ||
+    r.includes('landmark') ||
+    r.includes('locality')
+  ) {
     return 'Address Issue';
   }
 
-  if (r.includes('payment') || r.includes('cash') || r.includes('money') || r.includes('change')) return 'Payment Issue';
+  // Payment Issue
+  if (r.includes('payment') || r.includes('cash') || r.includes('money') || r.includes('change')) {
+    return 'Payment Issue';
+  }
 
-  if (r.includes('otp')) return 'OTP Issue';
+  // OTP General Issue
+  if (r.includes('otp')) {
+    return 'OTP Issue';
+  }
 
+  // DE Did Not Visit
   if (r.includes('did not visit') || r.includes('de fake') || r.includes('not visited') || r.includes('no visit')) {
     return 'Delivery Executive Did Not Visit';
   }

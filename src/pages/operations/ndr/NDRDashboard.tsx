@@ -59,6 +59,15 @@ export default function NDRDashboard() {
 
   useEffect(() => {
     loadData();
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener('ndr-data-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('ndr-data-updated', handleUpdate);
+    };
   }, [selectedHub, refreshTrigger]);
 
   const handleConfirmReset = async (options: { reason: string; exportBeforeDelete: boolean }) => {

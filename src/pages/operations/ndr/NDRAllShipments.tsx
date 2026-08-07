@@ -98,6 +98,15 @@ export default function NDRAllShipments() {
 
   useEffect(() => {
     loadData();
+
+    const handleUpdate = () => {
+      loadData();
+    };
+
+    window.addEventListener('ndr-data-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('ndr-data-updated', handleUpdate);
+    };
   }, [selectedHub, search, workflowStatus, attempts, isToday, vendor, executive, reason, otpStatus, aging, page, outletCtx?.refreshTrigger]);
 
 

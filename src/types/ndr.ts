@@ -33,6 +33,8 @@ export interface NDRShipment {
   drs_code: string | null;
   client_name: string | null;
   consignee_name: string | null;
+  consignee_phone?: string | null;
+  delivery_address?: string | null;
   delivery_executive: string | null;
   partner_name: string | null;
   hub_location: string | null;

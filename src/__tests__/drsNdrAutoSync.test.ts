@@ -1,7 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { normalizeNDRReason } from '../lib/ndr/ndrReasonNormalizer';
 import { syncDRSUndelToNDR } from '../lib/ndr/ndrAutoSync';
 import { DRSReportRow } from '../types/drs';
+
+vi.mock('@/lib/supabase', () => {
+  const chainable = {
+    select: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockResolvedValue({ data: [], error: null }),
+    update: vi.fn().mockResolvedValue({ data: [], error: null }),
+    then: (resolve: any) => resolve({ data: [], error: null }),
+  };
+
+  return {
+    supabase: {
+      from: vi.fn().mockReturnValue(chainable),
+    },
+  };
+});
 
 describe('DRS → NDR Auto-Sync & Reason Normalizer System', () => {
   it('normalizes raw NDR reasons accurately into canonical categories', () => {

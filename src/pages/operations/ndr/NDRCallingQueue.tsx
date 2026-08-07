@@ -57,6 +57,15 @@ export default function NDRCallingQueue() {
 
   useEffect(() => {
     loadQueue();
+
+    const handleUpdate = () => {
+      loadQueue();
+    };
+
+    window.addEventListener('ndr-data-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('ndr-data-updated', handleUpdate);
+    };
   }, [selectedHub, attemptsFilter, outletCtx?.refreshTrigger]);
 
   const handleCallSuccess = () => {

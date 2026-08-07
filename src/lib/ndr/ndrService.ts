@@ -702,7 +702,8 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
   }
 
   const items = data || [];
-  const todayStr = new Date().toISOString().split('T')[0];
+  const localNow = new Date();
+  const todayStr = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`;
 
   let todaysUpload = 0;
   let freshShipments = 0;
@@ -735,17 +736,26 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
     const wf = item.ndr_workflow_status;
     const currStat = item.shipment_status_current;
     const attempts = item.total_attempts || 1;
-    const createdDate = item.created_at ? item.created_at.split('T')[0] : '';
-    const updatedDate = item.updated_at ? item.updated_at.split('T')[0] : '';
+    
+    let createdDate = '';
+    if (item.created_at) {
+      const d = new Date(item.created_at);
+      createdDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    let updatedDate = '';
+    if (item.updated_at) {
+      const d = new Date(item.updated_at);
+      updatedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
 
     if (createdDate === todayStr) {
       todaysUpload++;
       totalOfdAttemptsToday += attempts;
-      if (attempts === 1) attempt1Count++;
-      else if (attempts === 2) attempt2Count++;
-      else if (attempts === 3) attempt3Count++;
-      else if (attempts >= 4) attempt4PlusCount++;
     }
+
+    // Active workflow grouping
+    const isActive = wf === 'UNDEL' || wf === 'Calling Pending' || wf === 'Supervisor Review' || wf === 'Supervisor Pending' || wf === 'Follow-up' || wf === 'Reattempt Required';
 
     if (wf === 'UNDEL' || wf === 'Calling Pending') callingPending++;
     else if (wf === 'Supervisor Review' || wf === 'Supervisor Pending') supervisorPending++;
@@ -758,23 +768,31 @@ export async function fetchNDRMetrics(hubId?: string | null): Promise<NDRMetrics
 
     if ((wf === 'UNDEL' || wf === 'Calling Pending') && attempts === 1) {
       freshShipments++;
-    } else if ((wf === 'UNDEL' || wf === 'Calling Pending' || wf === 'Follow-up') && attempts >= 2) {
+    } else if (isActive && attempts >= 2) {
       reattemptPending++;
     }
 
-    // Reason-wise calculation
-    const category = normalizeNDRReason(item.normalized_ndr_reason || item.original_ndr_reason);
-    if (category === 'Customer Refused to Accept') customerRefusedToAccept++;
-    else if (category === 'Customer Refused OTP') customerRefusedOtp++;
-    else if (category === 'Customer Not Reachable') customerNotReachable++;
-    else if (category === 'Phone Switched Off') phoneSwitchedOff++;
-    else if (category === 'Future Delivery Requested') futureDeliveryRequested++;
-    else if (category === 'Fake Order') fakeOrder++;
-    else if (category === 'Address Issue') addressIssue++;
-    else if (category === 'Payment Issue') paymentIssue++;
-    else if (category === 'OTP Issue') otpIssue++;
-    else if (category === 'Delivery Executive Did Not Visit') deDidNotVisit++;
-    else otherReasons++;
+    // Attempt KPI breakdown for active UNDEL shipments
+    if (isActive) {
+      if (attempts === 1) attempt1Count++;
+      else if (attempts === 2) attempt2Count++;
+      else if (attempts === 3) attempt3Count++;
+      else if (attempts >= 4) attempt4PlusCount++;
+
+      // Reason KPI breakdown for active UNDEL shipments
+      const category = normalizeNDRReason(item.normalized_ndr_reason || item.original_ndr_reason);
+      if (category === 'Customer Refused to Accept') customerRefusedToAccept++;
+      else if (category === 'Customer Refused OTP') customerRefusedOtp++;
+      else if (category === 'Customer Not Reachable') customerNotReachable++;
+      else if (category === 'Phone Switched Off') phoneSwitchedOff++;
+      else if (category === 'Future Delivery Requested') futureDeliveryRequested++;
+      else if (category === 'Fake Order') fakeOrder++;
+      else if (category === 'Address Issue') addressIssue++;
+      else if (category === 'Payment Issue') paymentIssue++;
+      else if (category === 'OTP Issue') otpIssue++;
+      else if (category === 'Delivery Executive Did Not Visit') deDidNotVisit++;
+      else otherReasons++;
+    }
   });
 
   const totalActive = callingPending + supervisorPending + followUpToday;
