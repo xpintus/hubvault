@@ -82,6 +82,7 @@ import {
 
 type TabType =
   | 'OVERVIEW'
+  | 'OFD'
   | 'EMPLOYEE'
   | 'FIRST_ATTEMPT'
   | 'REATTEMPT'
@@ -607,6 +608,7 @@ export default function DRSPerformanceReport() {
         <nav className="flex min-w-max space-x-1">
           {[
             { id: 'OVERVIEW', label: 'Overview' },
+            { id: 'OFD', label: `OFD Shipments (${filteredSummary?.totalOfd || 0})` },
             { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
             { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
             { id: 'REATTEMPT', label: 'Reattempt' },
@@ -693,7 +695,7 @@ export default function DRSPerformanceReport() {
               {/* ----------------------------------------------------- */}
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
                 {/* 1. Total OFD */}
-                <div className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+                <button type="button" onClick={() => setActiveTab('OFD')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-slate-400" />
                   <div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
@@ -703,9 +705,9 @@ export default function DRSPerformanceReport() {
                   <span className="font-mono text-3xl font-black leading-none tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">
                     {filteredSummary.totalOfd}
                   </span>
-                  <span className="text-[10px] font-semibold text-neutral-400">Unique AWBs</span>
+                  <span className="flex items-center justify-between text-[10px] font-semibold text-neutral-400"><span>Unique AWBs</span><span className="text-brand-600 transition-transform group-hover:translate-x-1">View shipments →</span></span>
                   </div>
-                </div>
+                </button>
 
                 {/* 2. Delivered */}
                 <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/30 sm:p-5">
@@ -905,7 +907,72 @@ export default function DRSPerformanceReport() {
           )}
 
           {/* ========================================================= */}
-          {/* TAB 2: EMPLOYEE PAGE (DEFAULT SORT OVERALL % DESC)       */}
+          {/* TAB 2: UNIQUE OFD SHIPMENTS                              */}
+          {/* ========================================================= */}
+          {activeTab === 'OFD' && filteredSummary && (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200/80 bg-gradient-to-r from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Shipment register</p>
+                  <h2 className="mt-1 text-xl font-black">Total OFD Shipments</h2>
+                  <p className="mt-1 text-xs text-indigo-100/70">Unique AWB-level records from the active DRS report.</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center backdrop-blur-sm">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total OFD</span>
+                  <strong className="mt-1 block font-mono text-3xl font-black">{filteredSummary.totalOfd}</strong>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1050px] text-left text-xs">
+                    <thead className="border-b border-neutral-200 bg-neutral-50 font-bold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/60">
+                      <tr>
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">AWB</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Employee</th>
+                        <th className="px-4 py-3">Customer / Client</th>
+                        <th className="px-4 py-3">Payment</th>
+                        <th className="px-4 py-3 text-right">Amount</th>
+                        <th className="px-4 py-3 text-center">Attempts</th>
+                        <th className="px-4 py-3">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {filteredUniqueRows.map((row, index) => (
+                        <tr key={row.waybill_no} className="transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20">
+                          <td className="px-4 py-3 font-mono text-neutral-400">{index + 1}</td>
+                          <td className="px-4 py-3 font-mono font-black text-brand-600">{row.waybill_no}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black ${
+                              row.shipment_status_normalized === 'Delivered'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                : row.shipment_status_normalized === 'Undelivered'
+                                  ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300'
+                                  : 'border-neutral-200 bg-neutral-50 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+                            }`}>{row.shipment_status_normalized}</span>
+                          </td>
+                          <td className="px-4 py-3"><strong className="block text-neutral-900 dark:text-white">{row.employee_name || '-'}</strong><span className="text-[10px] text-neutral-400">{row.partner_name || '-'}</span></td>
+                          <td className="px-4 py-3"><strong className="block max-w-[180px] truncate text-neutral-800 dark:text-neutral-200">{row.consignee || '-'}</strong><span className="block max-w-[180px] truncate text-[10px] text-neutral-400">{row.customer_name || '-'}</span></td>
+                          <td className="px-4 py-3 font-bold text-neutral-700 dark:text-neutral-300">{row.payment_type || '-'}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold">₹{row.amount_payable.toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-center"><span className="rounded-lg bg-neutral-100 px-2 py-1 font-mono font-bold dark:bg-neutral-800">{row.total_attempts || 1}</span></td>
+                          <td className="max-w-[220px] truncate px-4 py-3 text-neutral-500" title={row.reason}>{row.reason || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="border-t border-neutral-200 bg-neutral-50/70 px-4 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/30">
+                  Showing <strong className="text-neutral-900 dark:text-white">{filteredUniqueRows.length}</strong> unique OFD shipments
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 3: EMPLOYEE PAGE (DEFAULT SORT OVERALL % DESC)       */}
           {/* ========================================================= */}
           {activeTab === 'EMPLOYEE' && (
             <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
