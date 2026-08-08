@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +55,7 @@ import {
   ChevronRight,
   Clock,
   Columns,
+  Copy,
   CreditCard,
   Download,
   FileSpreadsheet,
@@ -117,6 +118,8 @@ export default function DRSPerformanceReport() {
   const [comparisonResult, setComparisonResult] = useState<DRSReportComparison | null>(null);
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [copyingEmployeeSnapshot, setCopyingEmployeeSnapshot] = useState(false);
+  const employeeSnapshotRef = useRef<HTMLDivElement>(null);
 
   // Enterprise Reset & Data Management State
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -373,6 +376,46 @@ export default function DRSPerformanceReport() {
   const handleExportPDF = async () => {
     if (!filteredSummary) return;
     await exportDRSPerformancePDF(filteredSummary, filteredEmployeeMetrics);
+  };
+
+  const handleCopyEmployeeSnapshot = async () => {
+    if (!employeeSnapshotRef.current || copyingEmployeeSnapshot) return;
+    setCopyingEmployeeSnapshot(true);
+
+    const textSnapshot = [
+      `Employee Performance${filteredSummary?.reportDate ? ` - ${filteredSummary.reportDate}` : ''}`,
+      `Hub: ${selectedHub?.name || 'All hubs'}`,
+      ...filteredEmployeeMetrics.map(
+        (employee, index) =>
+          `#${index + 1} ${employee.employee_name} | OFD ${employee.total_ofd} | Delivered ${employee.total_delivered} | Pending ${employee.total_undel} | Overall ${employee.overall_delivery_pct}%`
+      ),
+    ].join('\n');
+
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(employeeSnapshotRef.current, {
+        backgroundColor: '#ffffff',
+        scale: Math.min(window.devicePixelRatio || 1, 2),
+        useCORS: true,
+      });
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+
+      if (!blob || !navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+        throw new Error('Image clipboard is not supported');
+      }
+
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      setToastMsg('Employee performance snapshot copied!');
+    } catch {
+      try {
+        await navigator.clipboard.writeText(textSnapshot);
+        setToastMsg('Performance summary copied as text.');
+      } catch {
+        setToastMsg('Snapshot copy failed. Please allow clipboard permission.');
+      }
+    } finally {
+      setCopyingEmployeeSnapshot(false);
+    }
   };
 
   const handleOpenHistoryItem = (item: DRSReportHistoryItem) => {
@@ -997,10 +1040,45 @@ export default function DRSPerformanceReport() {
           {/* TAB 3: EMPLOYEE PAGE (DEFAULT SORT OVERALL % DESC)       */}
           {/* ========================================================= */}
           {activeTab === 'EMPLOYEE' && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-hidden text-xs">
-              <div className="overflow-x-auto">
+            <div ref={employeeSnapshotRef} className="overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 px-5 py-6 text-white sm:px-7">
+                <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-100">
+                      <BarChart3 className="h-4 w-4" /> Team leaderboard
+                    </div>
+                    <h2 className="text-xl font-black sm:text-2xl">Employee Performance</h2>
+                    <p className="mt-1 text-xs text-indigo-100">Ranked delivery performance for the selected report and filters.</p>
+                  </div>
+                  <button
+                    type="button"
+                    data-html2canvas-ignore="true"
+                    onClick={handleCopyEmployeeSnapshot}
+                    disabled={copyingEmployeeSnapshot || filteredEmployeeMetrics.length === 0}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white px-4 py-2.5 text-xs font-black text-indigo-700 shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {copyingEmployeeSnapshot ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                    {copyingEmployeeSnapshot ? 'Copying...' : 'Copy Snapshot'}
+                  </button>
+                </div>
+                <div className="relative mt-5 grid grid-cols-3 gap-2 sm:max-w-xl sm:gap-3">
+                  {[
+                    ['Employees', filteredEmployeeMetrics.length],
+                    ['Total OFD', filteredSummary?.totalOfd ?? 0],
+                    ['Delivery', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-indigo-100 sm:text-[10px]">{label}</div>
+                      <div className="mt-1 font-mono text-lg font-black sm:text-xl">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-left">
-                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800 sticky top-0">
+                  <thead className="border-b border-neutral-200 bg-neutral-50/90 text-[10px] font-black uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60">
                     <tr>
                       <th className="px-4 py-3">Rank</th>
                       <th className="px-4 py-3">Employee</th>
@@ -1022,9 +1100,9 @@ export default function DRSPerformanceReport() {
                           setSelectedEmployee(e);
                           setDrawerOpen(true);
                         }}
-                        className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 cursor-pointer transition"
+                        className="cursor-pointer transition hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20"
                       >
-                        <td className="px-4 py-3 font-mono font-semibold text-neutral-400">#{idx + 1}</td>
+                        <td className="px-4 py-3"><span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-mono font-black ${idx < 3 ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800'}`}>#{idx + 1}</span></td>
                         <td className="px-4 py-3 font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
                           <User className="h-3.5 w-3.5 text-brand-600" /> {e.employee_name}
                         </td>
@@ -1033,13 +1111,44 @@ export default function DRSPerformanceReport() {
                         <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.total_undel}</td>
                         <td className="px-4 py-3 font-mono font-bold text-blue-600">{e.first_attempt_delivery_pct}%</td>
                         <td className="px-4 py-3 font-mono font-bold text-purple-600">{e.reattempt_delivery_pct}%</td>
-                        <td className="px-4 py-3 font-mono font-black text-emerald-600">{e.overall_delivery_pct}%</td>
+                        <td className="min-w-32 px-4 py-3">
+                          <div className="mb-1 flex justify-between font-mono font-black text-emerald-600"><span>{e.overall_delivery_pct}%</span></div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${Math.min(e.overall_delivery_pct, 100)}%` }} /></div>
+                        </td>
                         <td className="px-4 py-3 font-mono text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
                         <td className="px-4 py-3 font-mono text-right">{e.prepaid_ofd} AWBs</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="space-y-3 bg-neutral-50/70 p-3 md:hidden dark:bg-neutral-950/30">
+                {filteredEmployeeMetrics.map((employee, index) => (
+                  <button
+                    type="button"
+                    key={employee.employee_name}
+                    onClick={() => { setSelectedEmployee(employee); setDrawerOpen(true); }}
+                    className="w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className={`inline-flex h-9 min-w-9 items-center justify-center rounded-xl font-mono text-xs font-black ${index < 3 ? 'bg-amber-100 text-amber-700' : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40'}`}>#{index + 1}</span>
+                        <div className="min-w-0"><div className="truncate text-sm font-black text-neutral-900 dark:text-white">{employee.employee_name}</div><div className="mt-0.5 text-[10px] font-semibold text-neutral-400">{employee.total_ofd} OFD shipments</div></div>
+                      </div>
+                      <span className="font-mono text-base font-black text-emerald-600">{employee.overall_delivery_pct}%</span>
+                    </div>
+                    <div className="my-3 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${Math.min(employee.overall_delivery_pct, 100)}%` }} /></div>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      {[
+                        ['Delivered', employee.total_delivered, 'text-emerald-600'],
+                        ['Pending', employee.total_undel, 'text-rose-600'],
+                        ['1st %', `${employee.first_attempt_delivery_pct}%`, 'text-blue-600'],
+                        ['Retry %', `${employee.reattempt_delivery_pct}%`, 'text-violet-600'],
+                      ].map(([label, value, color]) => <div key={label} className="rounded-lg bg-neutral-50 px-1 py-2 dark:bg-neutral-800/60"><div className={`font-mono text-xs font-black ${color}`}>{value}</div><div className="mt-0.5 text-[8px] font-bold uppercase text-neutral-400">{label}</div></div>)}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
