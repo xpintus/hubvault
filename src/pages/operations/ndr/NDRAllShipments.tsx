@@ -155,10 +155,10 @@ export default function NDRAllShipments() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-[28px] border border-neutral-200/70 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-950 dark:via-neutral-950 dark:to-indigo-950/20 sm:p-5">
       {/* Active Filters Pill Banner */}
       {hasActiveFilters && (
-        <div className="px-4 py-2.5 rounded-2xl bg-brand-50/60 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-200 bg-brand-50/70 px-4 py-3 text-xs dark:border-brand-800/40 dark:bg-brand-900/20">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
               <Filter className="h-3.5 w-3.5" /> Active Filters:
@@ -204,8 +204,8 @@ export default function NDRAllShipments() {
       )}
 
       {/* Top Filter Bar */}
-      <div className="p-4 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft flex flex-col md:flex-row gap-3 items-center justify-between">
-        <div className="flex flex-1 items-center gap-3 w-full">
+      <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:flex-row sm:p-4">
+        <div className="flex w-full flex-1 flex-col items-stretch gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-neutral-400" />
             <input
@@ -216,7 +216,7 @@ export default function NDRAllShipments() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-medium text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
+              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2.5 pl-10 pr-4 text-xs font-medium text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
             />
           </div>
 
@@ -226,7 +226,7 @@ export default function NDRAllShipments() {
               setWorkflowStatus(e.target.value as any);
               setPage(1);
             }}
-            className="px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+            className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-xs font-semibold text-neutral-800 outline-none focus:border-brand-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
           >
             <option value="ALL">All Statuses</option>
             <option value={NDR_WORKFLOW_STATUS.CALLING_PENDING}>Calling Pending</option>
@@ -243,7 +243,7 @@ export default function NDRAllShipments() {
               setAttempts(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+            className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-xs font-semibold text-neutral-800 outline-none focus:border-brand-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
           >
             <option value="ALL">All Shipments</option>
             <option value="fresh">Fresh (Attempt 1)</option>
@@ -252,16 +252,16 @@ export default function NDRAllShipments() {
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 md:w-auto">
           <button
             onClick={handleExportExcel}
-            className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition flex items-center gap-1.5"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 md:flex-none"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
           </button>
           <button
             onClick={handleExportCSV}
-            className="px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition flex items-center gap-1.5"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300 md:flex-none"
           >
             <Download className="h-3.5 w-3.5" /> CSV
           </button>
@@ -269,7 +269,7 @@ export default function NDRAllShipments() {
       </div>
 
       {/* Main Shipments Data Table */}
-      <div className="rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
         {loading ? (
           <div className="py-16 text-center text-neutral-500 flex flex-col items-center gap-2">
             <RefreshCw className="h-6 w-6 animate-spin text-brand-600" />
@@ -280,7 +280,7 @@ export default function NDRAllShipments() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-500 font-semibold border-b border-neutral-200 dark:border-neutral-800">
+              <thead className="border-b border-neutral-200 bg-slate-100/80 font-bold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/70">
                 <tr>
                   <th className="px-4 py-3">AWB</th>
                   <th className="px-4 py-3">Attempt & Type</th>
@@ -303,7 +303,7 @@ export default function NDRAllShipments() {
                       setSelectedShipment(s);
                       setTimelineOpen(true);
                     }}
-                    className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition cursor-pointer"
+                    className="cursor-pointer transition hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20"
                   >
                     <td className="px-4 py-3"><AWBCopyButton awb={s.awb_number} /></td>
 
@@ -387,8 +387,8 @@ export default function NDRAllShipments() {
         )}
 
         {/* Pagination Footer */}
-        <div className="px-4 py-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-500">
-          <span>Showing {shipments.length} of {totalCount} shipments</span>
+        <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50/70 px-4 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/30">
+          <span>Showing <strong className="text-neutral-800 dark:text-neutral-200">{shipments.length}</strong> of <strong className="text-neutral-800 dark:text-neutral-200">{totalCount}</strong> shipments</span>
           <div className="flex items-center gap-2">
             <button
               disabled={page === 1}

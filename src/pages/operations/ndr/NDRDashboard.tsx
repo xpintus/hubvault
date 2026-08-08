@@ -252,9 +252,19 @@ export default function NDRDashboard() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 rounded-[28px] border border-neutral-200/70 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-950 dark:via-neutral-950 dark:to-indigo-950/20 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">Command center</p>
+          <h2 className="mt-1 text-xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-2xl">Today&apos;s NDR overview</h2>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Prioritise pending calls, approvals and reattempts from one place.</p>
+        </div>
+        <button onClick={loadData} className="inline-flex w-fit items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-sm transition hover:border-brand-300 hover:text-brand-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
+          <RefreshCw className="h-3.5 w-3.5" /> Refresh data
+        </button>
+      </div>
       {/* Enterprise Data Management Action Bar */}
-      <div className="p-4 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-4">
         <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">
           <Archive className="h-4 w-4 text-brand-600" />
           <span>NDR Operational Data Management</span>
@@ -266,7 +276,7 @@ export default function NDRDashboard() {
               setResetLevel(1);
               setResetModalOpen(true);
             }}
-            className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+            className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 font-bold text-amber-700 transition hover:bg-amber-100 active:scale-95 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
           >
             Reset Current Report
           </button>
@@ -275,33 +285,35 @@ export default function NDRDashboard() {
               setResetLevel(3);
               setResetModalOpen(true);
             }}
-            className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 font-bold text-rose-700 transition hover:bg-rose-100 active:scale-95 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
           >
             Delete All
           </button>
           <button
             onClick={() => setRecycleBinOpen(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold transition shadow-sm active:scale-95 flex items-center gap-1.5"
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2 font-bold text-neutral-700 transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
           >
             Recycle Bin
           </button>
         </div>
       </div>
       {/* 8 Operational Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.label}
               onClick={() => navigate(card.route)}
-              className={`p-6 rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between hover:shadow-lg ${card.bgColor}`}
+              className={`group relative min-h-[155px] cursor-pointer overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg sm:p-5 ${card.bgColor}`}
             >
+              <div className="absolute inset-x-0 top-0 h-1 bg-current opacity-50" />
+              <div className="flex h-full flex-col justify-between gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold tracking-wider uppercase text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-400 sm:text-xs">
                   {card.label}
                 </span>
-                <Icon className={`h-6 w-6 ${card.color} group-hover:scale-110 transition-transform`} />
+                <span className="rounded-xl bg-white/70 p-2 shadow-sm dark:bg-neutral-900/50"><Icon className={`h-5 w-5 ${card.color} transition-transform group-hover:scale-110`} /></span>
               </div>
 
               {card.badge && (
@@ -310,21 +322,21 @@ export default function NDRDashboard() {
                 </span>
               )}
 
-              <div className="mt-4 flex items-baseline justify-between">
-                <span className={`text-4xl font-black ${card.color}`}>
+              <div className="flex items-end justify-between">
+                <span className={`font-mono text-3xl font-black leading-none sm:text-4xl ${card.color}`}>
                   {card.value}
                 </span>
-                <span className="text-xs font-semibold text-neutral-500 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  View Queue <ArrowRight className="h-3.5 w-3.5" />
+                <span className="flex items-center gap-1 text-[10px] font-bold text-neutral-500 transition-transform group-hover:translate-x-1 sm:text-xs">
+                  Open <ArrowRight className="h-3.5 w-3.5" />
                 </span>
-              </div>
+              </div></div>
             </div>
           );
         })}
       </div>
 
       {/* 11 Reason-Wise KPI Cards */}
-      <div className="p-6 rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-soft space-y-4">
+      <div className="space-y-4 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-6">
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-brand-500/10 text-brand-600">
@@ -339,21 +351,21 @@ export default function NDRDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {reasonKpis.map((r) => {
             const Icon = r.icon;
             return (
               <div
                 key={r.label}
                 onClick={() => navigate(`/operations/ndr/shipments?reason=${encodeURIComponent(r.reason)}`)}
-                className={`p-4 rounded-xl border transition cursor-pointer group flex flex-col justify-between hover:shadow-md ${r.bgColor}`}
+                className={`group min-h-[112px] cursor-pointer rounded-2xl border p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md ${r.bgColor}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 line-clamp-1">{r.label}</span>
-                  <Icon className={`h-4 w-4 ${r.color} group-hover:scale-110 transition-transform`} />
+                  <span className="rounded-lg bg-white/70 p-1.5 shadow-sm dark:bg-neutral-900/50"><Icon className={`h-4 w-4 ${r.color} transition-transform group-hover:scale-110`} /></span>
                 </div>
                 <div className="mt-3 flex items-baseline justify-between">
-                  <span className={`text-2xl font-black ${r.color}`}>{r.count}</span>
+                  <span className={`font-mono text-2xl font-black ${r.color}`}>{r.count}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>

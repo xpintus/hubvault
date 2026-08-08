@@ -41,42 +41,48 @@ export default function NDRLayout() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Operations Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--card-bg)] p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-soft">
+      <div className="relative overflow-hidden rounded-[28px] border border-indigo-200/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-xl shadow-indigo-950/10 sm:p-7">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-brand-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 md:flex-row md:items-center">
         <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-glow">
+          <div className="rounded-2xl border border-white/20 bg-white/10 p-3.5 text-white shadow-lg backdrop-blur-sm">
             <Truck className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">NDR Management Module</h1>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">NDR Operations</h1>
               {selectedHub && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 dark:bg-brand-600/15 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800/40">
+                <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold text-indigo-100 backdrop-blur-sm">
                   {selectedHub.name}
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Operations & Undelivered (UNDEL) shipment resolution pipeline with complete calling, supervisor review, and timeline history.
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-indigo-100/75">
+              Resolve undelivered shipments faster with calling, supervisor review and complete activity history.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          <span className="hidden items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-bold text-emerald-200 lg:flex">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> Live operations
+          </span>
           <button
             onClick={() => setImportModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-glow transition flex items-center gap-2 active:scale-95"
+            className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-50 active:scale-95"
           >
             <Upload className="h-4 w-4" /> Import Daily NDR File
           </button>
-        </div>
+        </div></div>
       </div>
 
       {/* Operations Sub-Navigation Bar */}
-      <div className="border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto no-scrollbar">
-        <nav className="flex space-x-1 min-w-max pb-1">
+      <div className="no-scrollbar overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white p-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+        <nav className="flex min-w-max space-x-1">
           {NAV_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -85,9 +91,9 @@ export default function NDRLayout() {
                 to={tab.to}
                 className={({ isActive }) =>
                   clsx(
-                    'flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150',
+                    'flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all duration-150',
                     isActive
-                      ? 'bg-brand-50 dark:bg-brand-600/15 text-brand-600 dark:text-brand-400 font-bold border border-brand-200 dark:border-brand-800/40'
+                      ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-bold shadow-md shadow-indigo-500/20'
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
                   )
                 }
