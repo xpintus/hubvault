@@ -199,6 +199,9 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     transition: background-color 0.25s ease, color 0.25s ease;
   }
+  .dark body {
+    color: #E2E8F0;
+  }
   * {
     border-color: var(--card-border);
   }
@@ -206,6 +209,42 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
     background: var(--brand-600);
     color: #FFFFFF;
   }
+}
+
+/*
+ * Dark-mode safety net
+ *
+ * A number of screens combine the shared `card` surface with a light-mode
+ * `bg-white` utility and an opacity based dark colour.  With CSS-variable
+ * colours, older generated opacity utilities can be ignored by the browser,
+ * leaving a white card with light dark-mode text.  Keep shared surfaces on the
+ * semantic theme tokens so the whole authenticated app remains readable.
+ */
+.dark .card,
+.dark .card-hover {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark .bg-white {
+  background-color: var(--card-bg) !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
+.dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.dark select,
+.dark textarea {
+  color: var(--input-text);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #94A3B8;
 }
 
 @layer components {

@@ -712,7 +712,7 @@ export default function Dashboard() {
                   <Card
                     key={c.title}
                     hover
-                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90"
+                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-700 rounded-2xl bg-white dark:bg-[var(--card-bg)]"
                     role="button"
                     tabIndex={0}
                     onClick={c.openModal}
@@ -751,7 +751,7 @@ export default function Dashboard() {
                   <Card
                     key={c.title}
                     hover
-                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90"
+                    className="p-4 sm:p-5 group/kpi cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-700 rounded-2xl bg-white dark:bg-[var(--card-bg)]"
                     role="button"
                     tabIndex={0}
                     onClick={c.openModal}
@@ -787,7 +787,7 @@ export default function Dashboard() {
                   <Card
                     key={c.title}
                     hover
-                    className="p-4 sm:p-5 group/dues cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl bg-white dark:bg-neutral-900/90"
+                    className="p-4 sm:p-5 group/dues cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md w-full min-w-0 border border-neutral-200/80 dark:border-neutral-700 rounded-2xl bg-white dark:bg-[var(--card-bg)]"
                     role="button"
                     tabIndex={0}
                     onClick={c.openModal}
