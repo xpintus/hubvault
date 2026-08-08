@@ -35,6 +35,7 @@ interface CreateBuyerBody {
   hub_name?: string;
   hub_code?: string;
   hub_location?: string;
+  logistics_company?: string;
   referral_code?: string;
   plan_type?: "lifetime" | "monthly";
 }
@@ -247,6 +248,10 @@ Deno.serve(async (req: Request) => {
       if (!body.name || !body.email || !body.password || !body.phone || !body.hub_name || !body.hub_code) {
         return jsonError(400, "Name, email, password, phone, hub name, and hub code are required");
       }
+      // Backward compatibility for an older cached signup form. New forms always
+      // send logistics_company; older clients remain able to create an account
+      // but do not receive Valmo-only Hub Operations access by default.
+      const logisticsCompany = body.logistics_company?.trim() || body.company?.trim() || "Other";
       if (body.name.trim().length < 2) {
         return jsonError(400, "Name must be at least 2 characters");
       }
@@ -334,6 +339,7 @@ Deno.serve(async (req: Request) => {
         name: hubName,
         code: hubCode,
         location: hubLocation,
+        logistics_company: logisticsCompany,
         status: "active",
         created_by: newUserId,
       }).select().single();
@@ -1342,9 +1348,9 @@ Deno.serve(async (req: Request) => {
         if (req.method !== "POST") return jsonError(405, "Method not allowed");
         if (callerRole !== "hub_admin") return jsonError(403, "Only Hub Admins can create hubs");
 
-        const body = await req.json() as { name: string; code: string; location?: string };
-        if (!body.name?.trim() || !body.code?.trim()) {
-          return jsonError(400, "Hub name and code are required");
+        const body = await req.json() as { name: string; code: string; location?: string; logistics_company?: string };
+        if (!body.name?.trim() || !body.code?.trim() || !body.logistics_company?.trim()) {
+          return jsonError(400, "Hub name, code and logistics company are required");
         }
 
         // Count existing hubs created by this user — check for errors
@@ -1378,6 +1384,7 @@ Deno.serve(async (req: Request) => {
           name: body.name.trim(),
           code: body.code.trim().toUpperCase(),
           location: body.location?.trim() || null,
+          logistics_company: body.logistics_company.trim(),
           status: "active",
           created_by: callerUser.user.id,
         }).select().single();

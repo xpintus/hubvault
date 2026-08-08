@@ -1,6 +1,7 @@
 import SEO from '@/components/SEO';
 import { useToast } from '@/components/ui/Toast';
-import { Button,Card,Input,Spinner,Textarea } from '@/components/ui/primitives';
+import { Button,Card,Input,Select,Spinner,Textarea } from '@/components/ui/primitives';
+import { LOGISTICS_COMPANIES } from '@/lib/logisticsCompany';
 import { useSettings } from '@/lib/settings';
 import { supabase,SUPABASE_ANON_KEY,SUPABASE_URL } from '@/lib/supabase';
 import {
@@ -50,6 +51,7 @@ interface BuyFormErrors {
   password?: string;
   hubName?: string;
   hubCode?: string;
+  logisticsCompany?: string;
 }
 
 export default function BuyNow() {
@@ -62,7 +64,7 @@ export default function BuyNow() {
   const [plan, setPlan] = useState<'lifetime' | 'monthly'>(() => searchParams.get('plan') === 'monthly' ? 'monthly' : 'lifetime');
   const selectedPrice = plan === 'lifetime' ? PRICE : MONTHLY_PRICE;
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', password: '', hubName: '', hubCode: '', message: '', promoCode: '',
+    name: '', email: '', phone: '', password: '', hubName: '', hubCode: '', logisticsCompany: '', message: '', promoCode: '',
   });
   const [errors, setErrors] = useState<BuyFormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -83,6 +85,7 @@ export default function BuyNow() {
     if (!form.password) e.password = 'Password is required';
     else if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
     if (!form.hubName.trim()) e.hubName = 'Hub name is required';
+    if (!form.logisticsCompany) e.logisticsCompany = 'Logistics company is required';
     if (!form.hubCode.trim()) e.hubCode = 'Hub code is required';
     else if (!/^[A-Z0-9-]{3,16}$/.test(form.hubCode.trim().toUpperCase())) e.hubCode = 'Use 3–16 letters, numbers or hyphens';
     setErrors(e);
@@ -109,6 +112,7 @@ export default function BuyNow() {
           phone: form.phone.trim(),
           hub_name: form.hubName.trim(),
           hub_code: form.hubCode.trim().toUpperCase(),
+          logistics_company: form.logisticsCompany,
           referral_code: form.promoCode.trim() || undefined,
           plan_type: plan,
         }),
@@ -326,6 +330,11 @@ export default function BuyNow() {
                     />
                     <User className="absolute left-3 top-[38px] h-4 w-4 text-neutral-400" />
                   </div>
+
+                  <Select label="Logistics Company" name="logisticsCompany" value={form.logisticsCompany} onChange={(e) => handleChange('logisticsCompany', e.target.value)} error={errors.logisticsCompany} required>
+                    <option value="">Select logistics company</option>
+                    {LOGISTICS_COMPANIES.map((company) => <option key={company} value={company}>{company}</option>)}
+                  </Select>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="relative">

@@ -19,6 +19,7 @@ export interface Hub {
   name: string;
   code: string;
   location: string | null;
+  logistics_company: string | null;
   status: HubStatus;
   created_by: string | null;
   created_at: string;

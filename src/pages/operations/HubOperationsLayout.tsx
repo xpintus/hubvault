@@ -1,6 +1,8 @@
 import { BarChart3, Truck } from 'lucide-react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
+import { useHub } from '@/lib/hubContext';
+import { supportsHubOperations } from '@/lib/logisticsCompany';
 
 const OPERATION_TABS = [
   {
@@ -21,6 +23,9 @@ const OPERATION_TABS = [
 
 export default function HubOperationsLayout() {
   const location = useLocation();
+  const { selectedHub, loading } = useHub();
+  if (loading) return null;
+  if (!supportsHubOperations(selectedHub?.logistics_company)) return <Navigate to="/dashboard" replace />;
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-[28px] border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">

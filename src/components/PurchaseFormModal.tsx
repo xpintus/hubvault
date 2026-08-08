@@ -1,5 +1,6 @@
 import Modal from '@/components/ui/Modal';
-import { Button,Input,Textarea } from '@/components/ui/primitives';
+import { Button,Input,Select,Textarea } from '@/components/ui/primitives';
+import { LOGISTICS_COMPANIES } from '@/lib/logisticsCompany';
 import { useToast } from '@/components/ui/Toast';
 import { supabase,SUPABASE_ANON_KEY,SUPABASE_URL } from '@/lib/supabase';
 import { Building2,CheckCircle2,Gift,Lock,Mail,MessageSquare,Phone,ShoppingBag,User } from 'lucide-react';
@@ -24,6 +25,8 @@ export default function PurchaseFormModal({ open, onClose, prefillName, prefillE
     password: '',
     phone: '',
     hubName: '',
+    hubCode: '',
+    logisticsCompany: '',
     message: '',
     promoCode: '',
   });
@@ -38,6 +41,9 @@ export default function PurchaseFormModal({ open, onClose, prefillName, prefillE
     else if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
     if (!form.phone.trim()) e.phone = 'Phone is required';
     if (!form.hubName.trim()) e.hubName = 'Hub name is required';
+    if (!form.hubCode.trim()) e.hubCode = 'Hub code is required';
+    else if (!/^[A-Z0-9-]{3,16}$/.test(form.hubCode.trim().toUpperCase())) e.hubCode = 'Use 3–16 letters, numbers or hyphens';
+    if (!form.logisticsCompany) e.logisticsCompany = 'Logistics company is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -60,6 +66,8 @@ export default function PurchaseFormModal({ open, onClose, prefillName, prefillE
           password: form.password,
           phone: form.phone.trim(),
           hub_name: form.hubName.trim(),
+          hub_code: form.hubCode.trim().toUpperCase(),
+          logistics_company: form.logisticsCompany,
           referral_code: form.promoCode.trim() || undefined,
         }),
       });
@@ -208,6 +216,32 @@ export default function PurchaseFormModal({ open, onClose, prefillName, prefillE
           />
           <Building2 className="absolute left-3 top-[38px] h-4 w-4 text-neutral-400" />
         </div>
+
+        <div className="relative">
+          <Input
+            label="Unique Hub Code"
+            name="hubCode"
+            value={form.hubCode}
+            onChange={(e) => { setForm({ ...form, hubCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 16) }); if (errors.hubCode) setErrors({ ...errors, hubCode: '' }); }}
+            placeholder="e.g. MUM-CENTRAL"
+            error={errors.hubCode}
+            required
+            className="pl-10 font-mono uppercase"
+          />
+          <Building2 className="absolute left-3 top-[38px] h-4 w-4 text-neutral-400" />
+        </div>
+
+        <Select
+          label="Logistics Company"
+          name="logisticsCompany"
+          value={form.logisticsCompany}
+          onChange={(e) => { setForm({ ...form, logisticsCompany: e.target.value }); if (errors.logisticsCompany) setErrors({ ...errors, logisticsCompany: '' }); }}
+          error={errors.logisticsCompany}
+          required
+        >
+          <option value="">Select logistics company</option>
+          {LOGISTICS_COMPANIES.map((company) => <option key={company} value={company}>{company}</option>)}
+        </Select>
 
         <div className="relative">
           <Input

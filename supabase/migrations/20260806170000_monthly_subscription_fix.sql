@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS subscription_history (
 ALTER TABLE subscription_history ENABLE ROW LEVEL SECURITY;
 
 -- Allow super_admin to read subscription_history
+DROP POLICY IF EXISTS "Super admins can view subscription history" ON subscription_history;
 CREATE POLICY "Super admins can view subscription history"
   ON subscription_history FOR SELECT
   USING (
@@ -41,6 +42,7 @@ CREATE POLICY "Super admins can view subscription history"
   );
 
 -- Allow users to view their own subscription history
+DROP POLICY IF EXISTS "Users can view their own subscription history" ON subscription_history;
 CREATE POLICY "Users can view their own subscription history"
   ON subscription_history FOR SELECT
   USING (user_id = auth.uid());

@@ -1,4 +1,6 @@
 import { useAuth } from '@/lib/auth';
+import { useHub } from '@/lib/hubContext';
+import { supportsHubOperations } from '@/lib/logisticsCompany';
 import { confirm } from '@/lib/confirm';
 import { useNotifications } from '@/lib/notifications';
 import { ROLE_LABELS, UserRole } from '@/types';
@@ -72,6 +74,7 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const { profile, signOut } = useAuth();
+  const { selectedHub } = useHub();
   const { pendingPayments, unreadHubNotifications, unreadBuyerNotifications, pendingPayouts } = useNotifications();
   const navigate = useNavigate();
 
@@ -86,7 +89,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
     navigate('/login');
   };
 
-  const items = NAV.filter((i) => profile && i.roles.includes(profile.role));
+  const items = NAV.filter((i) => profile && i.roles.includes(profile.role) && (i.to !== '/operations' || supportsHubOperations(selectedHub?.logistics_company)));
 
   return (
     <>

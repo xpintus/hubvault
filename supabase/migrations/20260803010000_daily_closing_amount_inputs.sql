@@ -6,7 +6,10 @@ alter table public.daily_closings
 
 update public.daily_closings
 set expected_online_amount = coalesce((source_snapshot->>'online_amount')::numeric, online_amount, 0)
-where expected_online_amount = 0;
+-- Approved closings are immutable by design (the lock trigger rejects updates).
+-- Backfill only mutable rows; approved historical snapshots remain untouched.
+where expected_online_amount = 0
+  and status <> 'approved';
 
 create or replace function public.submit_daily_closing_amounts(
   p_closing_id uuid,

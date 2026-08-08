@@ -84,6 +84,7 @@ export default function TrialSignup() {
           phone: form.phone.replace(/\D/g, ''),
           email: form.email.trim(),
           company: form.company,
+          logistics_company: form.company,
           hub_name: `${form.company} ${form.hub_code.trim()}`,
           hub_code: form.hub_code.trim().toUpperCase(),
           hub_location: form.location.trim(),

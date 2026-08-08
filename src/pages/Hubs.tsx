@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
 import { formatINR } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
+import { LOGISTICS_COMPANIES } from '@/lib/logisticsCompany';
 import { useNotifications } from '@/lib/notifications';
 import { supabase,SUPABASE_URL } from '@/lib/supabase';
 import { Hub,HubStatus,Profile } from '@/types';
@@ -27,7 +28,7 @@ export default function Hubs() {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Hub | null>(null);
-  const [form, setForm] = useState({ name: '', code: '', location: '', status: 'active' as HubStatus });
+  const [form, setForm] = useState({ name: '', code: '', location: '', logistics_company: '', status: 'active' as HubStatus });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -111,7 +112,7 @@ export default function Hubs() {
 
   const openAddForm = () => {
     setEditing(null);
-    setForm({ name: '', code: '', location: '', status: 'active' });
+    setForm({ name: '', code: '', location: '', logistics_company: '', status: 'active' });
     setErrors({});
     setModalOpen(true);
   };
@@ -136,7 +137,7 @@ export default function Hubs() {
 
   const openEdit = (h: Hub) => {
     setEditing(h);
-    setForm({ name: h.name, code: h.code, location: h.location ?? '', status: h.status });
+    setForm({ name: h.name, code: h.code, location: h.location ?? '', logistics_company: h.logistics_company ?? '', status: h.status });
     setErrors({});
     setModalOpen(true);
   };
@@ -145,6 +146,7 @@ export default function Hubs() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'Hub name is required';
     if (!form.code.trim()) e.code = 'Hub code is required';
+    if (!form.logistics_company) e.logistics_company = 'Logistics company is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -196,7 +198,7 @@ export default function Hubs() {
       if (editing) {
         const { error } = await supabase.from('hubs').update({
           name: form.name.trim(), code: form.code.trim().toUpperCase(),
-          location: form.location.trim() || null, status: form.status,
+          location: form.location.trim() || null, logistics_company: form.logistics_company, status: form.status,
         }).eq('id', editing.id);
         if (error) throw error;
         await logAudit('hub_created', profile?.id ?? null, `Updated hub ${form.name}`, null, editing.id);
@@ -208,6 +210,7 @@ export default function Hubs() {
             name: form.name.trim(),
             code: form.code.trim().toUpperCase(),
             location: form.location.trim() || undefined,
+            logistics_company: form.logistics_company,
           });
           await logAudit('hub_created_by_hub_admin', profile.id, `Hub Admin created hub ${form.name}`, profile.id, null);
           await refreshProfile();
@@ -215,7 +218,7 @@ export default function Hubs() {
         } else {
           const { data: newHub, error } = await supabase.from('hubs').insert({
             name: form.name.trim(), code: form.code.trim().toUpperCase(),
-            location: form.location.trim() || null, status: form.status,
+            location: form.location.trim() || null, logistics_company: form.logistics_company, status: form.status,
             created_by: profile?.id ?? null,
           }).select().single();
           if (error) throw error;
@@ -392,6 +395,10 @@ export default function Hubs() {
           <Input label="Hub Name" name="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} placeholder="Mumbai Central Hub" />
           <Input label="Hub Code" name="code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} error={errors.code} placeholder="MUM-01" hint="A unique short code" />
           <Input label="Location" name="location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Andheri East, Mumbai" />
+          <Select label="Logistics Company" name="logistics_company" value={form.logistics_company} onChange={(e) => setForm({ ...form, logistics_company: e.target.value })} error={errors.logistics_company}>
+            <option value="">Select logistics company</option>
+            {LOGISTICS_COMPANIES.map((company) => <option key={company} value={company}>{company}</option>)}
+          </Select>
           <Select label="Status" name="status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as HubStatus })}>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
