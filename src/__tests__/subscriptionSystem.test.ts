@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { getSubscriptionStatus, getDaysRemaining, getSubscriptionDetails } from '../lib/subscription';
 import { Profile } from '../types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 describe('Monthly Subscription System & Access Control', () => {
   const now = new Date('2026-08-06T12:00:00Z');
@@ -156,5 +158,12 @@ describe('Monthly Subscription System & Access Control', () => {
 
     expect(monthlyProfile.plan_type).toBe('monthly');
     expect(getSubscriptionStatus(monthlyProfile)).not.toBe('lifetime');
+  });
+
+  it('9. Regenerating a license preserves the monthly checkout plan', () => {
+    const edgeFunction = readFileSync(resolve('supabase/functions/manage-user/index.ts'), 'utf8');
+    expect(edgeFunction).toContain('.select("role, name, plan_type")');
+    expect(edgeFunction).toContain('pendingPlanRequest?.plan_type === "monthly" || target.plan_type === "monthly"');
+    expect(edgeFunction).toContain('createLicenseForUser(adminClient, body.user_id, targetPlan)');
   });
 });

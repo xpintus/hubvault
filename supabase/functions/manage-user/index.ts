@@ -1008,20 +1008,35 @@ Deno.serve(async (req: Request) => {
 
         const { data: target } = await adminClient
           .from("profiles")
-          .select("role, name")
+          .select("role, name, plan_type")
           .eq("id", body.user_id)
           .maybeSingle();
 
         if (!target) return jsonError(404, "User not found");
         if (target.role !== "hub_admin") return jsonError(400, "License keys are only for Hub Admins");
 
-        const newCode = await createLicenseForUser(adminClient, body.user_id);
+        // Regenerating a code must never silently change a monthly account to
+        // lifetime. A pending checkout request is the freshest plan choice;
+        // otherwise preserve the plan already assigned to the profile.
+        const { data: pendingPlanRequest } = await adminClient
+          .from("license_payment_requests")
+          .select("plan_type")
+          .eq("user_id", body.user_id)
+          .eq("request_type", "license")
+          .eq("status", "pending")
+          .order("submitted_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const targetPlan = pendingPlanRequest?.plan_type === "monthly" || target.plan_type === "monthly"
+          ? "monthly"
+          : "lifetime";
+        const newCode = await createLicenseForUser(adminClient, body.user_id, targetPlan);
 
         await adminClient.from("audit_logs").insert({
           action: action === "generate-license" ? "license_generated" : "license_regenerated",
           performed_by: callerUser.user.id,
           target_user_id: body.user_id,
-          details: `${action === "generate-license" ? "Generated" : "Regenerated"} license for ${target.name}: ${newCode}`,
+          details: `${action === "generate-license" ? "Generated" : "Regenerated"} ${targetPlan} license for ${target.name}: ${newCode}`,
         });
 
         return jsonResponse(200, { license_code: newCode, message: action === "generate-license" ? "License generated" : "License regenerated" });
