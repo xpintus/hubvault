@@ -74,6 +74,7 @@ const NDRRTOQueue = lazy(() => import('@/pages/operations/ndr/NDRRTOQueue'));
 const NDRReports = lazy(() => import('@/pages/operations/ndr/NDRReports'));
 const NDRImportHistory = lazy(() => import('@/pages/operations/ndr/NDRImportHistory'));
 const DRSPerformanceReport = lazy(() => import('@/pages/operations/drs/DRSPerformanceReport'));
+const RTOBulkUpload = lazy(() => import('@/pages/operations/rto/RTOBulkUpload'));
 const HubOperationsLayout = lazy(() => import('@/pages/operations/HubOperationsLayout'));
 
 
@@ -259,6 +260,14 @@ export default function App() {
                             element={
                               <Suspense fallback={<FullPageSpinner message="Loading DRS Performance Analytics…" />}>
                                 <DRSPerformanceReport />
+                              </Suspense>
+                            }
+                          />
+                          <Route
+                            path="/operations/rto-bulk-upload"
+                            element={
+                              <Suspense fallback={<FullPageSpinner message="Loading RTO Bulk Upload…" />}>
+                                <RTOBulkUpload />
                               </Suspense>
                             }
                           />

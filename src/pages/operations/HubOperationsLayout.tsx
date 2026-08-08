@@ -1,10 +1,17 @@
-import { BarChart3, Truck } from 'lucide-react';
+import { BarChart3, PackageX, Truck } from 'lucide-react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useHub } from '@/lib/hubContext';
 import { supportsHubOperations } from '@/lib/logisticsCompany';
 
 const OPERATION_TABS = [
+  {
+    to: '/operations/rto-bulk-upload',
+    label: 'RTO Bulk Upload',
+    description: 'Generate Valmo upload Excel',
+    icon: PackageX,
+    match: '/operations/rto-bulk-upload',
+  },
   {
     to: '/operations/drs-performance',
     label: 'DRS Performance',
@@ -40,7 +47,7 @@ export default function HubOperationsLayout() {
           </span>
         </div>
 
-        <nav className="grid gap-2 p-2 sm:grid-cols-2">
+        <nav className="grid gap-2 p-2 sm:grid-cols-3">
           {OPERATION_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
