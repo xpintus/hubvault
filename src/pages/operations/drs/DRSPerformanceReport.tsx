@@ -456,36 +456,39 @@ export default function DRSPerformanceReport() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 p-4 md:p-8 space-y-6 max-w-[1700px] mx-auto transition-colors font-sans antialiased">
+    <div className="mx-auto min-h-screen max-w-[1700px] space-y-5 bg-neutral-50 p-4 font-sans text-neutral-900 antialiased transition-colors dark:bg-neutral-950 dark:text-neutral-100 md:p-8">
       {/* ========================================================= */}
       {/* HEADER: REPORT METADATA & ACTION CONTROLS                */}
       {/* ========================================================= */}
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm">
-        <div className="space-y-1">
+      <header className="relative overflow-hidden rounded-[28px] border border-indigo-800/60 bg-gradient-to-br from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-xl shadow-indigo-950/10 sm:p-7">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+        <div className="min-w-0 space-y-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center font-black">
-              <BarChart3 className="h-4 w-4" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-sm">
+              <BarChart3 className="h-5 w-5" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+            <h1 className="max-w-3xl break-words text-lg font-black leading-tight tracking-tight text-white sm:text-xl">
               {summary?.fileName || 'DRS Performance Analytics Dashboard'}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-brand-500/10 text-brand-600 border border-brand-500/20 uppercase tracking-wider">
+            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-indigo-100">
               Power BI Edition
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
-            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-neutral-400" /> Report Date: <strong className="text-neutral-800 dark:text-neutral-200">{summary?.reportDate || 'N/A'}</strong></span>
+          <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-indigo-100/80">
+            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-indigo-300" /> Report Date: <strong className="text-white">{summary?.reportDate || 'N/A'}</strong></span>
             <span>•</span>
-            <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-neutral-400" /> Hub: <strong className="text-neutral-800 dark:text-neutral-200">{selectedHub?.name || activeItem?.hubName || 'Main Hub'}</strong></span>
+            <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-indigo-300" /> Hub: <strong className="text-white">{selectedHub?.name || activeItem?.hubName || 'Main Hub'}</strong></span>
             <span>•</span>
-            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-neutral-400" /> File: <strong className="text-neutral-800 dark:text-neutral-200">{summary?.fileName || 'N/A'}</strong></span>
+            <span className="flex max-w-xl items-center gap-1"><FileText className="h-3.5 w-3.5 shrink-0 text-indigo-300" /> File: <strong className="truncate text-white">{summary?.fileName || 'N/A'}</strong></span>
             <span>•</span>
-            <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-neutral-400" /> Updated: <strong className="text-neutral-800 dark:text-neutral-200">{activeItem?.uploadTimestamp || 'Just now'}</strong></span>
+            <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-indigo-300" /> Updated: <strong className="text-white">{activeItem?.uploadTimestamp || 'Just now'}</strong></span>
           </div>
         </div>
 
         {/* Action Controls & Enterprise Reset Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm xl:justify-end">
           {summary && (
             <div className="relative min-w-[200px]">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
@@ -494,12 +497,12 @@ export default function DRSPerformanceReport() {
                 placeholder="Search AWBs, Executive..."
                 value={filters.search}
                 onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none"
+                className="w-full rounded-xl border border-white/15 bg-white/10 py-2.5 pl-9 pr-3 text-xs font-medium text-white outline-none placeholder:text-indigo-200/60 focus:border-white/30 focus:ring-4 focus:ring-white/10"
               />
             </div>
           )}
 
-          <label className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md transition cursor-pointer flex items-center gap-1.5 active:scale-95">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-white px-3.5 py-2.5 text-xs font-black text-indigo-950 shadow-md transition hover:bg-indigo-50 active:scale-95">
             <Upload className="h-4 w-4" /> Upload DRS
             <input
               type="file"
@@ -517,21 +520,21 @@ export default function DRSPerformanceReport() {
             <>
               <button
                 onClick={handleManualSaveSnapshot}
-                className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl border border-violet-300/30 bg-violet-500/80 px-3.5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-violet-500 active:scale-95"
               >
                 <Save className="h-4 w-4" /> Save Snapshot
               </button>
 
               <button
                 onClick={handleOpenComparison}
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl border border-indigo-300/30 bg-indigo-500/80 px-3.5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-indigo-500 active:scale-95"
               >
                 <Columns className="h-4 w-4" /> Compare
               </button>
 
               <button
                 onClick={() => handleOpenResetModal(1)}
-                className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl border border-amber-300/30 bg-amber-500/80 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-amber-500 active:scale-95"
                 title="Reset Current Opened Report"
               >
                 <Trash2 className="h-4 w-4" /> Reset Current
@@ -542,7 +545,7 @@ export default function DRSPerformanceReport() {
           {selectedReportIds.length > 0 && (
             <button
               onClick={() => handleOpenResetModal(2)}
-              className="px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+              className="flex items-center gap-1.5 rounded-xl border border-orange-300/30 bg-orange-500/80 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-orange-500 active:scale-95"
             >
               <Trash2 className="h-4 w-4" /> Delete Selected ({selectedReportIds.length})
             </button>
@@ -550,7 +553,7 @@ export default function DRSPerformanceReport() {
 
           <button
             onClick={() => handleOpenResetModal(3)}
-            className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-300/30 bg-rose-500/80 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500 active:scale-95"
             title="Admin Delete ALL Reports"
           >
             <ShieldAlert className="h-4 w-4" /> Delete All
@@ -558,11 +561,11 @@ export default function DRSPerformanceReport() {
 
           <button
             onClick={() => setRecycleBinOpen(true)}
-            className="px-3 py-2 rounded-xl bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-bold transition flex items-center gap-1.5 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-white/20 active:scale-95"
           >
             <RotateCcw className="h-4 w-4 text-orange-500" /> Recycle Bin
           </button>
-        </div>
+        </div></div>
       </header>
 
       {/* NDR AUTO-SYNC RESULT BANNER */}
@@ -600,8 +603,8 @@ export default function DRSPerformanceReport() {
       {/* ========================================================= */}
       {/* NAVIGATION TABS (ROUNDED PILL TABS)                        */}
       {/* ========================================================= */}
-      <div className="overflow-x-auto no-scrollbar">
-        <nav className="flex space-x-1.5 min-w-max p-1 bg-neutral-200/50 dark:bg-neutral-900 rounded-full border border-neutral-200/80 dark:border-neutral-800">
+      <div className="no-scrollbar overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white p-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+        <nav className="flex min-w-max space-x-1">
           {[
             { id: 'OVERVIEW', label: 'Overview' },
             { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
@@ -615,10 +618,10 @@ export default function DRSPerformanceReport() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as TabType)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
+              className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 ${
                 activeTab === t.id
-                  ? 'bg-brand-600 text-white shadow-md'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-300/60 dark:hover:bg-neutral-800'
+                  ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                  : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
               }`}
             >
               {t.label}
