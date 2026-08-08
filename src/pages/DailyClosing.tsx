@@ -59,14 +59,20 @@ export default function DailyClosingPage() {
         if (hubId) q = q.eq('hub_id', hubId);
         const { data, error } = await q;
         if (error) throw error;
-        setClosings((data ?? []) as DailyClosing[]);
         await Promise.all((data ?? []).map((row) => db.daily_closings.put(row as DailyClosing)));
 
-        let eq = supabase.from('collection_entries').select('collector_id').eq('collection_date', date);
+        let eq = supabase.from('collection_entries').select('collector_id, expected_cod').eq('collection_date', date);
         if (hubId) eq = eq.eq('hub_id', hubId);
         const { data: entryCollectors, error: entryError } = await eq;
         if (entryError) throw entryError;
-        setRequiredCollectorIds([...new Set((entryCollectors ?? []).map(row => row.collector_id))]);
+        const codCollectorIds = new Set(
+          (entryCollectors ?? [])
+            .filter((row) => Number(row.expected_cod || 0) > 0)
+            .map((row) => row.collector_id),
+        );
+        availableCollectors = availableCollectors.filter((collector) => codCollectorIds.has(collector.id));
+        setClosings(((data ?? []) as DailyClosing[]).filter((closing) => codCollectorIds.has(closing.collector_id)));
+        setRequiredCollectorIds([...codCollectorIds]);
 
         let fq = supabase.from('daily_closing_finalizations')
           .select('*, finalizer:profiles!finalized_by(*), hub:hubs(*)').eq('closing_date', date);
@@ -77,9 +83,15 @@ export default function DailyClosingPage() {
       } else {
         availableCollectors = (await db.collectors.toArray()).filter((c) => (!hubId || c.hub_id === hubId) && (profile.role !== 'collector' || c.profile_id === profile.id));
         const local = (await db.daily_closings.toArray()).filter((c) => c.closing_date === date && (!hubId || c.hub_id === hubId));
-        setClosings(local);
         const localEntries = (await db.collection_entries.toArray()).filter(e => e.collection_date === date && (!hubId || e.hub_id === hubId));
-        setRequiredCollectorIds([...new Set(localEntries.map(e => e.collector_id))]);
+        const codCollectorIds = new Set(
+          localEntries
+            .filter((entry) => Number(entry.expected_cod || 0) > 0)
+            .map((entry) => entry.collector_id),
+        );
+        availableCollectors = availableCollectors.filter((collector) => codCollectorIds.has(collector.id));
+        setClosings(local.filter((closing) => codCollectorIds.has(closing.collector_id)));
+        setRequiredCollectorIds([...codCollectorIds]);
         setFinalization(null);
       }
       setCollectors(availableCollectors);
