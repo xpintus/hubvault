@@ -11,7 +11,7 @@ import { LOGISTICS_COMPANIES } from '@/lib/logisticsCompany';
 import { useNotifications } from '@/lib/notifications';
 import { supabase,SUPABASE_URL } from '@/lib/supabase';
 import { Hub,HubStatus,Profile } from '@/types';
-import { Building2,CreditCard,MapPin,Pencil,Plus,Search,Shield,Trash2,User } from 'lucide-react';
+import { Building2,CreditCard,MapPin,Pencil,Plus,Search,Shield,Trash2,Truck,User } from 'lucide-react';
 import { useCallback,useEffect,useMemo,useState } from 'react';
 
 export default function Hubs() {
@@ -336,6 +336,13 @@ export default function Hubs() {
                     <MapPin className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" /> {h.location}
                   </p>
                 )}
+                <div className="mb-3 flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+                  <Truck className="h-4 w-4 text-brand-600" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-neutral-400">Logistics Company</p>
+                    <p className="truncate text-xs font-bold text-neutral-800 dark:text-neutral-200">{h.logistics_company || 'Not selected — click Edit'}</p>
+                  </div>
+                </div>
                 <div className="space-y-2 mb-3 text-xs">
                   {creator && (
                     <div className="flex items-center gap-1.5 text-neutral-500">
