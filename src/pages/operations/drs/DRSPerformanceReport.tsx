@@ -386,7 +386,7 @@ export default function DRSPerformanceReport() {
       `Hub: ${selectedHub?.name || 'All hubs'}`,
       ...filteredEmployeeMetrics.map(
         (employee, index) =>
-          `#${index + 1} ${employee.employee_name} | OFD ${employee.total_ofd} | Delivered ${employee.total_delivered} | Pending ${employee.total_undel} | Overall ${employee.overall_delivery_pct}% | COD ${employee.cod_shipments_count} | COD Collected ₹${employee.cod_value_delivered.toLocaleString('en-IN')} | Prepaid ${employee.prepaid_ofd}`
+          `#${index + 1} ${employee.employee_name} | OFD ${employee.total_ofd} | Delivered ${employee.total_delivered} | Pending ${employee.total_undel} | Reattempt ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall ${employee.overall_delivery_pct}% | COD ${employee.cod_shipments_count} | Prepaid ${employee.prepaid_ofd}`
       ),
     ].join('\n');
 
@@ -432,8 +432,8 @@ export default function DRSPerformanceReport() {
 
       const columns = [
         ['RANK', 35], ['EMPLOYEE', 105], ['OFD', 360], ['DEL.', 440], ['PENDING', 525],
-        ['1ST %', 625], ['RETRY %', 735], ['OVERALL %', 855], ['COD COUNT', 990],
-        ['COD COLLECTED', 1110], ['PREPAID', 1280],
+        ['1ST %', 625], ['RETRY COUNT', 735], ['RETRY %', 855], ['OVERALL %', 965],
+        ['COD COUNT', 1090], ['PREPAID', 1240],
       ] as const;
       ctx.fillStyle = '#eef2ff'; ctx.fillRect(0, 180, width, 48);
       ctx.fillStyle = '#64748b'; ctx.font = '700 11px Arial';
@@ -449,11 +449,11 @@ export default function DRSPerformanceReport() {
         ctx.fillStyle = '#059669'; ctx.fillText(String(employee.total_delivered), 440, y + 34);
         ctx.fillStyle = '#e11d48'; ctx.fillText(String(employee.total_undel), 525, y + 34);
         ctx.fillStyle = '#2563eb'; ctx.fillText(`${employee.first_attempt_delivery_pct}%`, 625, y + 34);
-        ctx.fillStyle = '#7c3aed'; ctx.fillText(`${employee.reattempt_delivery_pct}%`, 735, y + 34);
-        ctx.fillStyle = '#059669'; ctx.fillText(`${employee.overall_delivery_pct}%`, 855, y + 34);
-        ctx.fillStyle = '#0f172a'; ctx.fillText(String(employee.cod_shipments_count), 990, y + 34);
-        ctx.fillText(`₹${employee.cod_value_delivered.toLocaleString('en-IN')}`, 1110, y + 34);
-        ctx.fillText(String(employee.prepaid_ofd), 1280, y + 34);
+        ctx.fillStyle = '#7c3aed'; ctx.fillText(String(employee.reattempt_ofd), 735, y + 34);
+        ctx.fillText(`${employee.reattempt_delivery_pct}%`, 855, y + 34);
+        ctx.fillStyle = '#059669'; ctx.fillText(`${employee.overall_delivery_pct}%`, 965, y + 34);
+        ctx.fillStyle = '#0f172a'; ctx.fillText(String(employee.cod_shipments_count), 1090, y + 34);
+        ctx.fillText(String(employee.prepaid_ofd), 1240, y + 34);
       });
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
 
@@ -1144,9 +1144,9 @@ export default function DRSPerformanceReport() {
                       <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
                       <th className="px-4 py-3 font-bold text-rose-600">Pending</th>
                       <th className="px-4 py-3 font-semibold text-blue-600">1st Attempt %</th>
+                      <th className="px-4 py-3 font-semibold text-purple-600">Reattempt Count</th>
                       <th className="px-4 py-3 font-semibold text-purple-600">Reattempt %</th>
                       <th className="px-4 py-3 font-black text-emerald-600">Overall %</th>
-                      <th className="px-4 py-3 text-right">COD Collected</th>
                       <th className="px-4 py-3 text-right">COD Shipments</th>
                       <th className="px-4 py-3 text-right">Prepaid</th>
                     </tr>
@@ -1169,12 +1169,12 @@ export default function DRSPerformanceReport() {
                         <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.total_delivered}</td>
                         <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.total_undel}</td>
                         <td className="px-4 py-3 font-mono font-bold text-blue-600">{e.first_attempt_delivery_pct}%</td>
+                        <td className="px-4 py-3 font-mono font-bold text-purple-600">{e.reattempt_ofd}</td>
                         <td className="px-4 py-3 font-mono font-bold text-purple-600">{e.reattempt_delivery_pct}%</td>
                         <td className="min-w-32 px-4 py-3">
                           <div className="mb-1 flex justify-between font-mono font-black text-emerald-600"><span>{e.overall_delivery_pct}%</span></div>
                           <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${Math.min(e.overall_delivery_pct, 100)}%` }} /></div>
                         </td>
-                        <td className="px-4 py-3 font-mono text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
                         <td className="px-4 py-3 font-mono font-bold text-right">{e.cod_shipments_count}</td>
                         <td className="px-4 py-3 font-mono text-right">{e.prepaid_ofd} AWBs</td>
                       </tr>
@@ -1199,17 +1199,15 @@ export default function DRSPerformanceReport() {
                       <span className="font-mono text-base font-black text-emerald-600">{employee.overall_delivery_pct}%</span>
                     </div>
                     <div className="my-3 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${Math.min(employee.overall_delivery_pct, 100)}%` }} /></div>
-                    <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="grid grid-cols-3 gap-2 text-center">
                       {[
                         ['Delivered', employee.total_delivered, 'text-emerald-600'],
                         ['Pending', employee.total_undel, 'text-rose-600'],
                         ['1st %', `${employee.first_attempt_delivery_pct}%`, 'text-blue-600'],
+                        ['Retry Count', employee.reattempt_ofd, 'text-violet-600'],
                         ['Retry %', `${employee.reattempt_delivery_pct}%`, 'text-violet-600'],
+                        ['COD', employee.cod_shipments_count, 'text-amber-600'],
                       ].map(([label, value, color]) => <div key={label} className="rounded-lg bg-neutral-50 px-1 py-2 dark:bg-neutral-800/60"><div className={`font-mono text-xs font-black ${color}`}>{value}</div><div className="mt-0.5 text-[8px] font-bold uppercase text-neutral-400">{label}</div></div>)}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 px-3 py-2 text-[10px] dark:bg-amber-950/20">
-                      <span className="font-bold text-amber-700 dark:text-amber-400">COD: {employee.cod_shipments_count} shipments</span>
-                      <span className="font-mono font-black text-neutral-800 dark:text-neutral-100">₹{employee.cod_value_delivered.toLocaleString('en-IN')} collected</span>
                     </div>
                   </button>
                 ))}
