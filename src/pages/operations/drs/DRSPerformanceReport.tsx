@@ -82,6 +82,7 @@ import {
 
 type TabType =
   | 'OVERVIEW'
+  | 'TOTAL_SHIPMENTS'
   | 'OFD'
   | 'EMPLOYEE'
   | 'FIRST_ATTEMPT'
@@ -290,6 +291,13 @@ export default function DRSPerformanceReport() {
   const filteredUniqueRows = useMemo(() => {
     return filterDRSRows(uniqueRows, filters);
   }, [uniqueRows, filters]);
+
+  // OFD pending means the shipment has no final delivery outcome yet.
+  // Delivered, Undelivered, RTO and Cancelled shipments are excluded.
+  const pendingOfdRows = useMemo(
+    () => filteredUniqueRows.filter((row) => row.shipment_status_normalized === 'Unknown'),
+    [filteredUniqueRows]
+  );
 
   // Unified Single-Report Filtered Summary
   const filteredSummary = useMemo(() => {
@@ -608,7 +616,8 @@ export default function DRSPerformanceReport() {
         <nav className="flex min-w-max space-x-1">
           {[
             { id: 'OVERVIEW', label: 'Overview' },
-            { id: 'OFD', label: `OFD Shipments (${filteredSummary?.totalOfd || 0})` },
+            { id: 'TOTAL_SHIPMENTS', label: `Total Shipments (${filteredUniqueRows.length})` },
+            { id: 'OFD', label: `OFD Pending (${pendingOfdRows.length})` },
             { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
             { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
             { id: 'REATTEMPT', label: 'Reattempt' },
@@ -694,12 +703,12 @@ export default function DRSPerformanceReport() {
               {/* 6 PRIMARY KPI CARDS (HEIGHT: 135–140PX, VALUE: 42PX BOLD) */}
               {/* ----------------------------------------------------- */}
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
-                {/* 1. Total OFD */}
-                <button type="button" onClick={() => setActiveTab('OFD')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+                {/* 1. Total Shipments */}
+                <button type="button" onClick={() => setActiveTab('TOTAL_SHIPMENTS')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-slate-400" />
                   <div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
-                    <span>Total OFD</span>
+                    <span>Total Shipments</span>
                     <span className="rounded-xl bg-slate-100 p-2 dark:bg-neutral-800"><Package className="h-4 w-4 text-slate-500" /></span>
                   </div>
                   <span className="font-mono text-3xl font-black leading-none tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">
@@ -709,7 +718,20 @@ export default function DRSPerformanceReport() {
                   </div>
                 </button>
 
-                {/* 2. Delivered */}
+                {/* 2. Pending OFD */}
+                <button type="button" onClick={() => setActiveTab('OFD')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white to-amber-50 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg dark:border-amber-900/60 dark:from-neutral-900 dark:to-amber-950/30 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-amber-500" />
+                  <div className="flex h-full flex-col justify-between gap-4">
+                    <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                      <span>OFD Pending</span>
+                      <span className="rounded-xl bg-amber-100 p-2 dark:bg-amber-950"><Truck className="h-4 w-4 text-amber-600" /></span>
+                    </div>
+                    <span className="font-mono text-3xl font-black leading-none tracking-tight text-amber-600 dark:text-amber-400 sm:text-4xl">{pendingOfdRows.length}</span>
+                    <span className="text-[10px] font-bold text-amber-600">Neither DEL nor UNDEL — view →</span>
+                  </div>
+                </button>
+
+                {/* 3. Delivered */}
                 <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/30 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
@@ -726,7 +748,7 @@ export default function DRSPerformanceReport() {
                 <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-rose-200/70 bg-gradient-to-br from-white to-rose-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-rose-900/60 dark:from-neutral-900 dark:to-rose-950/30 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-rose-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
-                    <span>Pending</span>
+                    <span>Undelivered</span>
                     <span className="rounded-xl bg-rose-100 p-2 dark:bg-rose-950"><Clock className="h-4 w-4 text-rose-600" /></span>
                   </div>
                   <span className="font-mono text-3xl font-black leading-none tracking-tight text-rose-600 dark:text-rose-400 sm:text-4xl">
@@ -909,17 +931,17 @@ export default function DRSPerformanceReport() {
           {/* ========================================================= */}
           {/* TAB 2: UNIQUE OFD SHIPMENTS                              */}
           {/* ========================================================= */}
-          {activeTab === 'OFD' && filteredSummary && (
+          {(activeTab === 'TOTAL_SHIPMENTS' || activeTab === 'OFD') && filteredSummary && (
             <div className="space-y-4">
               <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200/80 bg-gradient-to-r from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Shipment register</p>
-                  <h2 className="mt-1 text-xl font-black">Total OFD Shipments</h2>
-                  <p className="mt-1 text-xs text-indigo-100/70">Unique AWB-level records from the active DRS report.</p>
+                  <h2 className="mt-1 text-xl font-black">{activeTab === 'OFD' ? 'OFD Pending Shipments' : 'Total Shipments'}</h2>
+                  <p className="mt-1 text-xs text-indigo-100/70">{activeTab === 'OFD' ? 'Shipments awaiting a final Delivered or Undelivered update.' : 'All unique AWB-level records from the active DRS report.'}</p>
                 </div>
                 <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center backdrop-blur-sm">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total OFD</span>
-                  <strong className="mt-1 block font-mono text-3xl font-black">{filteredSummary.totalOfd}</strong>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-200">{activeTab === 'OFD' ? 'OFD Pending' : 'Total Shipments'}</span>
+                  <strong className="mt-1 block font-mono text-3xl font-black">{activeTab === 'OFD' ? pendingOfdRows.length : filteredUniqueRows.length}</strong>
                 </div>
               </div>
 
@@ -940,7 +962,7 @@ export default function DRSPerformanceReport() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                      {filteredUniqueRows.map((row, index) => (
+                      {(activeTab === 'OFD' ? pendingOfdRows : filteredUniqueRows).map((row, index) => (
                         <tr key={row.waybill_no} className="transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20">
                           <td className="px-4 py-3 font-mono text-neutral-400">{index + 1}</td>
                           <td className="px-4 py-3 font-mono font-black text-brand-600">{row.waybill_no}</td>
@@ -965,7 +987,7 @@ export default function DRSPerformanceReport() {
                   </table>
                 </div>
                 <div className="border-t border-neutral-200 bg-neutral-50/70 px-4 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/30">
-                  Showing <strong className="text-neutral-900 dark:text-white">{filteredUniqueRows.length}</strong> unique OFD shipments
+                  Showing <strong className="text-neutral-900 dark:text-white">{activeTab === 'OFD' ? pendingOfdRows.length : filteredUniqueRows.length}</strong> {activeTab === 'OFD' ? 'pending OFD' : 'total'} shipments
                 </div>
               </div>
             </div>
