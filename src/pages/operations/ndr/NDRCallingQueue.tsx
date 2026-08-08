@@ -3,11 +3,11 @@ import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { NDRShipment } from '@/types/ndr';
-import { NDRCallModal } from '@/components/ndr/NDRCallModal';
+import { NDRSupervisorModal } from '@/components/ndr/NDRSupervisorModal';
 import { AWBCopyButton } from '@/components/ndr/AWBCopyButton';
 import { NDRStatusBadge } from '@/components/ndr/NDRStatusBadge';
 import { NDRToast } from '@/components/ndr/NDRToast';
-import { Filter, PhoneCall, RefreshCw, Sparkles, Truck } from 'lucide-react';
+import { Filter, PhoneCall, RefreshCw, ShieldCheck, Sparkles, Truck } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 
 export default function NDRCallingQueue() {
@@ -17,7 +17,7 @@ export default function NDRCallingQueue() {
   const [shipments, setShipments] = useState<NDRShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState<NDRShipment | null>(null);
-  const [callModalOpen, setCallModalOpen] = useState(false);
+  const [supervisorModalOpen, setSupervisorModalOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [attemptsFilter, setAttemptsFilter] = useState<string>('ALL');
 
@@ -69,8 +69,8 @@ export default function NDRCallingQueue() {
     };
   }, [selectedHub, attemptsFilter, outletCtx?.refreshTrigger]);
 
-  const handleCallSuccess = () => {
-    setToastMsg('Call saved successfully. Sent to Supervisor.');
+  const handleSupervisorSuccess = () => {
+    setToastMsg('Customer call and supervisor action saved.');
     if (selectedShipment) {
       setShipments((prev) => prev.filter((item) => item.id !== selectedShipment.id));
     }
@@ -178,11 +178,11 @@ export default function NDRCallingQueue() {
                       <button
                         onClick={() => {
                           setSelectedShipment(s);
-                          setCallModalOpen(true);
+                          setSupervisorModalOpen(true);
                         }}
                         className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-1.5 ml-auto"
                       >
-                        <PhoneCall className="h-3.5 w-3.5" /> Call Customer
+                        <ShieldCheck className="h-3.5 w-3.5" /> Supervisor Action
                       </button>
                     </td>
                   </tr>
@@ -193,11 +193,11 @@ export default function NDRCallingQueue() {
         )}
       </div>
 
-      <NDRCallModal
+      <NDRSupervisorModal
         shipment={selectedShipment}
-        isOpen={callModalOpen}
-        onClose={() => setCallModalOpen(false)}
-        onSuccess={handleCallSuccess}
+        isOpen={supervisorModalOpen}
+        onClose={() => setSupervisorModalOpen(false)}
+        onSuccess={handleSupervisorSuccess}
       />
 
       <NDRToast message={toastMsg} onClose={() => setToastMsg(null)} />

@@ -9,7 +9,6 @@ import { NDRFilterParams, NDRShipment, NDRWorkflowStatus } from '@/types/ndr';
 import { NDRStatusBadge } from '@/components/ndr/NDRStatusBadge';
 import { AWBCopyButton } from '@/components/ndr/AWBCopyButton';
 import { NDRTimelineDrawer } from '@/components/ndr/NDRTimelineDrawer';
-import { NDRCallModal } from '@/components/ndr/NDRCallModal';
 import { NDRSupervisorModal } from '@/components/ndr/NDRSupervisorModal';
 import { NDRToast } from '@/components/ndr/NDRToast';
 import {
@@ -19,7 +18,6 @@ import {
   FileSpreadsheet,
   Filter,
   History,
-  PhoneCall,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -68,7 +66,6 @@ export default function NDRAllShipments() {
   // Active Modals & Drawers
   const [selectedShipment, setSelectedShipment] = useState<NDRShipment | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
-  const [callModalOpen, setCallModalOpen] = useState(false);
   const [supervisorModalOpen, setSupervisorModalOpen] = useState(false);
 
   const loadData = async () => {
@@ -111,12 +108,6 @@ export default function NDRAllShipments() {
   }, [selectedHub, search, workflowStatus, attempts, isToday, vendor, executive, reason, otpStatus, aging, page, outletCtx?.refreshTrigger]);
 
 
-
-  const handleCallSuccess = () => {
-    setToastMsg('Call saved successfully. Sent to Supervisor.');
-    if (outletCtx?.handleImportSuccess) outletCtx.handleImportSuccess();
-    loadData();
-  };
 
   const handleSupervisorSuccess = () => {
     setToastMsg('Supervisor action submitted successfully.');
@@ -379,16 +370,6 @@ export default function NDRAllShipments() {
                         <button
                           onClick={() => {
                             setSelectedShipment(s);
-                            setCallModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30"
-                          title="Call Customer"
-                        >
-                          <PhoneCall className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedShipment(s);
                             setSupervisorModalOpen(true);
                           }}
                           className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30"
@@ -433,13 +414,6 @@ export default function NDRAllShipments() {
         shipment={selectedShipment}
         isOpen={timelineOpen}
         onClose={() => setTimelineOpen(false)}
-      />
-
-      <NDRCallModal
-        shipment={selectedShipment}
-        isOpen={callModalOpen}
-        onClose={() => setCallModalOpen(false)}
-        onSuccess={handleCallSuccess}
       />
 
       <NDRSupervisorModal

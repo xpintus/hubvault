@@ -2,16 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { NDRShipment } from '@/types/ndr';
-import { NDRCallModal } from '@/components/ndr/NDRCallModal';
+import { NDRSupervisorModal } from '@/components/ndr/NDRSupervisorModal';
 import { AWBCopyButton } from '@/components/ndr/AWBCopyButton';
-import { Clock, PhoneCall, RefreshCw } from 'lucide-react';
+import { Clock, RefreshCw, ShieldCheck } from 'lucide-react';
 
 export default function NDRFollowUpDue() {
   const { selectedHub } = useHub();
   const [shipments, setShipments] = useState<NDRShipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState<NDRShipment | null>(null);
-  const [callModalOpen, setCallModalOpen] = useState(false);
+  const [supervisorModalOpen, setSupervisorModalOpen] = useState(false);
 
   const loadFollowUps = async () => {
     setLoading(true);
@@ -82,11 +82,11 @@ export default function NDRFollowUpDue() {
                       <button
                         onClick={() => {
                           setSelectedShipment(s);
-                          setCallModalOpen(true);
+                          setSupervisorModalOpen(true);
                         }}
                         className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-1.5"
                       >
-                        <PhoneCall className="h-3.5 w-3.5" /> Re-call / Update
+                        <ShieldCheck className="h-3.5 w-3.5" /> Supervisor Action
                       </button>
                     </td>
                   </tr>
@@ -97,10 +97,10 @@ export default function NDRFollowUpDue() {
         )}
       </div>
 
-      <NDRCallModal
+      <NDRSupervisorModal
         shipment={selectedShipment}
-        isOpen={callModalOpen}
-        onClose={() => setCallModalOpen(false)}
+        isOpen={supervisorModalOpen}
+        onClose={() => setSupervisorModalOpen(false)}
         onSuccess={loadFollowUps}
       />
     </div>
