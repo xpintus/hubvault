@@ -6,13 +6,6 @@ import { supportsHubOperations } from '@/lib/logisticsCompany';
 
 const OPERATION_TABS = [
   {
-    to: '/operations/rto-bulk-upload',
-    label: 'RTO Bulk Upload',
-    description: 'Generate Valmo upload Excel',
-    icon: PackageX,
-    match: '/operations/rto-bulk-upload',
-  },
-  {
     to: '/operations/drs-performance',
     label: 'DRS Performance',
     description: 'Delivery performance analytics',
@@ -25,6 +18,13 @@ const OPERATION_TABS = [
     description: 'Calling, follow-up and resolution',
     icon: Truck,
     match: '/operations/ndr',
+  },
+  {
+    to: '/operations/rto-bulk-upload',
+    label: 'RTO Bulk Upload',
+    description: 'Generate Valmo upload Excel',
+    icon: PackageX,
+    match: '/operations/rto-bulk-upload',
   },
 ];
 
@@ -59,11 +59,11 @@ export default function HubOperationsLayout() {
                     'group flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all',
                     location.pathname.startsWith(tab.match)
                       ? 'border-brand-200 bg-brand-50 text-brand-700 shadow-sm dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300'
-                      : 'border-transparent text-neutral-500 hover:border-neutral-200 hover:bg-neutral-50 dark:hover:border-neutral-800 dark:hover:bg-neutral-800/50'
+                      : 'border-transparent text-neutral-600 hover:border-neutral-200 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:border-neutral-700 dark:hover:bg-neutral-800/70'
                   )
                 }
               >
-                <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900"><Icon className="h-5 w-5" /></span>
+                <span className="rounded-xl border border-neutral-100 bg-white p-2 shadow-sm dark:border-neutral-700 dark:bg-neutral-800"><Icon className="h-5 w-5" /></span>
                 <span>
                   <strong className="block text-sm">{tab.label}</strong>
                   <span className="block text-[10px] font-medium opacity-70">{tab.description}</span>
