@@ -218,13 +218,20 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
+          navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' })
             .then(registration => {
               console.log('SW registered: ', registration);
+              registration.update();
             })
             .catch(registrationError => {
               console.log('SW registration failed: ', registrationError);
             });
+        });
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!sessionStorage.getItem('hubvault-sw-reloaded')) {
+            sessionStorage.setItem('hubvault-sw-reloaded', '1');
+            window.location.reload();
+          }
         });
       }
     </script>

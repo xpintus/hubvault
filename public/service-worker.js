@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hubvault-cache-v6';
+const CACHE_NAME = 'hubvault-cache-v7';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to cache for offline support including index.html app shell
@@ -29,7 +29,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Caching static assets & app shell');
-      return cache.addAll(STATIC_ASSETS);
+      // One missing optional icon/page must not abort the complete service
+      // worker installation and leave mobile clients on an obsolete shell.
+      return Promise.allSettled(STATIC_ASSETS.map((asset) => cache.add(asset)));
     }).then(() => {
       // Force the waiting service worker to become the active service worker
       return self.skipWaiting();
@@ -95,14 +97,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Static assets, JS, CSS, Images - Cache First, fallback to Network
+  // 4. Hashed assets are immutable. Serve cache first, but refresh the cache
+  // in the background so installed mobile clients recover cleanly after deploys.
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
+    caches.match(event.request).then(async (cachedResponse) => {
+      const networkRequest = fetch(event.request).then((networkResponse) => {
         // Only cache valid responses for static assets (js, css, images, fonts)
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
@@ -123,7 +122,9 @@ self.addEventListener('fetch', (event) => {
         });
 
         return networkResponse;
-      });
+      }).catch(() => cachedResponse);
+
+      return cachedResponse || networkRequest;
     })
   );
 });

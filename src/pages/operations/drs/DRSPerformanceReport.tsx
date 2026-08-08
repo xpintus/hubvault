@@ -491,7 +491,7 @@ export default function DRSPerformanceReport() {
         {/* Action Controls & Enterprise Reset Buttons */}
         <div className="flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm xl:justify-end">
           {summary && (
-            <div className="relative min-w-[200px]">
+            <div className="relative w-full sm:min-w-[200px] sm:w-auto">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
               <input
                 type="text"
