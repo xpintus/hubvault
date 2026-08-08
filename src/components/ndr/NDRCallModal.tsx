@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { logNDRCall } from '@/lib/ndr/ndrService';
 import { NDRCallerResult, NDRShipment } from '@/types/ndr';
+import { AWBCopyButton } from './AWBCopyButton';
 import { PhoneCall, RefreshCw, Send, X } from 'lucide-react';
 
 interface NDRCallModalProps {
@@ -77,7 +78,7 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
             </div>
             <div>
               <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Customer Calling Screen</h2>
-              <p className="text-xs text-neutral-500 font-mono">AWB: {shipment.awb_number}</p>
+              <div className="mt-1 text-xs text-neutral-500"><AWBCopyButton awb={shipment.awb_number} /></div>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">
@@ -98,7 +99,7 @@ export const NDRCallModal: React.FC<NDRCallModalProps> = ({ shipment, isOpen, on
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <span className="text-neutral-500 block">AWB Number:</span>
-                <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{shipment.awb_number}</span>
+                <AWBCopyButton awb={shipment.awb_number} />
               </div>
               <div>
                 <span className="text-neutral-500 block">Customer Name:</span>

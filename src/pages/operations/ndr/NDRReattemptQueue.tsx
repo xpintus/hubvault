@@ -3,6 +3,7 @@ import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { NDRShipment } from '@/types/ndr';
 import { NDRDeliveryModal } from '@/components/ndr/NDRDeliveryModal';
+import { AWBCopyButton } from '@/components/ndr/AWBCopyButton';
 import { CheckCircle2, RefreshCw, Truck } from 'lucide-react';
 
 export default function NDRReattemptQueue() {
@@ -74,7 +75,7 @@ export default function NDRReattemptQueue() {
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                 {shipments.map((s) => (
                   <tr key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30">
-                    <td className="px-4 py-3 font-mono font-bold text-neutral-900 dark:text-neutral-100">{s.awb_number}</td>
+                    <td className="px-4 py-3"><AWBCopyButton awb={s.awb_number} /></td>
                     <td className="px-4 py-3 font-semibold">{s.consignee_name || '-'}</td>
                     <td className="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400">{s.delivery_executive || '-'}</td>
                     <td className="px-4 py-3 font-bold">₹{s.amount_payable}</td>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { submitSupervisorAction } from '@/lib/ndr/ndrService';
 import { NDRShipment, NDRSupervisorActionType } from '@/types/ndr';
+import { AWBCopyButton } from './AWBCopyButton';
 import { CheckCircle2, RefreshCw, RotateCcw, ShieldCheck, Truck, X } from 'lucide-react';
 
 interface NDRSupervisorModalProps {
@@ -58,7 +59,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
             </div>
             <div>
               <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Supervisor Decision</h2>
-              <p className="text-xs text-neutral-500 font-mono">AWB: {shipment.awb_number}</p>
+              <div className="mt-1 text-xs text-neutral-500"><AWBCopyButton awb={shipment.awb_number} /></div>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">

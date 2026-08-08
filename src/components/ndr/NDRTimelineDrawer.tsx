@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchNDRCallLogs, fetchNDRSupervisorActions, fetchNDRTimeline } from '@/lib/ndr/ndrService';
 import { NDRCallLog, NDRShipment, NDRSupervisorAction, NDRTimelineLog } from '@/types/ndr';
 import { NDRStatusBadge } from './NDRStatusBadge';
+import { AWBCopyButton } from './AWBCopyButton';
 import { CheckCircle2, Clock, History, PhoneCall, ShieldCheck, Truck, X, XCircle } from 'lucide-react';
 
 interface NDRTimelineDrawerProps {
@@ -64,7 +65,7 @@ export const NDRTimelineDrawer: React.FC<NDRTimelineDrawerProps> = ({ shipment, 
               <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Shipment Operational View</h2>
               <NDRStatusBadge status={shipment.ndr_workflow_status} size="sm" />
             </div>
-            <p className="text-xs text-neutral-500 font-mono mt-0.5">AWB: {shipment.awb_number}</p>
+            <div className="mt-1 text-xs text-neutral-500"><AWBCopyButton awb={shipment.awb_number} /></div>
           </div>
           <button
             onClick={onClose}
@@ -83,7 +84,7 @@ export const NDRTimelineDrawer: React.FC<NDRTimelineDrawerProps> = ({ shipment, 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <span className="text-neutral-500 block">AWB Number</span>
-                <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">{shipment.awb_number}</span>
+                <AWBCopyButton awb={shipment.awb_number} />
               </div>
               <div>
                 <span className="text-neutral-500 block">Consignee</span>

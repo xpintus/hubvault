@@ -7,6 +7,7 @@ import { NDR_WORKFLOW_STATUS } from '@/lib/ndr/ndrConstants';
 import { NDRFilterParams, NDRShipment, NDRWorkflowStatus } from '@/types/ndr';
 
 import { NDRStatusBadge } from '@/components/ndr/NDRStatusBadge';
+import { AWBCopyButton } from '@/components/ndr/AWBCopyButton';
 import { NDRTimelineDrawer } from '@/components/ndr/NDRTimelineDrawer';
 import { NDRCallModal } from '@/components/ndr/NDRCallModal';
 import { NDRSupervisorModal } from '@/components/ndr/NDRSupervisorModal';
@@ -313,7 +314,7 @@ export default function NDRAllShipments() {
                     }}
                     className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition cursor-pointer"
                   >
-                    <td className="px-4 py-3 font-mono font-bold text-neutral-900 dark:text-neutral-100">{s.awb_number}</td>
+                    <td className="px-4 py-3"><AWBCopyButton awb={s.awb_number} /></td>
 
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${

@@ -3,6 +3,7 @@ import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { NDRShipment } from '@/types/ndr';
 import { NDRCallModal } from '@/components/ndr/NDRCallModal';
+import { AWBCopyButton } from '@/components/ndr/AWBCopyButton';
 import { Clock, PhoneCall, RefreshCw } from 'lucide-react';
 
 export default function NDRFollowUpDue() {
@@ -72,7 +73,7 @@ export default function NDRFollowUpDue() {
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                 {shipments.map((s) => (
                   <tr key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30">
-                    <td className="px-4 py-3 font-mono font-bold text-neutral-900 dark:text-neutral-100">{s.awb_number}</td>
+                    <td className="px-4 py-3"><AWBCopyButton awb={s.awb_number} /></td>
                     <td className="px-4 py-3 font-semibold">{s.consignee_name || '-'}</td>
                     <td className="px-4 py-3 font-medium">{s.delivery_executive || '-'}</td>
                     <td className="px-4 py-3 text-amber-600 font-medium">{s.original_ndr_reason || '-'}</td>
