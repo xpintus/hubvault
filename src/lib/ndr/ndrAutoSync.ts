@@ -86,28 +86,39 @@ export async function syncDRSUndelToNDR(
     const outcome = classifyDRSShipment(row);
     const cases = byAwb.get(key) || [];
     const active = cases.find(isActiveCase);
+    // One AWB always maps to one persistent NDR case. If the case was already
+    // closed, reuse it on a later DRS status change instead of creating a duplicate.
+    const existing = active || [...cases].sort((a, b) =>
+      String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || ''))
+    )[0];
 
     if (outcome !== 'undelivered') {
-      if (!active) continue;
+      if (!existing) continue;
       const delivered = outcome === 'delivered';
-      updates.push({ id: active.id, payload: {
+      const nextStatus = delivered ? 'DEL' : outcome === 'rto' ? 'RTO' : 'CANCELLED';
+      const unchanged = cleanStatus(existing.shipment_status_current) === nextStatus && existing.ndr_workflow_status === 'Closed';
+      if (unchanged) {
+        result.duplicatesSkipped++;
+        continue;
+      }
+      updates.push({ id: existing.id, payload: {
         shipment_status_current: delivered ? 'DEL' : outcome === 'rto' ? 'RTO' : 'CANCELLED',
         ndr_workflow_status: 'Closed',
         final_action: delivered ? 'Delivered' : outcome === 'rto' ? 'RTO' : 'Cancelled',
         delivered_after_ndr: delivered,
-        delivered_date: delivered ? (row.pod_date || now) : active.delivered_date,
-        rto_date: outcome === 'rto' ? (row.last_attempt_date || now) : active.rto_date,
-        drs_code: row.drs_code || active.drs_code,
-        drs_date: row.drs_date || fileMeta?.reportDate || active.drs_date,
-        last_attempt_date: row.last_attempt_date || active.last_attempt_date,
-        total_attempts: Math.max(active.total_attempts || 1, row.total_attempts || 1),
+        delivered_date: delivered ? (row.pod_date || now) : existing.delivered_date,
+        rto_date: outcome === 'rto' ? (row.last_attempt_date || now) : existing.rto_date,
+        drs_code: row.drs_code || existing.drs_code,
+        drs_date: row.drs_date || fileMeta?.reportDate || existing.drs_date,
+        last_attempt_date: row.last_attempt_date || existing.last_attempt_date,
+        total_attempts: Math.max(existing.total_attempts || 1, row.total_attempts || 1),
         updated_at: now,
       }});
       timeline.push({
-        shipment_id: active.id, event_type: delivered ? 'delivered' : 'closure',
+        shipment_id: existing.id, event_type: delivered ? 'delivered' : 'closure',
         action_title: delivered ? 'Resolved by DRS delivery update' : `Resolved by DRS ${outcome.toUpperCase()} update`,
         user_id: profile?.id || null, user_name: profile?.name || 'System Auto-Sync', user_role: profile?.role || 'system',
-        previous_status: active.ndr_workflow_status, new_status: 'Closed',
+        previous_status: existing.ndr_workflow_status, new_status: 'Closed',
         remarks: `Status updated from ${fileMeta?.fileName || 'DRS report'}; history preserved.`,
       });
       if (delivered) result.resolvedDelivered++; else result.resolvedTerminal++;
@@ -118,36 +129,41 @@ export async function syncDRSUndelToNDR(
     const reason = normalizeNDRReason(row.reason);
     result.reasonCounts[reason] = (result.reasonCounts[reason] || 0) + 1;
 
-    if (active) {
+    if (existing) {
       const attemptDate = row.last_attempt_date || row.first_attempt_date || row.drs_date || fileMeta?.reportDate || now;
       const unchanged =
-        (active.total_attempts || 1) === (row.total_attempts || 1) &&
-        String(active.last_attempt_date || '').slice(0, 10) === String(attemptDate).slice(0, 10) &&
-        (active.original_ndr_reason || '') === (row.reason || '');
+        isActiveCase(existing) &&
+        (existing.total_attempts || 1) === (row.total_attempts || 1) &&
+        String(existing.last_attempt_date || '').slice(0, 10) === String(attemptDate).slice(0, 10) &&
+        (existing.original_ndr_reason || '') === (row.reason || '');
       if (unchanged) {
         result.duplicatesSkipped++;
         continue;
       }
-      updates.push({ id: active.id, payload: {
-        total_attempts: Math.max(active.total_attempts || 1, row.total_attempts || 1),
+      updates.push({ id: existing.id, payload: {
+        shipment_status_current: 'UNDEL',
+        ndr_workflow_status: isActiveCase(existing) ? existing.ndr_workflow_status : 'Calling Pending',
+        final_action: null,
+        delivered_after_ndr: false,
+        total_attempts: Math.max(existing.total_attempts || 1, row.total_attempts || 1),
         last_attempt_date: attemptDate,
-        otp_status: row.otp_details || active.otp_status,
-        drs_code: row.drs_code || active.drs_code,
-        drs_date: row.drs_date || fileMeta?.reportDate || active.drs_date,
-        delivery_executive: row.employee_name || active.delivery_executive,
-        consignee_name: row.consignee || active.consignee_name,
-        consignee_phone: row.consignee_phone || active.consignee_phone,
-        delivery_address: row.delivery_address || active.delivery_address,
+        otp_status: row.otp_details || existing.otp_status,
+        drs_code: row.drs_code || existing.drs_code,
+        drs_date: row.drs_date || fileMeta?.reportDate || existing.drs_date,
+        delivery_executive: row.employee_name || existing.delivery_executive,
+        consignee_name: row.consignee || existing.consignee_name,
+        consignee_phone: row.consignee_phone || existing.consignee_phone,
+        delivery_address: row.delivery_address || existing.delivery_address,
         payment_type: row.payment_type?.toUpperCase().includes('COD') ? 'COD' : 'PREPAID',
-        amount_payable: row.amount_payable ?? active.amount_payable,
-        original_ndr_reason: row.reason || active.original_ndr_reason,
+        amount_payable: row.amount_payable ?? existing.amount_payable,
+        original_ndr_reason: row.reason || existing.original_ndr_reason,
         normalized_ndr_reason: reason,
         updated_at: now,
       }});
-      timeline.push({ shipment_id: active.id, event_type: 'import', action_title: 'DRS attempt updated',
+      timeline.push({ shipment_id: existing.id, event_type: 'import', action_title: 'DRS status updated',
         user_id: profile?.id || null, user_name: profile?.name || 'System Auto-Sync', user_role: profile?.role || 'system',
-        previous_status: active.ndr_workflow_status, new_status: active.ndr_workflow_status,
-        remarks: `Attempt ${row.total_attempts || 1}; ${row.reason || 'undelivered'}. Existing remarks and calls preserved.` });
+        previous_status: existing.ndr_workflow_status, new_status: isActiveCase(existing) ? existing.ndr_workflow_status : 'Calling Pending',
+        remarks: `Attempt ${row.total_attempts || 1}; ${row.reason || 'undelivered'}. Existing remarks, calls and history preserved.` });
       result.existingNdrUpdated++;
       continue;
     }

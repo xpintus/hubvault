@@ -4,18 +4,18 @@ import { clsx } from 'clsx';
 
 const OPERATION_TABS = [
   {
-    to: '/operations/ndr/dashboard',
-    label: 'NDR Operations',
-    description: 'Calling, follow-up and resolution',
-    icon: Truck,
-    match: '/operations/ndr',
-  },
-  {
     to: '/operations/drs-performance',
     label: 'DRS Performance',
     description: 'Delivery performance analytics',
     icon: BarChart3,
     match: '/operations/drs-performance',
+  },
+  {
+    to: '/operations/ndr/dashboard',
+    label: 'NDR Operations',
+    description: 'Calling, follow-up and resolution',
+    icon: Truck,
+    match: '/operations/ndr',
   },
 ];
 

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useHub } from '@/lib/hubContext';
-import { NDRImportModal } from '@/components/ndr/NDRImportModal';
 import {
   AlertCircle,
   Archive,
@@ -16,7 +15,6 @@ import {
   RotateCcw,
   ShieldCheck,
   Truck,
-  Upload,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -31,12 +29,7 @@ const NAV_TABS = [
 
 export default function NDRLayout() {
   const { selectedHub } = useHub();
-  const [importModalOpen, setImportModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  const handleImportSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
 
   return (
     <div className="space-y-5">
@@ -69,12 +62,6 @@ export default function NDRLayout() {
           <span className="hidden items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-bold text-emerald-200 lg:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> Live operations
           </span>
-          <button
-            onClick={() => setImportModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-50 active:scale-95"
-          >
-            <Upload className="h-4 w-4" /> Import Daily NDR File
-          </button>
         </div></div>
       </div>
 
@@ -109,14 +96,6 @@ export default function NDRLayout() {
         <Outlet context={{ refreshTrigger, setRefreshTrigger }} />
       </main>
 
-      {/* NDR Import Modal */}
-      <NDRImportModal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onSuccess={handleImportSuccess}
-        hubId={selectedHub?.id || null}
-
-      />
     </div>
   );
 }

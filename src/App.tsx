@@ -231,7 +231,7 @@ export default function App() {
                               </Suspense>
                             }
                           >
-                          <Route index element={<Navigate to="/operations/ndr/dashboard" replace />} />
+                          <Route index element={<Navigate to="/operations/drs-performance" replace />} />
                           {/* NDR Operations Module Routes */}
                           <Route
                             path="/operations/ndr"
