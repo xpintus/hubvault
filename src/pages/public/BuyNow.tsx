@@ -24,8 +24,8 @@ TrendingUp,
 User,
 Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
-import { Link,useNavigate } from 'react-router-dom';
+import { useEffect,useState } from 'react';
+import { Link,useNavigate,useSearchParams } from 'react-router-dom';
 
 const BUY_FEATURES = [
   { icon: Sparkles, text: 'Lifetime access — pay once, use forever' },
@@ -33,6 +33,14 @@ const BUY_FEATURES = [
   { icon: Scale, text: 'Daily reconciliation, dues & recovery tracking' },
   { icon: Building2, text: 'Unlimited hubs, collectors & transactions' },
   { icon: RotateCcw, text: 'Free updates and bug fixes included' },
+];
+
+const MONTHLY_FEATURES = [
+  { icon: Sparkles, text: 'Full HubVault access for 30 days' },
+  { icon: BarChart3, text: 'Real-time dashboards & one-click reports' },
+  { icon: Scale, text: 'Daily reconciliation, dues & recovery tracking' },
+  { icon: Building2, text: 'Unlimited hubs, collectors & transactions' },
+  { icon: RotateCcw, text: 'Renew anytime without losing your workspace' },
 ];
 
 interface BuyFormErrors {
@@ -46,11 +54,12 @@ interface BuyFormErrors {
 
 export default function BuyNow() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const { settings } = useSettings();
   const PRICE = settings.license_price;
   const MONTHLY_PRICE = settings.monthly_price;
-  const [plan, setPlan] = useState<'lifetime' | 'monthly'>(() => new URLSearchParams(window.location.search).get('plan') === 'monthly' ? 'monthly' : 'lifetime');
+  const [plan, setPlan] = useState<'lifetime' | 'monthly'>(() => searchParams.get('plan') === 'monthly' ? 'monthly' : 'lifetime');
   const selectedPrice = plan === 'lifetime' ? PRICE : MONTHLY_PRICE;
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '', hubName: '', hubCode: '', message: '', promoCode: '',
@@ -59,6 +68,10 @@ export default function BuyNow() {
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    setPlan(searchParams.get('plan') === 'monthly' ? 'monthly' : 'lifetime');
+  }, [searchParams]);
 
   const validate = (): boolean => {
     const e: BuyFormErrors = {};
@@ -213,12 +226,16 @@ export default function BuyNow() {
                   </div>
                   <div className="mt-5 flex items-baseline gap-2">
                     <span className="text-5xl font-bold tracking-tight">₹{selectedPrice}</span>
-                    <span className="text-lg text-white/50 line-through">₹2,999</span>
+                    {plan === 'lifetime' ? (
+                      <span className="text-lg text-white/50 line-through">₹2,999</span>
+                    ) : (
+                      <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white/80">30 days access</span>
+                    )}
                   </div>
                   <p className="mt-2 text-sm text-white/70">{plan === 'lifetime' ? 'One-time payment · No recurring fees' : 'Valid for one month · Renew monthly'}</p>
 
                   <div className="mt-7 space-y-3">
-                    {BUY_FEATURES.map((f) => (
+                    {(plan === 'lifetime' ? BUY_FEATURES : MONTHLY_FEATURES).map((f) => (
                       <div key={f.text} className="flex items-start gap-3">
                         <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/15">
                           <f.icon className="h-4 w-4" />
