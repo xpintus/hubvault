@@ -1099,13 +1099,6 @@ Deno.serve(async (req: Request) => {
           license_activated_at: myProfile.license_activated_at,
         });
       }
-          role: myProfile.role,
-          license_status: myProfile.license_status,
-          license_expires_at: myProfile.license_expires_at,
-          license_activated_at: myProfile.license_activated_at,
-        });
-      }
-
       case "request-license-upi": {
         // Hub admin submits a manual UPI payment request (license or hub_add)
         if (req.method !== "POST") return jsonError(405, "Method not allowed");

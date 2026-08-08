@@ -31,6 +31,7 @@ const TITLES: Record<string, string> = {
   '/purchases': 'Purchase Requests',
   '/audit-logs': 'Audit Logs',
   '/licenses': 'License Management',
+  '/activation-status': 'License & Subscription',
   '/mail-campaigns': 'Mail Campaigns',
 };
 

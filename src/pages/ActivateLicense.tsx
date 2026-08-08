@@ -2,6 +2,8 @@ import RequestLicenseModal from '@/components/RequestLicenseModal';
 import { Button,Input,Spinner } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
+import { useSettings } from '@/lib/settings';
+import { getSubscriptionDetails } from '@/lib/subscription';
 import { supabase,SUPABASE_URL } from '@/lib/supabase';
 import { AlertTriangle,CheckCircle2,Clock,Gift,KeyRound,ShieldCheck,ShoppingCart } from 'lucide-react';
 import { useEffect,useState } from 'react';
@@ -10,7 +12,8 @@ import { useNavigate } from 'react-router-dom';
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/manage-user`;
 
 export default function ActivateLicense() {
-  const { profile, loading, checkLicenseExpired: _checkLicenseExpired, signOut } = useAuth();
+  const { profile, loading, refreshProfile, signOut } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const toast = useToast();
   const [code, setCode] = useState('');
@@ -30,7 +33,8 @@ export default function ActivateLicense() {
       return;
     }
     if (profile.license_status === 'activated') {
-      navigate('/dashboard');
+      setStatus('activated');
+      setExpiresAt(profile.subscription_expires_at ?? profile.license_expires_at ?? null);
       return;
     }
     if (profile.license_status === 'expired') {
@@ -65,8 +69,8 @@ export default function ActivateLicense() {
         throw new Error(data.error || 'Activation failed');
       }
       setStatus('activated');
-      toast.success('License activated successfully! Redirecting to dashboard...');
-      setTimeout(() => navigate('/dashboard'), 1500);
+      await refreshProfile();
+      toast.success('License activated successfully!');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to activate license');
     } finally {
@@ -99,6 +103,13 @@ export default function ActivateLicense() {
   };
 
   const countdown = formatCountdown();
+  const subscription = getSubscriptionDetails(profile, settings.subscription_grace_days);
+  const isMonthly = profile?.plan_type === 'monthly';
+
+  const handleRenewMonthly = () => {
+    sessionStorage.setItem('hubvault_checkout_plan', 'monthly');
+    navigate('/payment');
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ background: 'var(--page-bg)' }}>
@@ -114,11 +125,37 @@ export default function ActivateLicense() {
           </div>
         </div>
 
+        <div className="mb-6 overflow-hidden rounded-3xl border border-neutral-200 bg-[var(--card-bg)] shadow-soft dark:border-neutral-800">
+          <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-brand-900 p-5 text-white">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Your HubVault access</p>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-black">{isMonthly ? 'Monthly Subscription' : 'Lifetime License'}</h2>
+                <p className="mt-1 text-xs text-indigo-100/70">Plan and activation details for {profile?.name}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${subscription.status === 'expired' ? 'bg-rose-500 text-white' : 'bg-emerald-400/20 text-emerald-200 ring-1 ring-emerald-300/30'}`}>
+                {subscription.status === 'expired' ? 'Expired' : profile?.license_status === 'pending' ? 'Pending activation' : 'Active'}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 p-5 text-xs">
+            <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"><span className="block text-neutral-400">Plan type</span><strong className="mt-1 block text-neutral-900 dark:text-white">{isMonthly ? 'Monthly' : 'Lifetime'}</strong></div>
+            <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"><span className="block text-neutral-400">License status</span><strong className="mt-1 block capitalize text-neutral-900 dark:text-white">{profile?.license_status || 'Pending'}</strong></div>
+            <div className="col-span-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900"><span className="block text-neutral-400">{isMonthly ? 'Subscription expiry' : 'Validity'}</span><strong className="mt-1 block text-neutral-900 dark:text-white">{isMonthly && subscription.expiresAt ? new Date(subscription.expiresAt).toLocaleString() : 'Lifetime — never expires'}</strong></div>
+            {isMonthly && (
+              <button onClick={handleRenewMonthly} className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5">
+                <ShoppingCart className="h-4 w-4" /> Renew Monthly Plan — ₹{settings.monthly_price}
+              </button>
+            )}
+          </div>
+        </div>
+
         {status === 'activated' ? (
-          <div className="rounded-2xl border border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-900/20 p-8 text-center">
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center dark:border-green-800/50 dark:bg-green-900/20">
             <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Activation Successful!</h2>
-            <p className="text-sm text-neutral-500">Your license is now active. Redirecting you to the dashboard...</p>
+            <h2 className="mb-2 text-xl font-bold text-neutral-900 dark:text-neutral-100">License Active</h2>
+            <p className="mb-5 text-sm text-neutral-500">Your HubVault workspace is active and ready to use.</p>
+            <Button onClick={() => navigate('/dashboard')} className="w-full">Open Dashboard</Button>
           </div>
         ) : status === 'expired' ? (
           <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20 p-8 text-center">

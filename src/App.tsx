@@ -205,6 +205,7 @@ export default function App() {
                               </Suspense>
                             }
                           />
+                          <Route path="/activation-status" element={<ActivateLicense />} />
                           <Route
                             path="/khatabook"
                             element={

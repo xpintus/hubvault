@@ -52,6 +52,7 @@ const NAV: NavItem[] = [
   { to: '/daily-closing', label: 'Daily Closing', icon: CalendarCheck2, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/recovery', label: 'Recovery', icon: RotateCcw, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/users', label: 'Users & Access', icon: UserCog, roles: ['super_admin', 'hub_admin'] },
+  { to: '/activation-status', label: 'License & Plan', icon: KeyRound, roles: ['hub_admin'] },
   { to: '/trial-users', label: 'Trial Users', icon: UserPlus, roles: ['super_admin'] },
   { to: '/messages', label: 'Messages', icon: Mail, roles: ['super_admin'] },
   { to: '/mail-campaigns', label: 'Mail Campaigns', icon: Send, roles: ['super_admin'] },
