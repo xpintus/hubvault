@@ -3,6 +3,8 @@ import { useHub } from '@/lib/hubContext';
 import { supportsHubOperations } from '@/lib/logisticsCompany';
 import { confirm } from '@/lib/confirm';
 import { useNotifications } from '@/lib/notifications';
+import { toISODate } from '@/lib/format';
+import { supabase } from '@/lib/supabase';
 import { ROLE_LABELS, UserRole } from '@/types';
 import { clsx } from 'clsx';
 import {
@@ -32,6 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 interface NavItem {
   to: string;
@@ -77,6 +80,32 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
   const { selectedHub } = useHub();
   const { pendingPayments, unreadHubNotifications, unreadBuyerNotifications, pendingPayouts } = useNotifications();
   const navigate = useNavigate();
+  const [dailyClosingPending, setDailyClosingPending] = useState(false);
+
+  useEffect(() => {
+    if (!profile || profile.role !== 'hub_admin') {
+      setDailyClosingPending(false);
+      return;
+    }
+    const hubId = selectedHub?.id || profile.hub_id;
+    if (!hubId) return;
+    let cancelled = false;
+    const today = toISODate(new Date());
+    const checkDailyClosing = async () => {
+      const [{ count: codEntries }, { data: finalization }] = await Promise.all([
+        supabase.from('collection_entries').select('id', { count: 'exact', head: true }).eq('hub_id', hubId).eq('collection_date', today).gt('expected_cod', 0),
+        supabase.from('daily_closing_finalizations').select('id').eq('hub_id', hubId).eq('closing_date', today).maybeSingle(),
+      ]);
+      if (!cancelled) setDailyClosingPending((codEntries ?? 0) > 0 && !finalization);
+    };
+    void checkDailyClosing();
+    const refresh = () => { void checkDailyClosing(); };
+    window.addEventListener('hubvault:daily-closing-finalized', refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('hubvault:daily-closing-finalized', refresh);
+    };
+  }, [profile, selectedHub?.id]);
 
   const handleSignOut = async () => {
     const ok = await confirm({
@@ -142,7 +171,9 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           <p className={clsx('px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400', collapsed && 'lg:hidden')}>Menu</p>
-          {items.map((item) => (
+          {items.map((item) => {
+            const needsDailyClose = item.to === '/daily-closing' && dailyClosingPending;
+            return (
             <NavLink
               key={item.to}
               to={item.to}
@@ -155,6 +186,8 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
                   collapsed && 'lg:justify-center lg:px-0',
                   isActive
                     ? 'bg-brand-50 dark:bg-brand-600/15 text-brand-600 dark:text-brand-400'
+                    : needsDailyClose
+                      ? 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-300 shadow-sm dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/40'
                     : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'
                 )
               }
@@ -168,6 +201,11 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
                   )} />
                   <item.icon className={clsx('h-[18px] w-[18px] shrink-0 transition-colors', isActive ? 'text-brand-600 dark:text-brand-400' : 'text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300')} />
                   <span className={clsx(collapsed && 'lg:hidden')}>{item.label}</span>
+                  {needsDailyClose && (
+                    <span className={clsx('ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white animate-pulse', collapsed && 'lg:absolute lg:right-0 lg:top-0 lg:h-2 lg:w-2 lg:p-0 lg:text-transparent')}>
+                      Close
+                    </span>
+                  )}
                   {item.to === '/licenses' && pendingPayments > 0 && (
                     <span className={clsx('inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse', collapsed && 'lg:absolute lg:top-1 lg:right-1')}>
                       {pendingPayments}
@@ -191,7 +229,8 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
                 </>
               )}
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
 
         {/* User footer */}

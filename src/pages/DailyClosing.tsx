@@ -8,7 +8,7 @@ import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { supabase } from '@/lib/supabase';
 import { Collector,DailyClosing,DailyClosingFinalization,DailyClosingHistory,DailyClosingStatus } from '@/types';
-import { ArchiveRestore,CheckCircle2,Download,FileText,History,Lock,RefreshCw,Send,ShieldCheck,XCircle } from 'lucide-react';
+import { AlertTriangle,ArchiveRestore,CalendarDays,CheckCircle2,Download,FileText,History,Lock,RefreshCw,Send,ShieldCheck,XCircle } from 'lucide-react';
 import { useCallback,useEffect,useMemo,useState } from 'react';
 
 const statusColor: Record<DailyClosingStatus, string> = { submitted: 'blue', approved: 'green', rejected: 'red', reopened: 'amber' };
@@ -70,7 +70,10 @@ export default function DailyClosingPage() {
             .filter((row) => Number(row.expected_cod || 0) > 0)
             .map((row) => row.collector_id),
         );
-        availableCollectors = availableCollectors.filter((collector) => codCollectorIds.has(collector.id));
+        const closingCollectorIds = new Set((data ?? []).map((closing) => closing.collector_id));
+        availableCollectors = availableCollectors.filter(
+          (collector) => codCollectorIds.has(collector.id) && !closingCollectorIds.has(collector.id),
+        );
         setClosings(((data ?? []) as DailyClosing[]).filter((closing) => codCollectorIds.has(closing.collector_id)));
         setRequiredCollectorIds([...codCollectorIds]);
 
@@ -89,7 +92,10 @@ export default function DailyClosingPage() {
             .filter((entry) => Number(entry.expected_cod || 0) > 0)
             .map((entry) => entry.collector_id),
         );
-        availableCollectors = availableCollectors.filter((collector) => codCollectorIds.has(collector.id));
+        const closingCollectorIds = new Set(local.map((closing) => closing.collector_id));
+        availableCollectors = availableCollectors.filter(
+          (collector) => codCollectorIds.has(collector.id) && !closingCollectorIds.has(collector.id),
+        );
         setClosings(local.filter((closing) => codCollectorIds.has(closing.collector_id)));
         setRequiredCollectorIds([...codCollectorIds]);
         setFinalization(null);
@@ -153,6 +159,7 @@ export default function DailyClosingPage() {
       const result = await finalizeDailyClosingDay(date, hubId);
       const verified = { ...result, finalizer: profile } as DailyClosingFinalization;
       setFinalization(verified);
+      window.dispatchEvent(new CustomEvent('hubvault:daily-closing-finalized', { detail: { hubId, date } }));
       toast.success(`Daily Closing verified by ${profile.name}`);
       printDailyClosingsPdf(closings, `Final Daily Closing Report - ${formatDate(date)}`, verified);
       await load();
@@ -167,8 +174,29 @@ export default function DailyClosingPage() {
         <div className="flex gap-2"><Button variant="outline" icon={<Download className="h-4 w-4" />} disabled={!closings.length} onClick={exportExcel}>Excel</Button><Button variant="outline" icon={<FileText className="h-4 w-4" />} disabled={!closings.length} onClick={exportPdf}>PDF</Button></div>
       </div>
 
+      {!finalization && requiredCollectorIds.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="rounded-xl bg-amber-100 p-2 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"><AlertTriangle className="h-5 w-5" /></span>
+            <div>
+              <p className="font-bold text-amber-900 dark:text-amber-100">Today&apos;s Daily Closing is pending</p>
+              <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">Hub Admin ko sabhi COD entries review karke Final Daily Close complete karna hai.</p>
+            </div>
+          </div>
+          <span className="w-fit rounded-full bg-amber-500 px-3 py-1 text-xs font-black text-white shadow-sm">ACTION REQUIRED</span>
+        </div>
+      )}
+
       <Card className="p-5 space-y-4">
-        <div className="grid gap-3 md:grid-cols-4"><Input label="Closing Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /><Select label="Employee" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">Select employee</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select><div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Expected online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div></div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-900">
+            <label htmlFor="closing-date" className="mb-1.5 flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300"><CalendarDays className="h-4 w-4 text-brand-500" />Date</label>
+            <input id="closing-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border-0 bg-transparent p-0 text-sm font-bold text-neutral-900 outline-none dark:text-neutral-100" />
+          </div>
+          <Select label="Employee with COD" value={collectorId} onChange={(e) => setCollectorId(e.target.value)}><option value="">{collectors.length ? 'Select employee' : 'No pending employee'}</option>{collectors.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.employee_id})</option>)}</Select>
+          <div className="rounded-xl bg-neutral-50 dark:bg-neutral-900 p-3"><p className="text-xs text-neutral-500">Expected cash</p><p className="font-bold">{formatINR(source.expectedCash)}</p></div>
+          <div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><p className="text-xs text-neutral-500">Expected online</p><p className="font-bold">{formatINR(source.onlineAmount)}</p></div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2"><Input label="Actual Cash Amount" type="number" min={0} value={actualCash} onChange={(e) => setActualCash(e.target.value)} placeholder="Enter cash amount" /><Input label="Actual Online Amount (optional)" type="number" min={0} value={actualOnline} onChange={(e) => setActualOnline(e.target.value)} placeholder="Blank will be submitted as ₹0" /></div>
         <div className="grid gap-3 md:grid-cols-4"><VarianceCard label="Cash variance" value={variances.cash} /><VarianceCard label="Online variance" value={variances.online} /><VarianceCard label="Total variance" value={variances.total} /><Textarea label={variances.reconciled ? 'Notes' : 'Remarks (auto-filled)'} rows={2} value={notes || autoRemark} onChange={(e) => setNotes(e.target.value)} /></div>
         {existing && !canSubmit && <div className="flex items-center gap-2 text-sm text-neutral-500"><Lock className="h-4 w-4" />This employee already has a {existing.status} closing for this date.</div>}
