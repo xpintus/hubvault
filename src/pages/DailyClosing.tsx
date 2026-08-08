@@ -180,7 +180,7 @@ export default function DailyClosingPage() {
             <span className="rounded-xl bg-amber-100 p-2 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"><AlertTriangle className="h-5 w-5" /></span>
             <div>
               <p className="font-bold text-amber-900 dark:text-amber-100">Today&apos;s Daily Closing is pending</p>
-              <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">Hub Admin ko sabhi COD entries review karke Final Daily Close complete karna hai.</p>
+              <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">The Hub Admin must review all COD entries and complete the Final Daily Close.</p>
             </div>
           </div>
           <span className="w-fit rounded-full bg-amber-500 px-3 py-1 text-xs font-black text-white shadow-sm">ACTION REQUIRED</span>

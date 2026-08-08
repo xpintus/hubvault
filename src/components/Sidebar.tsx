@@ -187,7 +187,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
                   isActive
                     ? 'bg-brand-50 dark:bg-brand-600/15 text-brand-600 dark:text-brand-400'
                     : needsDailyClose
-                      ? 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-300 shadow-sm dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/40'
+                      ? 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-300 shadow-sm shadow-red-500/10 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/50'
                     : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'
                 )
               }
@@ -202,8 +202,8 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }: 
                   <item.icon className={clsx('h-[18px] w-[18px] shrink-0 transition-colors', isActive ? 'text-brand-600 dark:text-brand-400' : 'text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300')} />
                   <span className={clsx(collapsed && 'lg:hidden')}>{item.label}</span>
                   {needsDailyClose && (
-                    <span className={clsx('ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white animate-pulse', collapsed && 'lg:absolute lg:right-0 lg:top-0 lg:h-2 lg:w-2 lg:p-0 lg:text-transparent')}>
-                      Close
+                    <span className={clsx('ml-auto inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white shadow-sm shadow-red-500/40 animate-pulse', collapsed && 'lg:absolute lg:right-0 lg:top-0 lg:h-2 lg:w-2 lg:p-0 lg:text-transparent')}>
+                      Attention
                     </span>
                   )}
                   {item.to === '/licenses' && pendingPayments > 0 && (
