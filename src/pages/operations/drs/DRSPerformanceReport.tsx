@@ -673,90 +673,109 @@ export default function DRSPerformanceReport() {
           {/* TAB 1: OVERVIEW PAGE                                      */}
           {/* ========================================================= */}
           {activeTab === 'OVERVIEW' && filteredSummary && (
-            <div className="space-y-6">
+            <div className="space-y-5 rounded-[28px] border border-neutral-200/70 bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-950 dark:via-neutral-950 dark:to-indigo-950/20 sm:p-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">Performance snapshot</p>
+                  <h2 className="mt-1 text-xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-2xl">Delivery Overview</h2>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Live operational health across OFD, attempts and payment modes.</p>
+                </div>
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                  {filteredSummary.overallDeliveryPct >= 80 ? 'On track' : 'Needs attention'}
+                </div>
+              </div>
               {/* ----------------------------------------------------- */}
               {/* 6 PRIMARY KPI CARDS (HEIGHT: 135–140PX, VALUE: 42PX BOLD) */}
               {/* ----------------------------------------------------- */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
                 {/* 1. Total OFD */}
-                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-slate-400" />
+                  <div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Total OFD</span>
-                    <Package className="h-4 w-4 text-neutral-400" />
+                    <span className="rounded-xl bg-slate-100 p-2 dark:bg-neutral-800"><Package className="h-4 w-4 text-slate-500" /></span>
                   </div>
-                  <span className="text-[42px] font-black tracking-tight leading-none text-neutral-900 dark:text-neutral-100 font-mono">
+                  <span className="font-mono text-3xl font-black leading-none tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">
                     {filteredSummary.totalOfd}
                   </span>
-                  <span className="text-[10px] text-neutral-400 font-medium">Unique AWBs</span>
+                  <span className="text-[10px] font-semibold text-neutral-400">Unique AWBs</span>
+                  </div>
                 </div>
 
                 {/* 2. Delivered */}
-                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/30 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Delivered</span>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span className="rounded-xl bg-emerald-100 p-2 dark:bg-emerald-950"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></span>
                   </div>
-                  <span className="text-[42px] font-black tracking-tight leading-none text-emerald-600 dark:text-emerald-400 font-mono">
+                  <span className="font-mono text-3xl font-black leading-none tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-4xl">
                     {filteredSummary.totalDelivered}
                   </span>
-                  <span className="text-[10px] text-emerald-600 font-semibold">{filteredSummary.overallDeliveryPct}% Rate</span>
+                  <span className="text-[10px] font-bold text-emerald-600">{filteredSummary.overallDeliveryPct}% success rate</span></div>
                 </div>
 
                 {/* 3. Pending */}
-                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-rose-200/70 bg-gradient-to-br from-white to-rose-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-rose-900/60 dark:from-neutral-900 dark:to-rose-950/30 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-rose-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Pending</span>
-                    <Clock className="h-4 w-4 text-rose-600" />
+                    <span className="rounded-xl bg-rose-100 p-2 dark:bg-rose-950"><Clock className="h-4 w-4 text-rose-600" /></span>
                   </div>
-                  <span className="text-[42px] font-black tracking-tight leading-none text-rose-600 dark:text-rose-400 font-mono">
+                  <span className="font-mono text-3xl font-black leading-none tracking-tight text-rose-600 dark:text-rose-400 sm:text-4xl">
                     {filteredSummary.totalUndel}
                   </span>
-                  <span className="text-[10px] text-rose-600 font-semibold">Active UNDEL</span>
+                  <span className="text-[10px] font-bold text-rose-600">Active undelivered</span></div>
                 </div>
 
                 {/* 4. Overall Delivery % */}
-                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-white to-indigo-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-indigo-900/60 dark:from-neutral-900 dark:to-indigo-950/30 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-indigo-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Overall %</span>
-                    <TrendingUp className="h-4 w-4 text-brand-600" />
+                    <span className="rounded-xl bg-indigo-100 p-2 dark:bg-indigo-950"><TrendingUp className="h-4 w-4 text-indigo-600" /></span>
                   </div>
-                  <span className="text-[42px] font-black tracking-tight leading-none text-neutral-900 dark:text-neutral-100 font-mono">
+                  <span className="font-mono text-3xl font-black leading-none tracking-tight text-indigo-600 dark:text-indigo-400 sm:text-4xl">
                     {filteredSummary.overallDeliveryPct}%
                   </span>
-                  <span className="text-[10px] text-neutral-400 font-medium">Efficiency</span>
+                  <span className="text-[10px] font-semibold text-neutral-400">Overall efficiency</span></div>
                 </div>
 
                 {/* 5. First Attempt % */}
-                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-white to-blue-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-blue-900/60 dark:from-neutral-900 dark:to-blue-950/30 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-blue-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>1st Attempt %</span>
-                    <Target className="h-4 w-4 text-blue-600" />
+                    <span className="rounded-xl bg-blue-100 p-2 dark:bg-blue-950"><Target className="h-4 w-4 text-blue-600" /></span>
                   </div>
-                  <span className="text-[42px] font-black tracking-tight leading-none text-blue-600 dark:text-blue-400 font-mono">
+                  <span className="font-mono text-3xl font-black leading-none tracking-tight text-blue-600 dark:text-blue-400 sm:text-4xl">
                     {filteredSummary.firstAttemptDeliveryPct}%
                   </span>
-                  <span className="text-[10px] text-blue-600 font-semibold">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd}</span>
+                  <span className="text-[10px] font-bold text-blue-600">{filteredSummary.firstAttemptDelivered} / {filteredSummary.firstAttemptOfd} delivered</span></div>
                 </div>
 
                 {/* 6. Reattempt % */}
-                <div className="min-h-[135px] max-h-[140px] flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-violet-200/70 bg-gradient-to-br from-white to-violet-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-violet-900/60 dark:from-neutral-900 dark:to-violet-950/30 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-violet-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Reattempt %</span>
-                    <RotateCcw className="h-4 w-4 text-purple-600" />
+                    <span className="rounded-xl bg-violet-100 p-2 dark:bg-violet-950"><RotateCcw className="h-4 w-4 text-violet-600" /></span>
                   </div>
-                  <span className="text-[42px] font-black tracking-tight leading-none text-purple-600 dark:text-purple-400 font-mono">
+                  <span className="font-mono text-3xl font-black leading-none tracking-tight text-violet-600 dark:text-violet-400 sm:text-4xl">
                     {filteredSummary.reattemptDeliveryPct}%
                   </span>
-                  <span className="text-[10px] text-purple-600 font-semibold">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd}</span>
+                  <span className="text-[10px] font-bold text-violet-600">{filteredSummary.reattemptDelivered} / {filteredSummary.reattemptOfd} delivered</span></div>
                 </div>
               </div>
 
               {/* ----------------------------------------------------- */}
               {/* EXECUTIVE SECTIONS (TREND, DONUT, EMPLOYEES, NDR, COD, PREPAID) */}
               {/* ----------------------------------------------------- */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
+              <div className="grid grid-cols-1 gap-4 text-xs md:grid-cols-2 xl:grid-cols-3">
                 {/* 1. Delivery Trend Chart */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                <div className="min-h-[220px] space-y-4 rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-emerald-600" /> Delivery Trend Efficiency
@@ -768,9 +787,9 @@ export default function DRSPerformanceReport() {
                       <span className="text-neutral-500 font-medium">Target Efficiency</span>
                       <span className="font-mono font-bold text-neutral-700 dark:text-neutral-300">80.00%</span>
                     </div>
-                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-3 rounded-full overflow-hidden">
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100 p-0.5 dark:bg-neutral-800">
                       <div
-                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-sm transition-all duration-500"
                         style={{ width: `${Math.min(filteredSummary.overallDeliveryPct, 100)}%` }}
                       />
                     </div>
@@ -779,13 +798,18 @@ export default function DRSPerformanceReport() {
                 </div>
 
                 {/* 2. Delivery Status Donut / Pie Breakdown */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                <div className="min-h-[220px] space-y-4 rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-2">
                       <PieIcon className="h-4 w-4 text-brand-600" /> Delivery Status Breakdown
                     </h3>
                   </div>
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-3 pt-1">
+                    <div className="flex h-3 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+                      <div className="bg-emerald-500" style={{ width: `${Math.min(filteredSummary.overallDeliveryPct, 100)}%` }} />
+                      <div className="bg-rose-500" style={{ width: `${Math.min((filteredSummary.totalUndel / Math.max(filteredSummary.totalOfd, 1)) * 100, 100)}%` }} />
+                      <div className="bg-violet-500" style={{ width: `${Math.min((filteredSummary.totalRto / Math.max(filteredSummary.totalOfd, 1)) * 100, 100)}%` }} />
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-emerald-600">Delivered</span>
                       <span className="font-mono font-bold">{filteredSummary.totalDelivered} ({filteredSummary.overallDeliveryPct}%)</span>
@@ -806,7 +830,7 @@ export default function DRSPerformanceReport() {
                 </div>
 
                 {/* 3. Top 5 Employees */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                <div className="min-h-[220px] space-y-3 rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider text-xs flex items-center gap-1.5">
                       <User className="h-4 w-4 text-brand-600" /> Top 5 Employees
@@ -815,8 +839,8 @@ export default function DRSPerformanceReport() {
                   </div>
                   <div className="space-y-1.5">
                     {filteredEmployeeMetrics.slice(0, 5).map((e, idx) => (
-                      <div key={e.employee_name} className="flex items-center justify-between p-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-800/40">
-                        <span className="font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[160px]">#{idx + 1} {e.employee_name}</span>
+                      <div key={e.employee_name} className="flex items-center justify-between rounded-xl bg-neutral-50 px-2.5 py-2 dark:bg-neutral-800/50">
+                        <span className="flex min-w-0 items-center gap-2 font-bold text-neutral-900 dark:text-neutral-100"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-white text-[10px] text-brand-600 shadow-sm dark:bg-neutral-900">{idx + 1}</span><span className="truncate">{e.employee_name}</span></span>
                         <span className="font-mono font-bold text-emerald-600">{e.overall_delivery_pct}%</span>
                       </div>
                     ))}
@@ -824,7 +848,7 @@ export default function DRSPerformanceReport() {
                 </div>
 
                 {/* 4. Top NDR Reasons */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                <div className="min-h-[190px] space-y-3 rounded-2xl border border-rose-200/70 bg-gradient-to-br from-white to-rose-50/60 p-5 shadow-sm transition hover:shadow-md dark:border-rose-900/50 dark:from-neutral-900 dark:to-rose-950/20">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-rose-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
                       <ShieldAlert className="h-4 w-4" /> Top NDR Reasons
@@ -832,7 +856,7 @@ export default function DRSPerformanceReport() {
                   </div>
                   <div className="space-y-1.5">
                     {reasonMetrics.slice(0, 5).map((r) => (
-                      <div key={r.reason} className="flex items-center justify-between p-1.5 rounded-lg bg-rose-500/5">
+                      <div key={r.reason} className="flex items-center justify-between rounded-xl border border-rose-100 bg-white/80 px-2.5 py-2 dark:border-rose-900/40 dark:bg-neutral-900/60">
                         <span className="truncate max-w-[170px] font-semibold text-neutral-800 dark:text-neutral-200">{r.reason}</span>
                         <span className="font-bold font-mono text-rose-600">{r.count} AWBs</span>
                       </div>
@@ -841,7 +865,7 @@ export default function DRSPerformanceReport() {
                 </div>
 
                 {/* 5. COD Summary */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                <div className="min-h-[190px] space-y-4 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-white to-violet-50 p-5 shadow-sm transition hover:shadow-md dark:border-violet-900/50 dark:from-neutral-900 dark:to-violet-950/30">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-purple-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
                       <CreditCard className="h-4 w-4" /> COD Summary
@@ -858,7 +882,7 @@ export default function DRSPerformanceReport() {
                 </div>
 
                 {/* 6. Prepaid Summary */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm space-y-3">
+                <div className="min-h-[190px] space-y-4 rounded-2xl border border-blue-200/70 bg-gradient-to-br from-white to-blue-50 p-5 shadow-sm transition hover:shadow-md dark:border-blue-900/50 dark:from-neutral-900 dark:to-blue-950/30">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-blue-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
                       <CreditCard className="h-4 w-4" /> Prepaid Summary
