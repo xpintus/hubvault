@@ -14,6 +14,7 @@ import { NDRToast } from '@/components/ndr/NDRToast';
 import {
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   FileSpreadsheet,
   Filter,
@@ -121,6 +122,36 @@ export default function NDRAllShipments() {
 
   const handleExportCSV = () => {
     exportNDRShipmentsToCSV(shipments, `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const handleCopyAllAwbs = async () => {
+    try {
+      const allAwbs: string[] = [];
+      let copyPage = 1;
+      let expectedCount = totalCount;
+      do {
+        const result = await fetchNDRShipments({
+          hubId: selectedHub?.id || undefined, search, workflowStatus,
+          attempts: attempts !== 'ALL' ? attempts : undefined, isToday,
+          vendor: vendor !== 'ALL' ? vendor : undefined,
+          executive: executive !== 'ALL' ? executive : undefined,
+          reason: reason !== 'ALL' ? reason : undefined,
+          otpStatus: otpStatus !== 'ALL' ? otpStatus : undefined,
+          aging, page: copyPage, limit: 500,
+        });
+        expectedCount = result.count;
+        allAwbs.push(...result.data.map((shipment) => shipment.awb_number).filter(Boolean));
+        if (result.data.length < 500) break;
+        copyPage += 1;
+      } while (allAwbs.length < expectedCount);
+
+      const uniqueAwbs = [...new Set(allAwbs)];
+      if (!uniqueAwbs.length) return setToastMsg('No AWBs found to copy.');
+      await navigator.clipboard.writeText(uniqueAwbs.join('\n'));
+      setToastMsg(`${uniqueAwbs.length} filtered AWBs copied!`);
+    } catch {
+      setToastMsg('Could not copy AWBs. Please allow clipboard permission.');
+    }
   };
 
   const hasActiveFilters =
@@ -253,6 +284,14 @@ export default function NDRAllShipments() {
         </div>
 
         <div className="flex w-full items-center gap-2 md:w-auto">
+          <button
+            onClick={handleCopyAllAwbs}
+            disabled={loading || totalCount === 0}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-bold text-violet-700 transition hover:bg-violet-100 disabled:opacity-50 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 md:flex-none"
+            title="Copy every AWB matching the active filters"
+          >
+            <Copy className="h-3.5 w-3.5" /> Copy All AWBs ({totalCount})
+          </button>
           <button
             onClick={handleExportExcel}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 md:flex-none"

@@ -119,6 +119,7 @@ export default function DRSPerformanceReport() {
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [copyingEmployeeSnapshot, setCopyingEmployeeSnapshot] = useState(false);
+  const [shipmentViewFilter, setShipmentViewFilter] = useState<'ALL' | 'DELIVERED' | 'UNDELIVERED'>('ALL');
 
   // Enterprise Reset & Data Management State
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -300,6 +301,28 @@ export default function DRSPerformanceReport() {
     () => filteredUniqueRows.filter((row) => row.shipment_status_normalized === 'Unknown'),
     [filteredUniqueRows]
   );
+
+  const shipmentRegisterRows = useMemo(() => {
+    if (activeTab === 'OFD') return pendingOfdRows;
+    if (shipmentViewFilter === 'DELIVERED') return filteredUniqueRows.filter((row) => row.shipment_status_normalized === 'Delivered');
+    if (shipmentViewFilter === 'UNDELIVERED') return filteredUniqueRows.filter((row) => row.shipment_status_normalized === 'Undelivered');
+    return filteredUniqueRows;
+  }, [activeTab, filteredUniqueRows, pendingOfdRows, shipmentViewFilter]);
+
+  const openShipmentRegister = (filter: 'ALL' | 'DELIVERED' | 'UNDELIVERED') => {
+    setShipmentViewFilter(filter);
+    setActiveTab('TOTAL_SHIPMENTS');
+  };
+
+  const copyShipmentRegisterAwbs = async () => {
+    if (!shipmentRegisterRows.length) return setToastMsg('No AWBs found to copy.');
+    try {
+      await navigator.clipboard.writeText(shipmentRegisterRows.map((row) => row.waybill_no).join('\n'));
+      setToastMsg(`${shipmentRegisterRows.length} AWBs copied!`);
+    } catch {
+      setToastMsg('Could not copy AWBs. Please allow clipboard permission.');
+    }
+  };
 
   // Unified Single-Report Filtered Summary
   const filteredSummary = useMemo(() => {
@@ -728,7 +751,7 @@ export default function DRSPerformanceReport() {
           ].map((t) => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id as TabType)}
+              onClick={() => t.id === 'TOTAL_SHIPMENTS' ? openShipmentRegister('ALL') : setActiveTab(t.id as TabType)}
               className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 ${
                 activeTab === t.id
                   ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20'
@@ -804,7 +827,7 @@ export default function DRSPerformanceReport() {
               {/* ----------------------------------------------------- */}
               <div className="no-scrollbar grid snap-x snap-mandatory grid-flow-col auto-cols-[minmax(158px,78vw)] gap-3 overflow-x-auto pb-2 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-4 sm:overflow-visible sm:pb-0 xl:grid-cols-7">
                 {/* 1. Total Shipments */}
-                <button type="button" onClick={() => setActiveTab('TOTAL_SHIPMENTS')} className="group relative min-h-[142px] snap-start overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+                <button type="button" onClick={() => openShipmentRegister('ALL')} className="group relative min-h-[142px] snap-start overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-slate-400" />
                   <div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
@@ -832,7 +855,7 @@ export default function DRSPerformanceReport() {
                 </button>
 
                 {/* 3. Delivered */}
-                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/30 sm:p-5">
+                <button type="button" onClick={() => openShipmentRegister('DELIVERED')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/30 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Delivered</span>
@@ -841,11 +864,11 @@ export default function DRSPerformanceReport() {
                   <span className="font-mono text-3xl font-black leading-none tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-4xl">
                     {filteredSummary.totalDelivered}
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-600">{filteredSummary.overallDeliveryPct}% success rate</span></div>
-                </div>
+                  <span className="flex items-center justify-between text-[10px] font-bold text-emerald-600"><span>{filteredSummary.overallDeliveryPct}% success rate</span><span className="transition-transform group-hover:translate-x-1">View →</span></span></div>
+                </button>
 
                 {/* 3. Pending */}
-                <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-rose-200/70 bg-gradient-to-br from-white to-rose-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-rose-900/60 dark:from-neutral-900 dark:to-rose-950/30 sm:p-5">
+                <button type="button" onClick={() => openShipmentRegister('UNDELIVERED')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-rose-200/70 bg-gradient-to-br from-white to-rose-50 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-rose-900/60 dark:from-neutral-900 dark:to-rose-950/30 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-rose-500" /><div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
                     <span>Undelivered</span>
@@ -854,8 +877,8 @@ export default function DRSPerformanceReport() {
                   <span className="font-mono text-3xl font-black leading-none tracking-tight text-rose-600 dark:text-rose-400 sm:text-4xl">
                     {filteredSummary.totalUndel}
                   </span>
-                  <span className="text-[10px] font-bold text-rose-600">Active undelivered</span></div>
-                </div>
+                  <span className="flex items-center justify-between text-[10px] font-bold text-rose-600"><span>Active undelivered</span><span className="transition-transform group-hover:translate-x-1">View remarks →</span></span></div>
+                </button>
 
                 {/* 4. Overall Delivery % */}
                 <div className="relative min-h-[142px] overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-white to-indigo-50 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:border-indigo-900/60 dark:from-neutral-900 dark:to-indigo-950/30 sm:p-5">
@@ -1036,12 +1059,15 @@ export default function DRSPerformanceReport() {
               <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200/80 bg-gradient-to-r from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Shipment register</p>
-                  <h2 className="mt-1 text-xl font-black">{activeTab === 'OFD' ? 'OFD Pending Shipments' : 'Total Shipments'}</h2>
-                  <p className="mt-1 text-xs text-indigo-100/70">{activeTab === 'OFD' ? 'Shipments awaiting a final Delivered or Undelivered update.' : 'All unique AWB-level records from the active DRS report.'}</p>
+                  <h2 className="mt-1 text-xl font-black">{activeTab === 'OFD' ? 'OFD Pending Shipments' : shipmentViewFilter === 'DELIVERED' ? 'Delivered Shipments' : shipmentViewFilter === 'UNDELIVERED' ? 'Undelivered Shipments & Remarks' : 'Total Shipments'}</h2>
+                  <p className="mt-1 text-xs text-indigo-100/70">{activeTab === 'OFD' ? 'Shipments awaiting a final Delivered or Undelivered update.' : shipmentViewFilter === 'UNDELIVERED' ? 'Review every undelivered AWB with its complete DRS reason/remark.' : 'AWB-level records from the active DRS report.'}</p>
                 </div>
-                <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center backdrop-blur-sm">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-200">{activeTab === 'OFD' ? 'OFD Pending' : 'Total Shipments'}</span>
-                  <strong className="mt-1 block font-mono text-3xl font-black">{activeTab === 'OFD' ? pendingOfdRows.length : filteredUniqueRows.length}</strong>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={copyShipmentRegisterAwbs} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-black text-indigo-800 shadow-lg"><Copy className="h-4 w-4" /> Copy All AWBs</button>
+                  <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center backdrop-blur-sm">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-200">Filtered AWBs</span>
+                  <strong className="mt-1 block font-mono text-3xl font-black">{shipmentRegisterRows.length}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -1062,7 +1088,7 @@ export default function DRSPerformanceReport() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                      {(activeTab === 'OFD' ? pendingOfdRows : filteredUniqueRows).map((row, index) => (
+                      {shipmentRegisterRows.map((row, index) => (
                         <tr key={row.waybill_no} className="transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20">
                           <td className="px-4 py-3 font-mono text-neutral-400">{index + 1}</td>
                           <td className="px-4 py-3 font-mono font-black text-brand-600">{row.waybill_no}</td>
@@ -1080,14 +1106,14 @@ export default function DRSPerformanceReport() {
                           <td className="px-4 py-3 font-bold text-neutral-700 dark:text-neutral-300">{row.payment_type || '-'}</td>
                           <td className="px-4 py-3 text-right font-mono font-bold">₹{row.amount_payable.toLocaleString('en-IN')}</td>
                           <td className="px-4 py-3 text-center"><span className="rounded-lg bg-neutral-100 px-2 py-1 font-mono font-bold dark:bg-neutral-800">{row.total_attempts || 1}</span></td>
-                          <td className="max-w-[220px] truncate px-4 py-3 text-neutral-500" title={row.reason}>{row.reason || '-'}</td>
+                          <td className="min-w-[260px] max-w-[360px] whitespace-normal px-4 py-3 leading-relaxed text-neutral-600 dark:text-neutral-300">{row.reason || 'No remark available'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div className="border-t border-neutral-200 bg-neutral-50/70 px-4 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/30">
-                  Showing <strong className="text-neutral-900 dark:text-white">{activeTab === 'OFD' ? pendingOfdRows.length : filteredUniqueRows.length}</strong> {activeTab === 'OFD' ? 'pending OFD' : 'total'} shipments
+                  Showing <strong className="text-neutral-900 dark:text-white">{shipmentRegisterRows.length}</strong> filtered shipments
                 </div>
               </div>
             </div>
