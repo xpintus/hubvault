@@ -146,7 +146,7 @@ export async function saveDRSHistorySnapshot(
   }
 
   // Always update local storage first so history is immediately populated
-  const localUpdated = saveLocalDRSHistoryItem(item, false);
+  const localUpdated = saveLocalDRSHistoryItem(item, true);
 
   try {
     const s = item.summary;
@@ -190,9 +190,19 @@ export async function saveDRSHistorySnapshot(
       },
     };
 
-    const { data: insertedData, error: fullError } = await supabase
+    let existingQuery = supabase
       .from('drs_report_history')
-      .insert(fullPayload)
+      .select('id')
+      .eq('report_date', item.reportDate)
+      .eq('file_name', item.fileName)
+      .is('deleted_at', null);
+    existingQuery = item.hubId ? existingQuery.eq('hub_id', item.hubId) : existingQuery.is('hub_id', null);
+    const { data: existing } = await existingQuery.maybeSingle();
+
+    const writeQuery = existing?.id
+      ? supabase.from('drs_report_history').update(fullPayload).eq('id', existing.id)
+      : supabase.from('drs_report_history').insert(fullPayload);
+    const { data: insertedData, error: fullError } = await writeQuery
       .select('id')
       .single();
 
@@ -284,7 +294,7 @@ export function getActiveReportId(): string | null {
   try {
     if (typeof localStorage === 'undefined') return null;
     return localStorage.getItem(ACTIVE_REPORT_ID_KEY);
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -373,4 +383,3 @@ export function compareDRSReportItems(
     codAmountChange,
   };
 }
-

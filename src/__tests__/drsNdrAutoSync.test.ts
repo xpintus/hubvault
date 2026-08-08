@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { normalizeNDRReason } from '../lib/ndr/ndrReasonNormalizer';
-import { syncDRSUndelToNDR } from '../lib/ndr/ndrAutoSync';
+import { classifyDRSShipment, syncDRSUndelToNDR } from '../lib/ndr/ndrAutoSync';
 import { DRSReportRow } from '../types/drs';
 
 vi.mock('@/lib/supabase', () => {
@@ -22,6 +22,28 @@ vi.mock('@/lib/supabase', () => {
 });
 
 describe('DRS → NDR Auto-Sync & Reason Normalizer System', () => {
+  const shipment = (overrides: Partial<DRSReportRow>): DRSReportRow => ({
+    rowIndex: 1, drs_code: 'DRS-1', waybill_no: '000123', employee_name: 'Rider',
+    partner_name: 'Partner', location: 'Hub', city: '', state: '', customer_name: 'Client',
+    consignee: 'Customer', shipment_status_raw: '', shipment_status_normalized: 'Unknown',
+    amount_payable: 0, payment_type: 'PREPAID', pod_date: '', first_attempt_date: '',
+    last_attempt_date: '', total_attempts: 1, delivery_pincode: '', is_mobility: '', reason: '',
+    otp_details: '', drs_date: '2026-08-08', drs_status: '', ndr_instruction_received: '',
+    is_duplicate: false, duplicate_count: 1, is_invalid: false, ...overrides,
+  });
+
+  it('classifies terminal updates and does not treat every CLOSED DRS as delivered', () => {
+    expect(classifyDRSShipment(shipment({ shipment_status_raw: 'UNDEL', shipment_status_normalized: 'Undelivered', drs_status: 'CLOSED', reason: 'Customer refused' }))).toBe('undelivered');
+    expect(classifyDRSShipment(shipment({ shipment_status_raw: 'completed', drs_status: 'COMPLETED', pod_date: '2026-08-08' }))).toBe('delivered');
+    expect(classifyDRSShipment(shipment({ shipment_status_raw: 'RTO', shipment_status_normalized: 'RTO' }))).toBe('rto');
+    expect(classifyDRSShipment(shipment({ drs_status: 'CLOSED', reason: 'address not found' }))).toBe('undelivered');
+  });
+
+  it('requires a tenant hub before writing NDR data', async () => {
+    await expect(syncDRSUndelToNDR([shipment({ shipment_status_raw: 'UNDEL', shipment_status_normalized: 'Undelivered' })], null, {}))
+      .rejects.toThrow('Please select a hub');
+  });
+
   it('normalizes raw NDR reasons accurately into canonical categories', () => {
     expect(normalizeNDRReason('Customer refused to accept')).toBe('Customer Refused to Accept');
     expect(normalizeNDRReason('Customer refused order')).toBe('Customer Refused to Accept');

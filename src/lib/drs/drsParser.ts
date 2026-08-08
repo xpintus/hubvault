@@ -19,12 +19,18 @@ export function findHeaderKey(rowKeys: string[], aliases: string[]): string | un
 
 // Normalize shipment status according to Excel Pivot rules
 export function normalizeStatus(rawStatus: unknown): NormalizedShipmentStatus {
-  const s = String(rawStatus ?? '').trim().toUpperCase().replace(/[\s_\-]+/g, ' ');
+  const s = String(rawStatus ?? '').trim().toUpperCase().replace(/[\s_-]+/g, ' ');
   if (['DEL', 'DELIVERED'].includes(s)) return 'Delivered';
-  if (['UNDEL', 'UNDELIVERED', 'UN DELIVERED', 'UNDELIVERED ATTEMPT', 'NOT DELIVERED', 'ATTEMPTED', 'FAILED'].includes(s) || s.includes('UNDEL')) return 'Undelivered';
+  if (['UNDEL', 'UNDELIVERED', 'UN DELIVERED', 'UNDELIVERED ATTEMPT', 'NOT DELIVERED', 'ATTEMPTED', 'FAILED', 'DELIVERY FAILED', 'NDR'].includes(s) || s.includes('UNDEL')) return 'Undelivered';
   if (['CANCEL', 'CANCELLED', 'CANCELED'].includes(s)) return 'Cancelled';
   if (['RTO', 'RETURN TO ORIGIN', 'RETURNED'].includes(s)) return 'RTO';
   return 'Unknown';
+}
+
+export function normalizeAmount(rawAmount: unknown): number {
+  const cleaned = String(rawAmount ?? '').replace(/[^0-9.-]/g, '');
+  const value = Number.parseFloat(cleaned);
+  return Number.isFinite(value) ? value : 0;
 }
 
 // Normalize attempt count: integer conversion, defaulting to 1 for valid rows with missing attempt string
@@ -51,7 +57,14 @@ export async function parseDRSFile(file: File): Promise<{
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
 
-  const rawJson = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+  // `raw: false` respects an Excel cell's display format. This is important for
+  // identifiers such as 000123: converting the underlying number directly would
+  // irreversibly discard its displayed leading zeroes.
+  const rawJson = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: '',
+    raw: false,
+    dateNF: 'yyyy-mm-dd',
+  });
 
   if (!rawJson || rawJson.length === 0) {
     return {
@@ -125,7 +138,7 @@ export async function parseDRSFile(file: File): Promise<{
       delivery_address: String(keyAddress ? r[keyAddress] : '').trim(),
       shipment_status_raw: rawStat,
       shipment_status_normalized: normalizeStatus(rawStat),
-      amount_payable: parseFloat(String(keyAmount ? r[keyAmount] : '0')) || 0,
+      amount_payable: normalizeAmount(keyAmount ? r[keyAmount] : 0),
       payment_type: String(keyPayment ? r[keyPayment] : '').trim() || 'COD',
       pod_date: String(keyPodDate ? r[keyPodDate] : '').trim(),
       first_attempt_date: String(keyFirstAttempt ? r[keyFirstAttempt] : '').trim(),
