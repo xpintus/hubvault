@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
 import { useNavigate } from 'react-router-dom';
@@ -119,7 +119,6 @@ export default function DRSPerformanceReport() {
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [copyingEmployeeSnapshot, setCopyingEmployeeSnapshot] = useState(false);
-  const employeeSnapshotRef = useRef<HTMLDivElement>(null);
 
   // Enterprise Reset & Data Management State
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -379,7 +378,7 @@ export default function DRSPerformanceReport() {
   };
 
   const handleCopyEmployeeSnapshot = async () => {
-    if (!employeeSnapshotRef.current || copyingEmployeeSnapshot) return;
+    if (copyingEmployeeSnapshot || filteredEmployeeMetrics.length === 0) return;
     setCopyingEmployeeSnapshot(true);
 
     const textSnapshot = [
@@ -387,16 +386,74 @@ export default function DRSPerformanceReport() {
       `Hub: ${selectedHub?.name || 'All hubs'}`,
       ...filteredEmployeeMetrics.map(
         (employee, index) =>
-          `#${index + 1} ${employee.employee_name} | OFD ${employee.total_ofd} | Delivered ${employee.total_delivered} | Pending ${employee.total_undel} | Overall ${employee.overall_delivery_pct}%`
+          `#${index + 1} ${employee.employee_name} | OFD ${employee.total_ofd} | Delivered ${employee.total_delivered} | Pending ${employee.total_undel} | Overall ${employee.overall_delivery_pct}% | COD ${employee.cod_shipments_count} | COD Collected ₹${employee.cod_value_delivered.toLocaleString('en-IN')} | Prepaid ${employee.prepaid_ofd}`
       ),
     ].join('\n');
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(employeeSnapshotRef.current, {
-        backgroundColor: '#ffffff',
-        scale: Math.min(window.devicePixelRatio || 1, 2),
-        useCORS: true,
+      const width = 1400;
+      const rowHeight = 58;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = 250 + filteredEmployeeMetrics.length * rowHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas is unavailable');
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const gradient = ctx.createLinearGradient(0, 0, width, 180);
+      gradient.addColorStop(0, '#4338ca');
+      gradient.addColorStop(0.55, '#6d28d9');
+      gradient.addColorStop(1, '#a21caf');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, 180);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 16px Arial';
+      ctx.fillText('TEAM LEADERBOARD', 38, 42);
+      ctx.font = '800 30px Arial';
+      ctx.fillText('Employee Performance', 38, 82);
+      ctx.font = '400 14px Arial';
+      ctx.fillStyle = '#e0e7ff';
+      ctx.fillText(`${selectedHub?.name || 'All hubs'} • ${filteredSummary?.reportDate || 'Current report'}`, 38, 108);
+
+      const cards = [
+        ['EMPLOYEES', String(filteredEmployeeMetrics.length)],
+        ['TOTAL OFD', String(filteredSummary?.totalOfd ?? 0)],
+        ['DELIVERY', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
+        ['COD SHIPMENTS', String(paymentMetrics.codOfd)],
+      ];
+      cards.forEach(([label, value], index) => {
+        const x = 38 + index * 190;
+        ctx.fillStyle = 'rgba(255,255,255,0.14)';
+        ctx.fillRect(x, 124, 174, 42);
+        ctx.fillStyle = '#ddd6fe'; ctx.font = '700 10px Arial'; ctx.fillText(label, x + 12, 140);
+        ctx.fillStyle = '#ffffff'; ctx.font = '800 17px Arial'; ctx.fillText(value, x + 12, 160);
+      });
+
+      const columns = [
+        ['RANK', 35], ['EMPLOYEE', 105], ['OFD', 360], ['DEL.', 440], ['PENDING', 525],
+        ['1ST %', 625], ['RETRY %', 735], ['OVERALL %', 855], ['COD COUNT', 990],
+        ['COD COLLECTED', 1110], ['PREPAID', 1280],
+      ] as const;
+      ctx.fillStyle = '#eef2ff'; ctx.fillRect(0, 180, width, 48);
+      ctx.fillStyle = '#64748b'; ctx.font = '700 11px Arial';
+      columns.forEach(([label, x]) => ctx.fillText(label, x, 210));
+
+      filteredEmployeeMetrics.forEach((employee, index) => {
+        const y = 228 + index * rowHeight;
+        ctx.fillStyle = index % 2 === 0 ? '#ffffff' : '#f8fafc'; ctx.fillRect(0, y, width, rowHeight);
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, y + rowHeight - 1, width, 1);
+        ctx.font = '700 14px Arial'; ctx.fillStyle = index < 3 ? '#b45309' : '#64748b'; ctx.fillText(`#${index + 1}`, 35, y + 34);
+        ctx.fillStyle = '#0f172a'; ctx.fillText(employee.employee_name, 105, y + 34);
+        ctx.font = '700 13px Arial'; ctx.fillText(String(employee.total_ofd), 360, y + 34);
+        ctx.fillStyle = '#059669'; ctx.fillText(String(employee.total_delivered), 440, y + 34);
+        ctx.fillStyle = '#e11d48'; ctx.fillText(String(employee.total_undel), 525, y + 34);
+        ctx.fillStyle = '#2563eb'; ctx.fillText(`${employee.first_attempt_delivery_pct}%`, 625, y + 34);
+        ctx.fillStyle = '#7c3aed'; ctx.fillText(`${employee.reattempt_delivery_pct}%`, 735, y + 34);
+        ctx.fillStyle = '#059669'; ctx.fillText(`${employee.overall_delivery_pct}%`, 855, y + 34);
+        ctx.fillStyle = '#0f172a'; ctx.fillText(String(employee.cod_shipments_count), 990, y + 34);
+        ctx.fillText(`₹${employee.cod_value_delivered.toLocaleString('en-IN')}`, 1110, y + 34);
+        ctx.fillText(String(employee.prepaid_ofd), 1280, y + 34);
       });
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
 
@@ -1040,7 +1097,7 @@ export default function DRSPerformanceReport() {
           {/* TAB 3: EMPLOYEE PAGE (DEFAULT SORT OVERALL % DESC)       */}
           {/* ========================================================= */}
           {activeTab === 'EMPLOYEE' && (
-            <div ref={employeeSnapshotRef} className="overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+            <div className="overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
               <div className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 px-5 py-6 text-white sm:px-7">
                 <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
                 <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -1062,11 +1119,12 @@ export default function DRSPerformanceReport() {
                     {copyingEmployeeSnapshot ? 'Copying...' : 'Copy Snapshot'}
                   </button>
                 </div>
-                <div className="relative mt-5 grid grid-cols-3 gap-2 sm:max-w-xl sm:gap-3">
+                <div className="relative mt-5 grid grid-cols-2 gap-2 sm:max-w-3xl sm:grid-cols-4 sm:gap-3">
                   {[
                     ['Employees', filteredEmployeeMetrics.length],
                     ['Total OFD', filteredSummary?.totalOfd ?? 0],
                     ['Delivery', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
+                    ['COD Shipments', paymentMetrics.codOfd],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
                       <div className="text-[9px] font-bold uppercase tracking-wider text-indigo-100 sm:text-[10px]">{label}</div>
@@ -1088,7 +1146,8 @@ export default function DRSPerformanceReport() {
                       <th className="px-4 py-3 font-semibold text-blue-600">1st Attempt %</th>
                       <th className="px-4 py-3 font-semibold text-purple-600">Reattempt %</th>
                       <th className="px-4 py-3 font-black text-emerald-600">Overall %</th>
-                      <th className="px-4 py-3 text-right">COD</th>
+                      <th className="px-4 py-3 text-right">COD Collected</th>
+                      <th className="px-4 py-3 text-right">COD Shipments</th>
                       <th className="px-4 py-3 text-right">Prepaid</th>
                     </tr>
                   </thead>
@@ -1116,6 +1175,7 @@ export default function DRSPerformanceReport() {
                           <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${Math.min(e.overall_delivery_pct, 100)}%` }} /></div>
                         </td>
                         <td className="px-4 py-3 font-mono text-right">₹{e.cod_value_delivered.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-right">{e.cod_shipments_count}</td>
                         <td className="px-4 py-3 font-mono text-right">{e.prepaid_ofd} AWBs</td>
                       </tr>
                     ))}
@@ -1146,6 +1206,10 @@ export default function DRSPerformanceReport() {
                         ['1st %', `${employee.first_attempt_delivery_pct}%`, 'text-blue-600'],
                         ['Retry %', `${employee.reattempt_delivery_pct}%`, 'text-violet-600'],
                       ].map(([label, value, color]) => <div key={label} className="rounded-lg bg-neutral-50 px-1 py-2 dark:bg-neutral-800/60"><div className={`font-mono text-xs font-black ${color}`}>{value}</div><div className="mt-0.5 text-[8px] font-bold uppercase text-neutral-400">{label}</div></div>)}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 px-3 py-2 text-[10px] dark:bg-amber-950/20">
+                      <span className="font-bold text-amber-700 dark:text-amber-400">COD: {employee.cod_shipments_count} shipments</span>
+                      <span className="font-mono font-black text-neutral-800 dark:text-neutral-100">₹{employee.cod_value_delivered.toLocaleString('en-IN')} collected</span>
                     </div>
                   </button>
                 ))}
