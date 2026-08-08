@@ -40,8 +40,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
-  { to: '/operations/ndr/dashboard', label: 'NDR Operations', icon: Truck, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
-  { to: '/operations/drs-performance', label: 'DRS Performance', icon: FileBarChart, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
+  { to: '/operations', label: 'Hub Operations', icon: Truck, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/khatabook', label: 'KhataBook', icon: BookOpen, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
 
   { to: '/reports', label: 'Reports', icon: FileBarChart, roles: ['super_admin', 'hub_admin', 'supervisor'] },

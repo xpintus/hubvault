@@ -32,6 +32,7 @@ const TITLES: Record<string, string> = {
   '/audit-logs': 'Audit Logs',
   '/licenses': 'License Management',
   '/activation-status': 'License & Subscription',
+  '/operations': 'Hub Operations',
   '/mail-campaigns': 'Mail Campaigns',
 };
 

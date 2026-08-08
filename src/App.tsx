@@ -74,6 +74,7 @@ const NDRRTOQueue = lazy(() => import('@/pages/operations/ndr/NDRRTOQueue'));
 const NDRReports = lazy(() => import('@/pages/operations/ndr/NDRReports'));
 const NDRImportHistory = lazy(() => import('@/pages/operations/ndr/NDRImportHistory'));
 const DRSPerformanceReport = lazy(() => import('@/pages/operations/drs/DRSPerformanceReport'));
+const HubOperationsLayout = lazy(() => import('@/pages/operations/HubOperationsLayout'));
 
 
 import { formatDateLong } from '@/lib/format';
@@ -221,6 +222,16 @@ export default function App() {
                             <Route path="reports" element={<KhataBookReports />} />
                           </Route>
 
+                          {/* Unified Hub Operations workspace */}
+                          <Route
+                            path="/operations"
+                            element={
+                              <Suspense fallback={<FullPageSpinner message="Loading Hub Operations…" />}>
+                                <HubOperationsLayout />
+                              </Suspense>
+                            }
+                          >
+                          <Route index element={<Navigate to="/operations/ndr/dashboard" replace />} />
                           {/* NDR Operations Module Routes */}
                           <Route
                             path="/operations/ndr"
@@ -251,6 +262,7 @@ export default function App() {
                               </Suspense>
                             }
                           />
+                          </Route>
 
 
 
