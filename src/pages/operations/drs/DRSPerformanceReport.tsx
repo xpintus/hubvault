@@ -702,9 +702,9 @@ export default function DRSPerformanceReport() {
               {/* ----------------------------------------------------- */}
               {/* 6 PRIMARY KPI CARDS (HEIGHT: 135–140PX, VALUE: 42PX BOLD) */}
               {/* ----------------------------------------------------- */}
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+              <div className="no-scrollbar grid snap-x snap-mandatory grid-flow-col auto-cols-[minmax(158px,78vw)] gap-3 overflow-x-auto pb-2 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-4 sm:overflow-visible sm:pb-0 xl:grid-cols-7">
                 {/* 1. Total Shipments */}
-                <button type="button" onClick={() => setActiveTab('TOTAL_SHIPMENTS')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+                <button type="button" onClick={() => setActiveTab('TOTAL_SHIPMENTS')} className="group relative min-h-[142px] snap-start overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-slate-400" />
                   <div className="flex h-full flex-col justify-between gap-4">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
@@ -719,7 +719,7 @@ export default function DRSPerformanceReport() {
                 </button>
 
                 {/* 2. Pending OFD */}
-                <button type="button" onClick={() => setActiveTab('OFD')} className="group relative min-h-[142px] overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white to-amber-50 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg dark:border-amber-900/60 dark:from-neutral-900 dark:to-amber-950/30 sm:p-5">
+                <button type="button" onClick={() => setActiveTab('OFD')} className="group relative min-h-[142px] snap-start overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white to-amber-50 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg dark:border-amber-900/60 dark:from-neutral-900 dark:to-amber-950/30 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-amber-500" />
                   <div className="flex h-full flex-col justify-between gap-4">
                     <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
