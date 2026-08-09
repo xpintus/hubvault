@@ -49,6 +49,7 @@ import {
   ArrowUpRight,
   BarChart2,
   BarChart3,
+  Banknote,
   Building2,
   Calendar,
   CheckCircle2,
@@ -78,6 +79,7 @@ import {
   Truck,
   Upload,
   User,
+  Users,
   XCircle,
 } from 'lucide-react';
 
@@ -595,18 +597,22 @@ export default function DRSPerformanceReport() {
       <header className="drs-hero relative overflow-hidden rounded-[30px] border border-indigo-700/50 bg-gradient-to-br from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-[0_28px_70px_-36px_rgba(49,46,129,.9)] sm:p-7">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+        <div className="relative grid gap-7 xl:grid-cols-[minmax(0,1fr)_minmax(420px,auto)] xl:items-start">
         <div className="min-w-0 space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[.2em] text-cyan-100">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" /> Live Operations Intelligence
+          </div>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-sm">
-              <BarChart3 className="h-5 w-5" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] border border-white/20 bg-gradient-to-br from-white/20 to-white/5 text-cyan-200 shadow-xl shadow-indigo-950/30 backdrop-blur-sm">
+              <BarChart3 className="h-7 w-7" />
             </div>
-            <h1 className="max-w-3xl break-words text-lg font-black leading-tight tracking-tight text-white sm:text-xl">
-              {summary?.fileName || 'DRS Performance Analytics Dashboard'}
-            </h1>
-            <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">
-              Enterprise Analytics
-            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[.18em] text-indigo-200">DRS Performance Command Center</p>
+              <h1 className="mt-1 max-w-3xl break-words text-2xl font-black leading-none tracking-[-.035em] text-white sm:text-3xl">
+                {summary?.fileName || 'Delivery Performance Analytics'}
+              </h1>
+              <p className="mt-2 text-xs font-medium text-indigo-100/65">Executive delivery intelligence, employee accountability and shipment outcomes in one workspace.</p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-indigo-100/80">
             <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-indigo-300" /> Report Date: <strong className="text-white">{summary?.reportDate || 'N/A'}</strong></span>
@@ -698,6 +704,19 @@ export default function DRSPerformanceReport() {
             <RotateCcw className="h-4 w-4 text-orange-500" /> Recycle Bin
           </button>
         </div></div>
+        <div className="relative mt-6 grid grid-cols-2 gap-2.5 border-t border-white/10 pt-5 sm:grid-cols-4">
+          {[
+            { label: 'Total Shipments', value: summary?.totalOfd ?? 0, icon: Package, tone: 'text-cyan-200 bg-cyan-300/10' },
+            { label: 'Delivery Rate', value: `${summary?.overallDeliveryPct ?? 0}%`, icon: TrendingUp, tone: 'text-emerald-200 bg-emerald-300/10' },
+            { label: 'Executives', value: filteredEmployeeMetrics.length, icon: Users, tone: 'text-violet-200 bg-violet-300/10' },
+            { label: 'OFD Pending', value: pendingOfdRows.length, icon: Clock, tone: 'text-amber-200 bg-amber-300/10' },
+          ].map((metric) => (
+            <div key={metric.label} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.065] p-3 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/10">
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${metric.tone}`}><metric.icon className="h-4.5 w-4.5" /></span>
+              <span className="min-w-0"><span className="block text-xl font-black tabular-nums text-white">{metric.value}</span><span className="block truncate text-[9px] font-bold uppercase tracking-wider text-indigo-100/60">{metric.label}</span></span>
+            </div>
+          ))}
+        </div>
       </header>
 
       {/* NDR AUTO-SYNC RESULT BANNER */}
@@ -738,26 +757,27 @@ export default function DRSPerformanceReport() {
       <div className="drs-tabs rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90">
         <nav className="flex flex-wrap gap-1">
           {[
-            { id: 'OVERVIEW', label: 'Overview' },
-            { id: 'TOTAL_SHIPMENTS', label: `Total Shipments (${filteredUniqueRows.length})` },
-            { id: 'OFD', label: `OFD Pending (${pendingOfdRows.length})` },
-            { id: 'EMPLOYEE', label: `Employee (${filteredEmployeeMetrics.length})` },
-            { id: 'FIRST_ATTEMPT', label: 'First Attempt' },
-            { id: 'REATTEMPT', label: 'Reattempt' },
-            { id: 'COD', label: 'COD' },
-            { id: 'PREPAID', label: 'Prepaid' },
-            { id: 'CLIENT', label: `Client (${clientMetrics.length})` },
-            { id: 'HISTORY', label: `Report History (${historyList.length})` },
+            { id: 'OVERVIEW', label: 'Overview', icon: LayoutDashboard },
+            { id: 'TOTAL_SHIPMENTS', label: `Shipments (${filteredUniqueRows.length})`, icon: Package },
+            { id: 'OFD', label: `OFD Pending (${pendingOfdRows.length})`, icon: Truck },
+            { id: 'EMPLOYEE', label: `Employees (${filteredEmployeeMetrics.length})`, icon: Users },
+            { id: 'FIRST_ATTEMPT', label: 'First Attempt', icon: Target },
+            { id: 'REATTEMPT', label: 'Reattempt', icon: RotateCcw },
+            { id: 'COD', label: 'COD', icon: Banknote },
+            { id: 'PREPAID', label: 'Prepaid', icon: CreditCard },
+            { id: 'CLIENT', label: `Clients (${clientMetrics.length})`, icon: Building2 },
+            { id: 'HISTORY', label: `History (${historyList.length})`, icon: History },
           ].map((t) => (
             <button
               key={t.id}
               onClick={() => t.id === 'TOTAL_SHIPMENTS' ? openShipmentRegister('ALL') : setActiveTab(t.id as TabType)}
-              className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 ${
                 activeTab === t.id
                   ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20'
                   : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
               }`}
             >
+              <t.icon className="h-3.5 w-3.5" />
               {t.label}
             </button>
           ))}
@@ -773,15 +793,23 @@ export default function DRSPerformanceReport() {
           <p className="text-xs font-bold text-neutral-500">Restoring report snapshot...</p>
         </div>
       ) : !summary ? (
-        <div className="p-16 rounded-2xl bg-white dark:bg-neutral-900 border border-dashed border-neutral-300 dark:border-neutral-800 text-center space-y-4 shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center">
-            <Upload className="h-8 w-8" />
+        <div className="relative overflow-hidden rounded-[28px] border border-brand-200/70 bg-gradient-to-br from-white via-indigo-50/60 to-cyan-50/50 p-6 text-center shadow-[0_28px_70px_-52px_rgba(79,70,229,.8)] dark:border-brand-500/20 dark:from-neutral-900 dark:via-indigo-950/30 dark:to-cyan-950/20 sm:p-12">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-400/10 blur-3xl" />
+          <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-gradient-to-br from-brand-600 to-violet-500 text-white shadow-xl shadow-brand-500/25">
+            <Upload className="h-9 w-9" />
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Upload DRS Performance Report</h3>
-            <p className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
+          <div className="relative mt-6">
+            <p className="text-[10px] font-black uppercase tracking-[.2em] text-brand-600">Start your analysis</p>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-3xl">Upload DRS Performance Report</h3>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-neutral-500">
               Select a daily DRS Excel or CSV file to calculate executive analytics and save permanent snapshots.
             </p>
+          </div>
+          <div className="relative mx-auto mt-6 grid max-w-2xl gap-2 sm:grid-cols-3">
+            {[['Instant parsing', FileSpreadsheet], ['Employee insights', User], ['Saved snapshots', Save]].map(([label, Icon]) => {
+              const FeatureIcon = Icon as typeof FileSpreadsheet;
+              return <div key={label as string} className="flex items-center justify-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 text-xs font-bold text-neutral-600 shadow-sm dark:border-white/5 dark:bg-white/5 dark:text-neutral-300"><FeatureIcon className="h-4 w-4 text-brand-600" />{label as string}</div>;
+            })}
           </div>
           {parsingProgress ? (
             <div className="py-4 flex flex-col items-center gap-2 text-brand-600">
@@ -789,8 +817,8 @@ export default function DRSPerformanceReport() {
               <span className="text-xs font-bold">{parsingProgress}</span>
             </div>
           ) : (
-            <label className="inline-block px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition shadow-md cursor-pointer active:scale-95">
-              Choose File
+            <label className="relative mt-7 inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-violet-600 px-7 py-3.5 text-sm font-black text-white shadow-lg shadow-brand-500/25 transition hover:-translate-y-0.5 hover:shadow-xl active:scale-95">
+              <Upload className="h-4 w-4" /> Choose Excel or CSV
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
