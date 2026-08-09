@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { exportDRSPerformanceWorkbook } from '@/lib/drs/drsExcelExporter';
 import { DRSReportRow, EmployeeDRSMetrics } from '@/types/drs';
 import {
@@ -30,6 +31,20 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'ALL' | 'DELIVERED' | 'UNDEL' | 'COD'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen || !metrics) return null;
 
@@ -170,18 +185,26 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
 
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-sm animate-fade-in flex justify-end">
-      <div className="w-full max-w-2xl bg-[var(--card-bg)] border-l border-neutral-200 dark:border-neutral-800 h-full flex flex-col shadow-2xl overflow-y-auto">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex h-dvh w-screen justify-end overflow-hidden bg-black/50 backdrop-blur-sm animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${metrics.employee_name} performance details`}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="flex h-dvh w-full flex-col overflow-hidden border-l border-neutral-200 bg-[var(--card-bg)] shadow-2xl dark:border-neutral-800 sm:max-w-2xl">
         {/* Drawer Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 sticky top-0 bg-[var(--card-bg)] z-10">
-          <div className="flex items-center gap-3">
+        <div className="z-10 flex shrink-0 flex-col gap-3 border-b border-neutral-200 bg-[var(--card-bg)] px-4 py-3 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-600/20 border-2 border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 font-black text-lg">
               {metrics.employee_name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{metrics.employee_name}</h2>
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <h2 className="truncate text-lg font-bold text-neutral-900 dark:text-neutral-100">{metrics.employee_name}</h2>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${scoreBg}`}>
                   {scoreLabel}
                 </span>
@@ -190,7 +213,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-2">
             <button
               onClick={handleDownloadSingleEmployeeReport}
               className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-glow transition flex items-center gap-1.5 active:scale-95"
@@ -199,6 +222,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
             </button>
             <button
               onClick={onClose}
+              aria-label="Close employee details"
               className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
             >
               <X className="h-5 w-5" />
@@ -206,7 +230,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
           </div>
         </div>
 
-        <div className="p-6 space-y-5 flex-1 text-xs">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 text-xs sm:p-6">
           {/* Performance Score Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
@@ -321,6 +345,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
