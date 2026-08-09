@@ -443,8 +443,8 @@ export default function DRSPerformanceReport() {
         ['EMPLOYEES', String(filteredEmployeeMetrics.length)],
         ['TOTAL OFD', String(filteredSummary?.totalOfd ?? 0)],
         ['OVERALL', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
-        ['COD PERFORMANCE', `${paymentMetrics.codDeliveryPct}%`],
-        ['PREPAID PERFORMANCE', `${paymentMetrics.prepaidDeliveryPct}%`],
+        ['COD FAD', `${paymentMetrics.codFadPercent}%`],
+        ['PREPAID FAD', `${paymentMetrics.prepaidFadPercent}%`],
         ['PENDING', String(filteredSummary?.totalUndel ?? 0)],
       ];
       cards.forEach(([label, value], index) => {
@@ -1182,8 +1182,8 @@ export default function DRSPerformanceReport() {
                     { label: 'Employees', value: filteredEmployeeMetrics.length, detail: 'Active executives', icon: Users, progress: 100, accent: 'from-cyan-300 to-sky-400', iconStyle: 'bg-cyan-300/15 text-cyan-100' },
                     { label: 'Total OFD', value: filteredSummary?.totalOfd ?? 0, detail: 'Assigned shipments', icon: Package, progress: 100, accent: 'from-indigo-300 to-blue-400', iconStyle: 'bg-indigo-300/15 text-indigo-100' },
                     { label: 'Overall Delivery', value: `${filteredSummary?.overallDeliveryPct ?? 0}%`, detail: `${filteredSummary?.totalDelivered ?? 0} delivered`, icon: TrendingUp, progress: filteredSummary?.overallDeliveryPct ?? 0, accent: 'from-emerald-300 to-teal-400', iconStyle: 'bg-emerald-300/15 text-emerald-100' },
-                    { label: 'COD Performance', value: `${paymentMetrics.codDeliveryPct}%`, detail: `${paymentMetrics.codDelivered}/${paymentMetrics.codOfd} delivered`, icon: Banknote, progress: paymentMetrics.codDeliveryPct, accent: 'from-amber-300 to-orange-400', iconStyle: 'bg-amber-300/15 text-amber-100' },
-                    { label: 'Prepaid Performance', value: `${paymentMetrics.prepaidDeliveryPct}%`, detail: `${paymentMetrics.prepaidDelivered}/${paymentMetrics.prepaidOfd} delivered`, icon: CreditCard, progress: paymentMetrics.prepaidDeliveryPct, accent: 'from-fuchsia-300 to-pink-400', iconStyle: 'bg-fuchsia-300/15 text-fuchsia-100' },
+                    { label: 'COD FAD', value: `${paymentMetrics.codFadPercent}%`, detail: `${paymentMetrics.codFirstAttemptDel}/${paymentMetrics.codFirstAttemptOfd} first attempt`, icon: Banknote, progress: paymentMetrics.codFadPercent, accent: 'from-amber-300 to-orange-400', iconStyle: 'bg-amber-300/15 text-amber-100' },
+                    { label: 'Prepaid FAD', value: `${paymentMetrics.prepaidFadPercent}%`, detail: `${paymentMetrics.prepaidFirstAttemptDel}/${paymentMetrics.prepaidFirstAttemptOfd} first attempt`, icon: CreditCard, progress: paymentMetrics.prepaidFadPercent, accent: 'from-fuchsia-300 to-pink-400', iconStyle: 'bg-fuchsia-300/15 text-fuchsia-100' },
                     { label: 'Pending', value: filteredSummary?.totalUndel ?? 0, detail: 'Needs attention', icon: Clock, progress: filteredSummary?.totalOfd ? ((filteredSummary.totalUndel / filteredSummary.totalOfd) * 100) : 0, accent: 'from-rose-300 to-red-400', iconStyle: 'bg-rose-300/15 text-rose-100' },
                   ].map((metric) => (
                     <div key={metric.label} className="group relative min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[.09] p-3.5 shadow-[0_16px_35px_-24px_rgba(0,0,0,.75)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/[.14]">
