@@ -294,8 +294,6 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
   mask-image: linear-gradient(to bottom, black, transparent 92%);
 }
 
-.drs-hero > * { position: relative; z-index: 1; }
-
 .drs-command-bar button,
 .drs-command-bar label {
   min-height: 2.5rem;

@@ -704,16 +704,20 @@ export default function DRSPerformanceReport() {
             <RotateCcw className="h-4 w-4 text-orange-500" /> Recycle Bin
           </button>
         </div></div>
-        <div className="relative mt-6 grid grid-cols-2 gap-2.5 border-t border-white/10 pt-5 sm:grid-cols-4">
+        <div className="relative z-[1] mt-6 grid grid-cols-2 gap-2.5 border-t border-white/10 pt-5 sm:grid-cols-4 xl:grid-cols-8">
           {[
-            { label: 'Total Shipments', value: summary?.totalOfd ?? 0, icon: Package, tone: 'text-cyan-200 bg-cyan-300/10' },
-            { label: 'Delivery Rate', value: `${summary?.overallDeliveryPct ?? 0}%`, icon: TrendingUp, tone: 'text-emerald-200 bg-emerald-300/10' },
-            { label: 'Executives', value: filteredEmployeeMetrics.length, icon: Users, tone: 'text-violet-200 bg-violet-300/10' },
+            { label: 'Hub', value: selectedHub?.name || activeItem?.hubName || 'Main Hub', icon: Building2, tone: 'text-cyan-200 bg-cyan-300/10' },
+            { label: 'Report Date', value: summary?.reportDate || 'N/A', icon: Calendar, tone: 'text-blue-200 bg-blue-300/10' },
+            { label: 'COD FAD', value: `${summary?.codFadPercent ?? 0}%`, icon: Banknote, tone: 'text-purple-200 bg-purple-300/10' },
+            { label: 'Prepaid FAD', value: `${summary?.prepaidFadPercent ?? 0}%`, icon: CreditCard, tone: 'text-sky-200 bg-sky-300/10' },
+            { label: 'Overall Performance', value: `${summary?.overallDeliveryPct ?? 0}%`, icon: TrendingUp, tone: 'text-emerald-200 bg-emerald-300/10' },
+            { label: 'First Attempt', value: `${summary?.firstAttemptDeliveryPct ?? 0}%`, icon: Target, tone: 'text-indigo-200 bg-indigo-300/10' },
+            { label: 'Reattempt', value: `${summary?.reattemptDeliveryPct ?? 0}%`, icon: RotateCcw, tone: 'text-violet-200 bg-violet-300/10' },
             { label: 'OFD Pending', value: pendingOfdRows.length, icon: Clock, tone: 'text-amber-200 bg-amber-300/10' },
           ].map((metric) => (
             <div key={metric.label} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.065] p-3 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/10">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${metric.tone}`}><metric.icon className="h-4.5 w-4.5" /></span>
-              <span className="min-w-0"><span className="block text-xl font-black tabular-nums text-white">{metric.value}</span><span className="block truncate text-[9px] font-bold uppercase tracking-wider text-indigo-100/60">{metric.label}</span></span>
+              <span className="min-w-0"><span className="block break-words text-sm font-black leading-tight tabular-nums text-white xl:text-base">{metric.value}</span><span className="mt-1 block text-[8px] font-bold uppercase tracking-wider text-indigo-100/60">{metric.label}</span></span>
             </div>
           ))}
         </div>
