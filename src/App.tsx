@@ -459,7 +459,7 @@ function GuestAppLayout() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
+    <div className="app-shell flex h-dvh max-w-full overflow-hidden" style={{ background: 'var(--page-bg)' }}>
       {/* Simplified sidebar for guest */}
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden animate-fade-in" onClick={() => setSidebarOpen(false)} />}
       <aside className="fixed lg:sticky top-0 z-40 h-screen w-64 border-r border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0" style={{ background: 'var(--card-bg)' }}>
@@ -553,7 +553,7 @@ function GuestAppLayout() {
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="app-content min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-6">
           <div className="max-w-7xl mx-auto">
             {isKhataBookRoute?<Outlet/>:<GuestDashboard />}
 

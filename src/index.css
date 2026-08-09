@@ -206,11 +206,18 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
 
 @layer base {
   html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
   body {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    overflow-x: clip;
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     background: var(--page-bg);
     color: var(--neutral-700);
@@ -221,11 +228,60 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
     color: #E2E8F0;
   }
   * {
+    min-width: 0;
     border-color: var(--card-border);
+  }
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    overflow-x: clip;
   }
   ::selection {
     background: var(--brand-600);
     color: #FFFFFF;
+  }
+}
+
+/* Responsive app content: keep the viewport fixed and let long labels/data
+   wrap instead of widening the page or being cut off. Data tables remain
+   bounded scroll regions when they cannot reasonably collapse into cards. */
+.app-shell,
+.app-shell > *,
+.app-content,
+.app-content > * {
+  max-width: 100%;
+}
+
+.app-content :where(p, h1, h2, h3, h4, h5, h6, td, th, label, dd, code) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.app-content .overflow-x-auto {
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.app-content .truncate {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .app-content .btn {
+    max-width: 100%;
+    height: auto;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .app-content :where(.card, .card-hover) {
+    max-width: 100%;
   }
 }
 

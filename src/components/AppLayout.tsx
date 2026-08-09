@@ -150,7 +150,7 @@ export default function AppLayout() {
   const isSuperAdmin = profile.role === 'super_admin';
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
+    <div className="app-shell flex h-dvh max-w-full overflow-hidden" style={{ background: 'var(--page-bg)' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
@@ -287,7 +287,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 w-full min-w-0 max-w-full overflow-x-hidden">
+        <main className="app-content flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 w-full min-w-0 max-w-full overflow-x-hidden overscroll-contain">
           <div className="max-w-7xl mx-auto w-full min-w-0">
             {/* Subscription Warning / Expired Banner for monthly users */}
             {profile?.role !== 'super_admin' && subDetails.isNearExpiry && (
