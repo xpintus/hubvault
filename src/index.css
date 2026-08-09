@@ -228,7 +228,6 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
     color: #E2E8F0;
   }
   * {
-    min-width: 0;
     border-color: var(--card-border);
   }
   #root {
@@ -253,8 +252,8 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
   max-width: 100%;
 }
 
-.app-content :where(p, h1, h2, h3, h4, h5, h6, td, th, label, dd, code) {
-  overflow-wrap: anywhere;
+.app-content :where(p, h1, h2, h3, h4, h5, h6, label, dd) {
+  overflow-wrap: break-word;
   word-break: normal;
 }
 
@@ -263,13 +262,6 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
   max-width: 100%;
   overscroll-behavior-inline: contain;
   scrollbar-width: thin;
-}
-
-.app-content .truncate {
-  overflow: visible;
-  white-space: normal;
-  text-overflow: clip;
-  overflow-wrap: anywhere;
 }
 
 @media (max-width: 639px) {

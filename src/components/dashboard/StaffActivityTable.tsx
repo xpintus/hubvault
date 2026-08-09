@@ -149,20 +149,20 @@ export const StaffActivityTable: React.FC<StaffActivityTableProps> = ({
   handleDelete,
 }) => {
   return (
-    <div className="hidden overflow-x-auto md:block">
-      <table className="w-full text-sm">
+    <div className="hidden w-full max-w-full overflow-x-auto md:block">
+      <table className="w-full min-w-[940px] table-auto text-sm xl:min-w-[1120px]">
         <thead className="bg-neutral-50/90 dark:bg-neutral-950/90 backdrop-blur-xs text-neutral-500 text-[11px] uppercase tracking-wider font-bold border-b border-neutral-200/80 dark:border-neutral-800/80 sticky top-0">
           <tr>
-            <th className="text-left px-5 py-3.5 font-bold">Employee</th>
-            <th className="text-left px-4 py-3.5 font-bold hidden lg:table-cell">Emp ID</th>
-            <th className="text-right px-4 py-3.5 font-bold hidden xl:table-cell">Expected COD</th>
-            <th className="text-right px-4 py-3.5 font-bold">Cash</th>
-            <th className="text-right px-4 py-3.5 font-bold hidden sm:table-cell">Online</th>
-            <th className="text-right px-4 py-3.5 font-bold">Total</th>
-            <th className="text-right px-4 py-3.5 font-bold">Pending</th>
-            <th className="text-right px-4 py-3.5 font-bold hidden xl:table-cell">Excess</th>
-            <th className="text-center px-4 py-3.5 font-bold">Status</th>
-            <th className="text-right px-5 py-3.5 font-bold">Actions</th>
+            <th className="whitespace-nowrap text-left px-5 py-3.5 font-bold">Employee</th>
+            <th className="whitespace-nowrap text-left px-4 py-3.5 font-bold hidden lg:table-cell">Emp ID</th>
+            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold hidden xl:table-cell">Expected COD</th>
+            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold">Cash</th>
+            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold hidden sm:table-cell">Online</th>
+            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold">Total</th>
+            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold">Pending</th>
+            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold hidden xl:table-cell">Excess</th>
+            <th className="whitespace-nowrap text-center px-4 py-3.5 font-bold">Status</th>
+            <th className="whitespace-nowrap text-right px-5 py-3.5 font-bold">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
@@ -180,23 +180,23 @@ export const StaffActivityTable: React.FC<StaffActivityTableProps> = ({
                 </div>
                 <RowHoverPopup entry={e} onView={() => setViewing(e)} />
               </td>
-              <td className="px-4 py-3.5 text-neutral-500 font-mono text-xs hidden lg:table-cell">{e.collector?.employee_id}</td>
-              <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 hidden xl:table-cell">{formatINR(e.expected_cod)}</td>
-              <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400">{formatINR(e.cash_amount)}</td>
-              <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400 hidden sm:table-cell">{formatINR(e.online_amount)}</td>
-              <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-800 dark:text-neutral-200">{formatINR(e.total_collection)}</td>
+              <td className="whitespace-nowrap px-4 py-3.5 text-neutral-500 font-mono text-xs hidden lg:table-cell">{e.collector?.employee_id}</td>
+              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-neutral-500 hidden xl:table-cell">{formatINR(e.expected_cod)}</td>
+              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400">{formatINR(e.cash_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400 hidden sm:table-cell">{formatINR(e.online_amount)}</td>
+              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums font-bold text-neutral-800 dark:text-neutral-200">{formatINR(e.total_collection)}</td>
               {(() => {
                 const pending = computePendingAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
                 const excess = computeExcessAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
                 return (
                   <>
-                    <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold', pending > 0 ? 'text-amber-500' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(pending)}</td>
-                    <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold hidden xl:table-cell', excess > 0 ? 'text-brand-600' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(excess)}</td>
+                    <td className={clsx('whitespace-nowrap px-4 py-3.5 text-right tabular-nums font-semibold', pending > 0 ? 'text-amber-500' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(pending)}</td>
+                    <td className={clsx('whitespace-nowrap px-4 py-3.5 text-right tabular-nums font-semibold hidden xl:table-cell', excess > 0 ? 'text-brand-600' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(excess)}</td>
                   </>
                 );
               })()}
-              <td className="px-4 py-3.5 text-center"><StatusBadge status={e.status} size="sm" /></td>
-              <td className="px-5 py-3.5">
+              <td className="whitespace-nowrap px-4 py-3.5 text-center"><StatusBadge status={e.status} size="sm" /></td>
+              <td className="whitespace-nowrap px-5 py-3.5">
                 <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => setViewing(e)} title="View" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-500 hover:bg-blue-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
                     <Eye className="h-4 w-4" />
