@@ -265,6 +265,20 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
 }
 
 @media (max-width: 639px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+    touch-action: pan-y;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: visible;
+  }
+
   .app-content .btn {
     max-width: 100%;
     height: auto;
@@ -274,6 +288,43 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
 
   .app-content :where(.card, .card-hover) {
     max-width: 100%;
+  }
+
+  .app-content {
+    padding-inline: .75rem;
+  }
+
+  .app-content :where(input, select, textarea, button) {
+    max-width: 100%;
+  }
+
+  .app-content :where(.grid) > * {
+    min-width: 0;
+  }
+}
+
+/* Mobile browsers handle one document scroller more reliably than a nested
+   fixed-height app viewport. Desktop keeps the app-like independent panel. */
+@media (max-width: 1023px) {
+  .app-shell {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow: visible !important;
+  }
+
+  .app-shell > .app-frame {
+    min-height: 100dvh;
+    overflow: visible !important;
+  }
+
+  .app-shell .app-content {
+    flex: none;
+    min-height: calc(100dvh - 5rem);
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 }
 

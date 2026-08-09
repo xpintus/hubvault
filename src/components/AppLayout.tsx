@@ -152,7 +152,7 @@ export default function AppLayout() {
   return (
     <div className="app-shell flex h-dvh max-w-full overflow-hidden bg-[var(--page-bg)]">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="app-frame flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
         <header className="sticky top-0 z-20 flex h-20 shrink-0 items-center justify-between gap-3 border-b border-white/70 bg-white/75 px-4 shadow-[0_8px_30px_-28px_rgba(15,23,42,.55)] backdrop-blur-2xl dark:border-white/5 dark:bg-slate-950/70 lg:px-7">
           <div className="flex items-center gap-3 min-w-0">
@@ -171,12 +171,12 @@ export default function AppLayout() {
 
                 <div className="flex items-center gap-2 lg:gap-3">
             {/* Sync status indicator */}
-            <SyncIndicator />
+            <div className="hidden sm:block"><SyncIndicator /></div>
             {/* Theme toggle */}
             <ThemeToggle />
             {/* Hub Selector */}
             {showHubSelector && (
-              <div className="relative" ref={hubMenuRef}>
+              <div className="relative hidden min-[480px]:block" ref={hubMenuRef}>
                 <button
                   onClick={() => hub.canSwitchHub && setHubMenuOpen((o) => !o)}
                   disabled={!hub.canSwitchHub}

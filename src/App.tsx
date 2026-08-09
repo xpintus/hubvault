@@ -519,7 +519,7 @@ function GuestAppLayout() {
           </div>
         </div>
       </aside>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="app-frame flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 backdrop-blur-xl dark:border-neutral-800 lg:px-6" style={{ background: 'color-mix(in srgb, var(--page-bg) 90%, transparent)' }}>
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-2 -ml-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition active:scale-95">
