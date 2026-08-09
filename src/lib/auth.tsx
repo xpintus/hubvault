@@ -1,6 +1,6 @@
 import { Profile } from '@/types';
 import { Session,User } from '@supabase/supabase-js';
-import { createContext,ReactNode,useCallback,useContext,useEffect,useState } from 'react';
+import { createContext,ReactNode,useCallback,useContext,useEffect,useRef,useState } from 'react';
 import { confirm } from './confirm';
 import { setActiveUserId } from './offline/db';
 import { getQueueCount } from './offline/syncQueue';
@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const profileUserIdRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (uid: string): Promise<{ profile: Profile | null; error: any }> => {
     const { data, error } = await supabase
@@ -40,10 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
     if (error) {
       console.error('profile fetch error', error);
-      setProfile(null);
       return { profile: null, error };
     }
     const prof = data as Profile | null;
+    profileUserIdRef.current = prof?.id ?? null;
     setProfile(prof);
     return { profile: prof, error: null };
   }, []);
@@ -67,17 +68,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       setActiveUserId(newSession?.user?.id ?? null);
       if (event === 'SIGNED_OUT' || !newSession?.user) {
+        profileUserIdRef.current = null;
         setProfile(null);
         setLoading(false);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setLoading(true);
+        // Supabase commonly emits these events when a background tab becomes
+        // active again. Keep the authenticated route tree mounted while the
+        // session/profile is refreshed so the current page is not lost.
+        const isUserChange = profileUserIdRef.current !== newSession.user.id;
+        if (isUserChange) setLoading(true);
         (async () => {
           const { profile: fetched, error: fetchErr } = await fetchProfile(newSession.user.id);
-          if (mounted) setLoading(false);
-          if (fetchErr || !fetched) {
+          if (mounted && isUserChange) setLoading(false);
+          // A temporary network error must not turn a valid background token
+          // refresh into a logout. Only a successful "no profile" lookup means
+          // that the account was actually removed.
+          if (!fetchErr && !fetched) {
             await supabase.auth.signOut();
             setActiveUserId(null);
             setSession(null);
+            profileUserIdRef.current = null;
             setProfile(null);
           }
         })();

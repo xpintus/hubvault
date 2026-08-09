@@ -33,6 +33,24 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
    ============================================================ */
 
 :root, .dark {
+  /* RGB companions let Tailwind generate reliable /5 ... /95 opacity utilities. */
+  --brand-50-rgb: 238 242 255; --brand-100-rgb: 224 231 255; --brand-200-rgb: 199 210 254;
+  --brand-300-rgb: 165 180 252; --brand-400-rgb: 129 140 248; --brand-500-rgb: 99 102 241;
+  --brand-600-rgb: 79 70 229; --brand-700-rgb: 67 56 202; --brand-800-rgb: 55 48 163;
+  --brand-900-rgb: 49 46 129; --brand-950-rgb: 30 27 75;
+  --success-50-rgb: 236 253 245; --success-100-rgb: 209 250 229; --success-200-rgb: 167 243 208;
+  --success-300-rgb: 110 231 183; --success-400-rgb: 52 211 153; --success-500-rgb: 16 185 129;
+  --success-600-rgb: 5 150 105; --success-700-rgb: 4 120 87; --success-800-rgb: 6 95 70; --success-900-rgb: 6 78 59;
+  --warning-50-rgb: 255 251 235; --warning-100-rgb: 254 243 199; --warning-200-rgb: 253 230 138;
+  --warning-300-rgb: 252 211 77; --warning-400-rgb: 251 191 36; --warning-500-rgb: 245 158 11;
+  --warning-600-rgb: 217 119 6; --warning-700-rgb: 180 83 9; --warning-800-rgb: 146 64 14; --warning-900-rgb: 120 53 15;
+  --error-50-rgb: 254 242 242; --error-100-rgb: 254 226 226; --error-200-rgb: 254 202 202;
+  --error-300-rgb: 252 165 165; --error-400-rgb: 248 113 113; --error-500-rgb: 239 68 68;
+  --error-600-rgb: 220 38 38; --error-700-rgb: 185 28 28; --error-800-rgb: 153 27 27; --error-900-rgb: 127 29 29;
+  --neutral-50-rgb: 248 250 252; --neutral-100-rgb: 241 245 249; --neutral-200-rgb: 226 232 240;
+  --neutral-300-rgb: 203 213 225; --neutral-400-rgb: 148 163 184; --neutral-500-rgb: 100 116 139;
+  --neutral-600-rgb: 71 85 105; --neutral-700-rgb: 51 65 85; --neutral-800-rgb: 30 41 59;
+  --neutral-900-rgb: 15 23 42; --neutral-950-rgb: 2 6 23;
   /* Brand — Indigo (same hue, both themes) */
   --brand-50: #EEF2FF;
   --brand-100: #E0E7FF;
@@ -209,25 +227,6 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
     background: var(--brand-600);
     color: #FFFFFF;
   }
-}
-
-/*
- * Dark-mode safety net
- *
- * A number of screens combine the shared `card` surface with a light-mode
- * `bg-white` utility and an opacity based dark colour.  With CSS-variable
- * colours, older generated opacity utilities can be ignored by the browser,
- * leaving a white card with light dark-mode text.  Keep shared surfaces on the
- * semantic theme tokens so the whole authenticated app remains readable.
- */
-.dark .card,
-.dark .card-hover {
-  background-color: var(--card-bg) !important;
-  border-color: var(--card-border) !important;
-}
-
-.dark .bg-white {
-  background-color: var(--card-bg) !important;
 }
 
 .dark input,
