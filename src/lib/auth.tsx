@@ -73,10 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         // Supabase commonly emits these events when a background tab becomes
-        // active again. Keep the authenticated route tree mounted while the
-        // session/profile is refreshed so the current page is not lost.
+        // active again. For the same user the new session token is enough;
+        // replacing the profile object makes page data effects run again and
+        // looks like a full refresh to the user.
         const isUserChange = profileUserIdRef.current !== newSession.user.id;
-        if (isUserChange) setLoading(true);
+        if (!isUserChange) return;
+
+        setLoading(true);
         (async () => {
           const { profile: fetched, error: fetchErr } = await fetchProfile(newSession.user.id);
           if (mounted && isUserChange) setLoading(false);
