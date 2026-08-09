@@ -152,9 +152,9 @@ export default function AppLayout() {
   return (
     <div className="app-shell flex h-dvh max-w-full overflow-hidden" style={{ background: 'var(--page-bg)' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-20 backdrop-blur-xl shadow-soft border-b border-neutral-200 dark:border-neutral-800 h-16 flex items-center justify-between px-4 lg:px-6 gap-3" style={{ background: 'color-mix(in srgb, var(--page-bg) 90%, transparent)' }}>
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 shadow-soft backdrop-blur-xl dark:border-neutral-800 lg:px-6" style={{ background: 'color-mix(in srgb, var(--page-bg) 90%, transparent)' }}>
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-2 -ml-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition active:scale-95">
               <Menu className="h-5 w-5" />
@@ -287,7 +287,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="app-content flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 w-full min-w-0 max-w-full overflow-x-hidden overscroll-contain">
+        <main className="app-content min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-4 lg:p-6">
           <div className="max-w-7xl mx-auto w-full min-w-0">
             {/* Subscription Warning / Expired Banner for monthly users */}
             {profile?.role !== 'super_admin' && subDetails.isNearExpiry && (
