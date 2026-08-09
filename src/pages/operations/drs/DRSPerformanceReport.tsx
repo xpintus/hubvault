@@ -593,8 +593,8 @@ export default function DRSPerformanceReport() {
       {/* HEADER: REPORT METADATA & ACTION CONTROLS                */}
       {/* ========================================================= */}
       <header className="drs-hero relative overflow-hidden rounded-[30px] border border-indigo-700/50 bg-gradient-to-br from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-[0_28px_70px_-36px_rgba(49,46,129,.9)] sm:p-7">
-        <div aria-hidden="true" className="pointer-events-none !absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl" />
-        <div aria-hidden="true" className="pointer-events-none !absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div aria-hidden="true" className="drs-hero-glow drs-hero-glow-right pointer-events-none rounded-full bg-violet-400/20 blur-3xl" />
+        <div aria-hidden="true" className="drs-hero-glow drs-hero-glow-bottom pointer-events-none rounded-full bg-cyan-400/10 blur-3xl" />
         <div className="relative grid gap-7 xl:grid-cols-[minmax(0,1fr)_minmax(420px,auto)] xl:items-start">
         <div className="min-w-0 space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[.2em] text-cyan-100">

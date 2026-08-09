@@ -283,6 +283,39 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
   isolation: isolate;
 }
 
+.drs-hero {
+  display: block;
+  width: 100%;
+  height: auto !important;
+  min-height: 0 !important;
+  contain: layout paint;
+}
+
+.drs-hero-glow {
+  position: absolute !important;
+  z-index: 0;
+  display: block;
+}
+
+.drs-hero-glow-right {
+  top: -6rem;
+  right: -5rem;
+  width: 18rem;
+  height: 18rem;
+}
+
+.drs-hero-glow-bottom {
+  bottom: -7rem;
+  left: 33.333%;
+  width: 14rem;
+  height: 14rem;
+}
+
+.drs-hero > :not(.drs-hero-glow) {
+  position: relative;
+  z-index: 1;
+}
+
 .drs-hero::after {
   content: '';
   position: absolute;
