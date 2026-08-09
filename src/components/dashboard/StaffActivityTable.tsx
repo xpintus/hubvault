@@ -149,20 +149,20 @@ export const StaffActivityTable: React.FC<StaffActivityTableProps> = ({
   handleDelete,
 }) => {
   return (
-    <div className="hidden w-full max-w-full overflow-x-auto md:block">
-      <table className="w-full min-w-[940px] table-auto text-sm xl:min-w-[1120px]">
+    <div className="hidden w-full max-w-full overflow-hidden md:block">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col className="w-[22%]" /><col className="w-[15%]" /><col className="w-[23%]" />
+          <col className="w-[16%]" /><col className="w-[13%]" /><col className="w-[11%]" />
+        </colgroup>
         <thead className="bg-neutral-50/90 dark:bg-neutral-950/90 backdrop-blur-xs text-neutral-500 text-[11px] uppercase tracking-wider font-bold border-b border-neutral-200/80 dark:border-neutral-800/80 sticky top-0">
           <tr>
             <th className="whitespace-nowrap text-left px-5 py-3.5 font-bold">Employee</th>
-            <th className="whitespace-nowrap text-left px-4 py-3.5 font-bold hidden lg:table-cell">Emp ID</th>
-            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold hidden xl:table-cell">Expected COD</th>
-            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold">Cash</th>
-            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold hidden sm:table-cell">Online</th>
-            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold">Total</th>
-            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold">Pending</th>
-            <th className="whitespace-nowrap text-right px-4 py-3.5 font-bold hidden xl:table-cell">Excess</th>
+            <th className="whitespace-nowrap px-3 py-3.5 text-right font-bold">Expected</th>
+            <th className="whitespace-nowrap px-3 py-3.5 text-right font-bold">Collection</th>
+            <th className="whitespace-nowrap px-3 py-3.5 text-right font-bold">Difference</th>
             <th className="whitespace-nowrap text-center px-4 py-3.5 font-bold">Status</th>
-            <th className="whitespace-nowrap text-right px-5 py-3.5 font-bold">Actions</th>
+            <th className="whitespace-nowrap px-3 py-3.5 text-center font-bold">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
@@ -173,41 +173,45 @@ export const StaffActivityTable: React.FC<StaffActivityTableProps> = ({
                   <div className="h-9 w-9 rounded-full bg-gradient-to-br from-brand-600/20 to-brand-600/10 text-brand-600 flex items-center justify-center font-bold text-xs shrink-0">
                     {e.collector?.name?.charAt(0).toUpperCase() ?? '?'}
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">{e.collector?.name ?? '—'}</div>
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400 lg:hidden">{e.collector?.employee_id}</div>
+                  <div className="min-w-0 leading-tight">
+                    <div className="break-words font-semibold text-neutral-800 dark:text-neutral-200">{e.collector?.name ?? '—'}</div>
+                    <div className="mt-1 text-[11px] font-mono text-neutral-500 dark:text-neutral-400">{e.collector?.employee_id}</div>
                   </div>
                 </div>
                 <RowHoverPopup entry={e} onView={() => setViewing(e)} />
               </td>
-              <td className="whitespace-nowrap px-4 py-3.5 text-neutral-500 font-mono text-xs hidden lg:table-cell">{e.collector?.employee_id}</td>
-              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-neutral-500 hidden xl:table-cell">{formatINR(e.expected_cod)}</td>
-              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400">{formatINR(e.cash_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400 hidden sm:table-cell">{formatINR(e.online_amount)}</td>
-              <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums font-bold text-neutral-800 dark:text-neutral-200">{formatINR(e.total_collection)}</td>
+              <td className="whitespace-nowrap px-3 py-3.5 text-right font-medium tabular-nums text-neutral-600 dark:text-neutral-300">{formatINR(e.expected_cod)}</td>
+              <td className="px-3 py-3.5 text-right tabular-nums">
+                <div className="whitespace-nowrap font-bold text-neutral-900 dark:text-neutral-100">{formatINR(e.total_collection)}</div>
+                <div className="mt-1 flex flex-wrap justify-end gap-x-2 text-[10px] text-neutral-500 dark:text-neutral-400">
+                  <span className="whitespace-nowrap">Cash {formatINR(e.cash_amount)}</span>
+                  <span className="whitespace-nowrap">Online {formatINR(e.online_amount)}</span>
+                </div>
+              </td>
               {(() => {
                 const pending = computePendingAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
                 const excess = computeExcessAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
                 return (
-                  <>
-                    <td className={clsx('whitespace-nowrap px-4 py-3.5 text-right tabular-nums font-semibold', pending > 0 ? 'text-amber-500' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(pending)}</td>
-                    <td className={clsx('whitespace-nowrap px-4 py-3.5 text-right tabular-nums font-semibold hidden xl:table-cell', excess > 0 ? 'text-brand-600' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(excess)}</td>
-                  </>
+                  <td className="px-3 py-3.5 text-right tabular-nums">
+                    {pending > 0 ? <><div className="whitespace-nowrap font-semibold text-amber-500">-{formatINR(pending)}</div><div className="mt-1 text-[10px] text-neutral-500">Pending</div></>
+                      : excess > 0 ? <><div className="whitespace-nowrap font-semibold text-brand-600">+{formatINR(excess)}</div><div className="mt-1 text-[10px] text-neutral-500">Excess</div></>
+                      : <><div className="font-semibold text-emerald-500">{formatINR(0)}</div><div className="mt-1 text-[10px] text-neutral-500">Matched</div></>}
+                  </td>
                 );
               })()}
               <td className="whitespace-nowrap px-4 py-3.5 text-center"><StatusBadge status={e.status} size="sm" /></td>
-              <td className="whitespace-nowrap px-5 py-3.5">
-                <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setViewing(e)} title="View" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-500 hover:bg-blue-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <td className="whitespace-nowrap px-2 py-3.5">
+                <div className="flex items-center justify-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100">
+                  <button onClick={() => setViewing(e)} title="View" className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-blue-500/10 hover:text-blue-500 active:scale-95 dark:text-neutral-400">
                     <Eye className="h-4 w-4" />
                   </button>
                   {canManage && (
-                    <button onClick={() => { setEditing(e); setEntryModalOpen(true); }} title="Edit" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
+                    <button onClick={() => { setEditing(e); setEntryModalOpen(true); }} title="Edit" className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-brand-50 hover:text-brand-600 active:scale-95 dark:text-neutral-400 dark:hover:bg-brand-600/15">
                       <Pencil className="h-4 w-4" />
                     </button>
                   )}
                   {canManage && (
-                    <button onClick={() => handleDelete(e)} title="Delete" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-500 hover:bg-red-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
+                    <button onClick={() => handleDelete(e)} title="Delete" className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-red-500/10 hover:text-red-500 active:scale-95 dark:text-neutral-400">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
