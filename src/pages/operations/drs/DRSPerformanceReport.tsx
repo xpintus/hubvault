@@ -442,14 +442,16 @@ export default function DRSPerformanceReport() {
       const cards = [
         ['EMPLOYEES', String(filteredEmployeeMetrics.length)],
         ['TOTAL OFD', String(filteredSummary?.totalOfd ?? 0)],
-        ['DELIVERY', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
-        ['COD SHIPMENTS', String(paymentMetrics.codOfd)],
+        ['OVERALL', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
+        ['COD PERFORMANCE', `${paymentMetrics.codDeliveryPct}%`],
+        ['PREPAID PERFORMANCE', `${paymentMetrics.prepaidDeliveryPct}%`],
+        ['PENDING', String(filteredSummary?.totalUndel ?? 0)],
       ];
       cards.forEach(([label, value], index) => {
-        const x = 38 + index * 190;
+        const x = 38 + index * 220;
         ctx.fillStyle = 'rgba(255,255,255,0.14)';
-        ctx.fillRect(x, 124, 174, 42);
-        ctx.fillStyle = '#ddd6fe'; ctx.font = '700 10px Arial'; ctx.fillText(label, x + 12, 140);
+        ctx.fillRect(x, 124, 204, 42);
+        ctx.fillStyle = '#ddd6fe'; ctx.font = '700 9px Arial'; ctx.fillText(label, x + 12, 140);
         ctx.fillStyle = '#ffffff'; ctx.font = '800 17px Arial'; ctx.fillText(value, x + 12, 160);
       });
 
@@ -1175,16 +1177,29 @@ export default function DRSPerformanceReport() {
                     {copyingEmployeeSnapshot ? 'Copying...' : 'Copy Snapshot'}
                   </button>
                 </div>
-                <div className="relative mt-5 grid grid-cols-2 gap-2 sm:max-w-3xl sm:grid-cols-4 sm:gap-3">
+                <div className="relative mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
                   {[
-                    ['Employees', filteredEmployeeMetrics.length],
-                    ['Total OFD', filteredSummary?.totalOfd ?? 0],
-                    ['Delivery', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
-                    ['COD Shipments', paymentMetrics.codOfd],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-indigo-100 sm:text-[10px]">{label}</div>
-                      <div className="mt-1 font-mono text-lg font-black sm:text-xl">{value}</div>
+                    { label: 'Employees', value: filteredEmployeeMetrics.length, detail: 'Active executives', icon: Users, progress: 100, accent: 'from-cyan-300 to-sky-400', iconStyle: 'bg-cyan-300/15 text-cyan-100' },
+                    { label: 'Total OFD', value: filteredSummary?.totalOfd ?? 0, detail: 'Assigned shipments', icon: Package, progress: 100, accent: 'from-indigo-300 to-blue-400', iconStyle: 'bg-indigo-300/15 text-indigo-100' },
+                    { label: 'Overall Delivery', value: `${filteredSummary?.overallDeliveryPct ?? 0}%`, detail: `${filteredSummary?.totalDelivered ?? 0} delivered`, icon: TrendingUp, progress: filteredSummary?.overallDeliveryPct ?? 0, accent: 'from-emerald-300 to-teal-400', iconStyle: 'bg-emerald-300/15 text-emerald-100' },
+                    { label: 'COD Performance', value: `${paymentMetrics.codDeliveryPct}%`, detail: `${paymentMetrics.codDelivered}/${paymentMetrics.codOfd} delivered`, icon: Banknote, progress: paymentMetrics.codDeliveryPct, accent: 'from-amber-300 to-orange-400', iconStyle: 'bg-amber-300/15 text-amber-100' },
+                    { label: 'Prepaid Performance', value: `${paymentMetrics.prepaidDeliveryPct}%`, detail: `${paymentMetrics.prepaidDelivered}/${paymentMetrics.prepaidOfd} delivered`, icon: CreditCard, progress: paymentMetrics.prepaidDeliveryPct, accent: 'from-fuchsia-300 to-pink-400', iconStyle: 'bg-fuchsia-300/15 text-fuchsia-100' },
+                    { label: 'Pending', value: filteredSummary?.totalUndel ?? 0, detail: 'Needs attention', icon: Clock, progress: filteredSummary?.totalOfd ? ((filteredSummary.totalUndel / filteredSummary.totalOfd) * 100) : 0, accent: 'from-rose-300 to-red-400', iconStyle: 'bg-rose-300/15 text-rose-100' },
+                  ].map((metric) => (
+                    <div key={metric.label} className="group relative min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[.09] p-3.5 shadow-[0_16px_35px_-24px_rgba(0,0,0,.75)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/[.14]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[8px] font-black uppercase tracking-[.14em] text-indigo-100/80 sm:text-[9px]">{metric.label}</div>
+                          <div className="mt-1.5 truncate font-mono text-lg font-black leading-none text-white sm:text-xl">{metric.value}</div>
+                        </div>
+                        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/10 ${metric.iconStyle}`}>
+                          <metric.icon className="h-4 w-4" />
+                        </span>
+                      </div>
+                      <div className="mt-3 h-1 overflow-hidden rounded-full bg-black/20">
+                        <div className={`h-full rounded-full bg-gradient-to-r ${metric.accent}`} style={{ width: `${Math.min(Math.max(metric.progress, 0), 100)}%` }} />
+                      </div>
+                      <div className="mt-2 truncate text-[9px] font-semibold text-indigo-100/65">{metric.detail}</div>
                     </div>
                   ))}
                 </div>
