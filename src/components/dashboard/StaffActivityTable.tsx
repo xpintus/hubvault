@@ -149,7 +149,7 @@ export const StaffActivityTable: React.FC<StaffActivityTableProps> = ({
   handleDelete,
 }) => {
   return (
-    <div className="hidden w-full max-w-full overflow-hidden md:block">
+    <div className="hidden w-full max-w-full overflow-x-clip overflow-y-visible md:block">
       <table className="w-full table-fixed text-sm">
         <colgroup>
           <col className="w-[22%]" /><col className="w-[15%]" /><col className="w-[23%]" />

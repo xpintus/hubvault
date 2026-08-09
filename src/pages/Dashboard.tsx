@@ -52,7 +52,8 @@ Wallet
 import { useCallback,useEffect,useMemo,useState } from 'react';
 
 import AvailableCollectionModal from '@/components/dashboard/AvailableCollectionModal';
-import { RowHoverPopup } from '@/components/dashboard/StaffActivityTable';
+import StaffActivityMobile from '@/components/dashboard/StaffActivityMobile';
+import StaffActivityTable from '@/components/dashboard/StaffActivityTable';
 
 type FilterStatus = 'all' | EntryStatus;
 
@@ -999,146 +1000,8 @@ export default function Dashboard() {
               />
             ) : (
               <>
-                {/* Desktop Table View */}
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-50/90 dark:bg-neutral-950/90 backdrop-blur-xs text-neutral-500 text-[11px] uppercase tracking-wider font-bold border-b border-neutral-200/80 dark:border-neutral-800/80 sticky top-0">
-                      <tr>
-                        <th className="text-left px-5 py-3.5 font-bold">Employee</th>
-                        <th className="text-left px-4 py-3.5 font-bold hidden lg:table-cell">Emp ID</th>
-                        <th className="text-right px-4 py-3.5 font-bold hidden xl:table-cell">Expected COD</th>
-                        <th className="text-right px-4 py-3.5 font-bold">Cash</th>
-                        <th className="text-right px-4 py-3.5 font-bold hidden sm:table-cell">Online</th>
-                        <th className="text-right px-4 py-3.5 font-bold">Total</th>
-                        <th className="text-right px-4 py-3.5 font-bold">Pending</th>
-                        <th className="text-right px-4 py-3.5 font-bold hidden xl:table-cell">Excess</th>
-                        <th className="text-center px-4 py-3.5 font-bold">Status</th>
-                        <th className="text-right px-5 py-3.5 font-bold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                      {filtered.map((e) => (
-                        <tr key={e.id} className="group hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
-                          <td className="px-5 py-3.5 relative">
-                            <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-brand-600/20 to-brand-600/10 text-brand-600 flex items-center justify-center font-bold text-xs shrink-0">
-                                {e.collector?.name?.charAt(0).toUpperCase() ?? '?'}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">{e.collector?.name ?? '—'}</div>
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400 lg:hidden">{e.collector?.employee_id}</div>
-                              </div>
-                            </div>
-                            <RowHoverPopup entry={e} onView={() => setViewing(e)} />
-                          </td>
-                          <td className="px-4 py-3.5 text-neutral-500 font-mono text-xs hidden lg:table-cell">{e.collector?.employee_id}</td>
-                          <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 hidden xl:table-cell">{formatINR(e.expected_cod)}</td>
-                          <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400">{formatINR(e.cash_amount)}</td>
-                          <td className="px-4 py-3.5 text-right tabular-nums text-neutral-500 dark:text-neutral-400 hidden sm:table-cell">{formatINR(e.online_amount)}</td>
-                          <td className="px-4 py-3.5 text-right tabular-nums font-bold text-neutral-800 dark:text-neutral-200">{formatINR(e.total_collection)}</td>
-                          {(() => {
-                            const pending = computePendingAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
-                            const excess = computeExcessAmount(safeAmount(e.expected_cod), safeAmount(e.total_collection));
-                            return (
-                              <>
-                                <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold', pending > 0 ? 'text-amber-500' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(pending)}</td>
-                                <td className={clsx('px-4 py-3.5 text-right tabular-nums font-semibold hidden xl:table-cell', excess > 0 ? 'text-brand-600' : 'text-neutral-500 dark:text-neutral-400')}>{formatINR(excess)}</td>
-                              </>
-                            );
-                          })()}
-                          <td className="px-4 py-3.5 text-center"><StatusBadge status={e.status} size="sm" /></td>
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setViewing(e)} title="View" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-500 hover:bg-blue-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              {canManage && (
-                                <button onClick={() => { setEditing(e); setEntryModalOpen(true); }} title="Edit" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
-                                  <Pencil className="h-4 w-4" />
-                                </button>
-                              )}
-                              {canManage && (
-                                <button onClick={() => handleDelete(e)} title="Delete" className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-500 hover:bg-red-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center">
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile Card List */}
-                <div className="divide-y divide-neutral-200 dark:divide-neutral-800 md:hidden">
-                  {filtered.map((e) => (
-                    <div key={e.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-neutral-950/70 transition-colors">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-600/20 to-brand-600/10 text-brand-600 flex items-center justify-center font-bold text-sm shrink-0">
-                            {e.collector?.name?.charAt(0).toUpperCase() ?? '?'}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate text-sm">{e.collector?.name ?? '—'}</p>
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono truncate">{e.collector?.employee_id}</p>
-                          </div>
-                        </div>
-                        <StatusBadge status={e.status} size="sm" />
-                      </div>
-
-                      <RowHoverPopup entry={e} mobile onView={() => setViewing(e)} />
-
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 px-2.5 py-2 text-center">
-                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Cash</p>
-                          <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatINR(e.cash_amount)}</p>
-                        </div>
-                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 px-2.5 py-2 text-center">
-                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Online</p>
-                          <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatINR(e.online_amount)}</p>
-                        </div>
-                        <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 px-2.5 py-2 text-center">
-                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Total</p>
-                          <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">{formatINR(e.total_collection)}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className={clsx(
-                          'text-xs font-semibold tabular-nums',
-                          e.gap < 0 ? 'text-red-500 dark:text-red-400' : e.gap > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-brand-600 dark:text-brand-400'
-                        )}>
-                          Gap: {e.gap < 0 ? '-' : e.gap > 0 ? '+' : ''}{formatINR(Math.abs(Number(e.gap)))}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setViewing(e)}
-                            className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-blue-500 hover:bg-blue-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          {canManage && (
-                            <button
-                              onClick={() => { setEditing(e); setEntryModalOpen(true); }}
-                              className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-600/15 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                          )}
-                          {canManage && (
-                            <button
-                              onClick={() => handleDelete(e)}
-                              className="p-2 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-red-500 hover:bg-red-500/10 transition active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <StaffActivityTable entries={filtered} canManage={canManage} setViewing={setViewing} setEditing={setEditing} setEntryModalOpen={setEntryModalOpen} handleDelete={handleDelete} />
+                <StaffActivityMobile entries={filtered} canManage={canManage} setViewing={setViewing} setEditing={setEditing} setEntryModalOpen={setEntryModalOpen} handleDelete={handleDelete} />
               </>
             )}
           </Card>
