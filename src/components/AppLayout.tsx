@@ -150,18 +150,19 @@ export default function AppLayout() {
   const isSuperAdmin = profile.role === 'super_admin';
 
   return (
-    <div className="app-shell flex h-dvh max-w-full overflow-hidden" style={{ background: 'var(--page-bg)' }}>
+    <div className="app-shell flex h-dvh max-w-full overflow-hidden bg-[var(--page-bg)]">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 shadow-soft backdrop-blur-xl dark:border-neutral-800 lg:px-6" style={{ background: 'color-mix(in srgb, var(--page-bg) 90%, transparent)' }}>
+        <header className="sticky top-0 z-20 flex h-20 shrink-0 items-center justify-between gap-3 border-b border-white/70 bg-white/75 px-4 shadow-[0_8px_30px_-28px_rgba(15,23,42,.55)] backdrop-blur-2xl dark:border-white/5 dark:bg-slate-950/70 lg:px-7">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 p-2 -ml-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition active:scale-95">
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-base lg:text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate tracking-tight">{title}</h1>
-              <p className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+              <p className="text-[9px] font-black uppercase tracking-[.2em] text-brand-500">HubVault Workspace</p>
+              <h1 className="truncate text-lg font-black tracking-tight text-neutral-950 dark:text-white lg:text-xl">{title}</h1>
+              <p className="hidden items-center gap-1.5 text-[11px] font-semibold text-neutral-500 sm:flex">
                 <Calendar className="h-3 w-3" />
                 {formatDateLong(new Date())}
               </p>
@@ -287,8 +288,8 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="app-content min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto w-full min-w-0">
+        <main className="app-content min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-5 lg:p-7">
+          <div className="mx-auto w-full min-w-0 max-w-[1500px]">
             {/* Subscription Warning / Expired Banner for monthly users */}
             {profile?.role !== 'super_admin' && subDetails.isNearExpiry && (
               <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">

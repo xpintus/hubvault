@@ -396,3 +396,106 @@ button, a, input, select, textarea {
   background-size: 1000px 100%;
   @apply animate-shimmer rounded-lg;
 }
+
+/* HubVault 2026 workspace design system */
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgb(var(--brand-500-rgb) / .08), transparent 28rem),
+    radial-gradient(circle at 92% 92%, rgb(14 165 233 / .06), transparent 32rem),
+    var(--page-bg);
+}
+
+.app-content {
+  background:
+    linear-gradient(rgb(255 255 255 / .18), rgb(255 255 255 / 0)),
+    radial-gradient(circle at 78% 0%, rgb(var(--brand-400-rgb) / .07), transparent 34rem);
+}
+
+.dark .app-content {
+  background:
+    linear-gradient(rgb(255 255 255 / .01), rgb(255 255 255 / 0)),
+    radial-gradient(circle at 78% 0%, rgb(var(--brand-500-rgb) / .09), transparent 38rem);
+}
+
+.card,
+.card-hover {
+  border-color: rgb(var(--neutral-200-rgb) / .75);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  box-shadow: 0 1px 2px rgb(15 23 42 / .035), 0 14px 35px -30px rgb(15 23 42 / .45);
+  backdrop-filter: blur(18px);
+}
+
+.dark .card,
+.dark .card-hover {
+  border-color: rgb(255 255 255 / .065);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .025) inset, 0 18px 42px -32px rgb(0 0 0 / .9);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgb(var(--brand-300-rgb) / .65);
+  box-shadow: 0 18px 42px -24px rgb(var(--brand-500-rgb) / .28);
+}
+
+.input-base {
+  min-height: 2.75rem;
+  border-color: rgb(var(--neutral-200-rgb) / .85);
+  border-radius: .875rem;
+  background: color-mix(in srgb, var(--input-bg) 92%, transparent);
+  box-shadow: 0 1px 2px rgb(15 23 42 / .025) inset;
+}
+
+.input-base:hover { border-color: rgb(var(--brand-300-rgb) / .8); }
+.input-base:focus {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 4px rgb(var(--brand-500-rgb) / .12), 0 4px 14px -8px rgb(var(--brand-500-rgb) / .45);
+}
+
+.btn {
+  min-height: 2.5rem;
+  border-radius: .875rem;
+  font-weight: 750;
+  letter-spacing: -.01em;
+  box-shadow: 0 1px 2px rgb(15 23 42 / .08);
+}
+
+.app-content table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.app-content thead {
+  background: rgb(var(--neutral-50-rgb) / .82);
+}
+
+.dark .app-content thead {
+  background: rgb(var(--neutral-950-rgb) / .5);
+}
+
+.app-content tbody tr {
+  transition: background-color .18s ease, transform .18s ease;
+}
+
+.app-content tbody tr:hover {
+  background: rgb(var(--brand-50-rgb) / .55);
+}
+
+.dark .app-content tbody tr:hover {
+  background: rgb(var(--brand-500-rgb) / .055);
+}
+
+.app-content :where(h1, h2, h3) {
+  letter-spacing: -.025em;
+}
+
+.app-content :where(button, a)[title] svg,
+.app-content button[aria-label] svg {
+  stroke-width: 2.1;
+}
+
+@media (max-width: 639px) {
+  .card,
+  .card-hover { border-radius: 1rem; }
+  .app-content { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+}
