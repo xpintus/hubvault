@@ -711,7 +711,7 @@ export default function DRSPerformanceReport() {
             { label: 'Overall Performance', value: `${summary?.overallDeliveryPct ?? 0}%`, icon: TrendingUp, tone: 'text-emerald-200 bg-emerald-300/10' },
             { label: 'First Attempt', value: `${summary?.firstAttemptDeliveryPct ?? 0}%`, icon: Target, tone: 'text-indigo-200 bg-indigo-300/10' },
             { label: 'Reattempt', value: `${summary?.reattemptDeliveryPct ?? 0}%`, icon: RotateCcw, tone: 'text-violet-200 bg-violet-300/10' },
-            { label: 'OFD Pending', value: pendingOfdRows.length, icon: Clock, tone: 'text-amber-200 bg-amber-300/10' },
+            { label: 'Out on Road', value: pendingOfdRows.length, icon: Clock, tone: 'text-amber-200 bg-amber-300/10' },
           ].map((metric) => (
             <div key={metric.label} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.065] p-3 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/10">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${metric.tone}`}><metric.icon className="h-4.5 w-4.5" /></span>
@@ -761,7 +761,7 @@ export default function DRSPerformanceReport() {
           {[
             { id: 'OVERVIEW', label: 'Overview', icon: LayoutDashboard },
             { id: 'TOTAL_SHIPMENTS', label: `Shipments (${filteredUniqueRows.length})`, icon: Package },
-            { id: 'OFD', label: `OFD Pending (${pendingOfdRows.length})`, icon: Truck },
+            { id: 'OFD', label: `Out on Road (${pendingOfdRows.length})`, icon: Truck },
             { id: 'EMPLOYEE', label: `Employees (${filteredEmployeeMetrics.length})`, icon: Users },
             { id: 'FIRST_ATTEMPT', label: 'First Attempt', icon: Target },
             { id: 'REATTEMPT', label: 'Reattempt', icon: RotateCcw },
@@ -876,7 +876,7 @@ export default function DRSPerformanceReport() {
                   <div className="absolute inset-x-0 top-0 h-1 bg-amber-500" />
                   <div className="flex h-full flex-col justify-between gap-4">
                     <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                      <span>OFD Pending</span>
+                      <span>Out on Road</span>
                       <span className="rounded-xl bg-amber-100 p-2 dark:bg-amber-950"><Truck className="h-4 w-4 text-amber-600" /></span>
                     </div>
                     <span className="font-mono text-3xl font-black leading-none tracking-tight text-amber-600 dark:text-amber-400 sm:text-4xl">{pendingOfdRows.length}</span>
@@ -1089,7 +1089,7 @@ export default function DRSPerformanceReport() {
               <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200/80 bg-gradient-to-r from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Shipment register</p>
-                  <h2 className="mt-1 text-xl font-black">{activeTab === 'OFD' ? 'OFD Pending Shipments' : shipmentViewFilter === 'DELIVERED' ? 'Delivered Shipments' : shipmentViewFilter === 'UNDELIVERED' ? 'Undelivered Shipments & Remarks' : 'Total Shipments'}</h2>
+                  <h2 className="mt-1 text-xl font-black">{activeTab === 'OFD' ? 'Out on Road Shipments' : shipmentViewFilter === 'DELIVERED' ? 'Delivered Shipments' : shipmentViewFilter === 'UNDELIVERED' ? 'Undelivered Shipments & Remarks' : 'Total Shipments'}</h2>
                   <p className="mt-1 text-xs text-indigo-100/70">{activeTab === 'OFD' ? 'Shipments awaiting a final Delivered or Undelivered update.' : shipmentViewFilter === 'UNDELIVERED' ? 'Review every undelivered AWB with its complete DRS reason/remark.' : 'AWB-level records from the active DRS report.'}</p>
                 </div>
                 <div className="flex items-center gap-3">
