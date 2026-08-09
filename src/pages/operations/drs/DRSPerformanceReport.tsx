@@ -588,11 +588,11 @@ export default function DRSPerformanceReport() {
   };
 
   return (
-    <div className="mx-auto min-h-screen max-w-[1700px] space-y-5 bg-neutral-50 p-4 font-sans text-neutral-900 antialiased transition-colors dark:bg-neutral-950 dark:text-neutral-100 md:p-8">
+    <div className="drs-pro mx-auto max-w-[1700px] space-y-6 font-sans text-neutral-900 antialiased transition-colors dark:text-neutral-100">
       {/* ========================================================= */}
       {/* HEADER: REPORT METADATA & ACTION CONTROLS                */}
       {/* ========================================================= */}
-      <header className="relative overflow-hidden rounded-[28px] border border-indigo-800/60 bg-gradient-to-br from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-xl shadow-indigo-950/10 sm:p-7">
+      <header className="drs-hero relative overflow-hidden rounded-[30px] border border-indigo-700/50 bg-gradient-to-br from-slate-950 via-indigo-950 to-brand-900 p-5 text-white shadow-[0_28px_70px_-36px_rgba(49,46,129,.9)] sm:p-7">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
         <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
@@ -604,8 +604,8 @@ export default function DRSPerformanceReport() {
             <h1 className="max-w-3xl break-words text-lg font-black leading-tight tracking-tight text-white sm:text-xl">
               {summary?.fileName || 'DRS Performance Analytics Dashboard'}
             </h1>
-            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-indigo-100">
-              Power BI Edition
+            <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">
+              Enterprise Analytics
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-indigo-100/80">
@@ -620,7 +620,7 @@ export default function DRSPerformanceReport() {
         </div>
 
         {/* Action Controls & Enterprise Reset Buttons */}
-        <div className="flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm xl:justify-end">
+        <div className="drs-command-bar flex max-w-xl flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[.07] p-3 shadow-inner shadow-white/5 backdrop-blur-xl xl:justify-end">
           {summary && (
             <div className="relative w-full sm:min-w-[200px] sm:w-auto">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
@@ -735,8 +735,8 @@ export default function DRSPerformanceReport() {
       {/* ========================================================= */}
       {/* NAVIGATION TABS (ROUNDED PILL TABS)                        */}
       {/* ========================================================= */}
-      <div className="no-scrollbar overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white p-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <nav className="flex min-w-max space-x-1">
+      <div className="drs-tabs rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90">
+        <nav className="flex flex-wrap gap-1">
           {[
             { id: 'OVERVIEW', label: 'Overview' },
             { id: 'TOTAL_SHIPMENTS', label: `Total Shipments (${filteredUniqueRows.length})` },
@@ -810,7 +810,7 @@ export default function DRSPerformanceReport() {
           {/* TAB 1: OVERVIEW PAGE                                      */}
           {/* ========================================================= */}
           {activeTab === 'OVERVIEW' && filteredSummary && (
-            <div className="space-y-5 rounded-[28px] border border-neutral-200/70 bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-950 dark:via-neutral-950 dark:to-indigo-950/20 sm:p-6">
+            <div className="drs-surface space-y-5 rounded-[28px] border border-neutral-200/70 bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-950 dark:via-neutral-950 dark:to-indigo-950/20 sm:p-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">Performance snapshot</p>
@@ -825,7 +825,7 @@ export default function DRSPerformanceReport() {
               {/* ----------------------------------------------------- */}
               {/* 6 PRIMARY KPI CARDS (HEIGHT: 135–140PX, VALUE: 42PX BOLD) */}
               {/* ----------------------------------------------------- */}
-              <div className="no-scrollbar grid snap-x snap-mandatory grid-flow-col auto-cols-[minmax(158px,78vw)] gap-3 overflow-x-auto pb-2 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-4 sm:overflow-visible sm:pb-0 xl:grid-cols-7">
+              <div className="drs-kpi-grid grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
                 {/* 1. Total Shipments */}
                 <button type="button" onClick={() => openShipmentRegister('ALL')} className="group relative min-h-[142px] snap-start overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
                   <div className="absolute inset-x-0 top-0 h-1 bg-slate-400" />
