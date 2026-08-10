@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useHub } from '@/lib/hubContext';
 import { fetchNDRShipments } from '@/lib/ndr/ndrService';
@@ -20,6 +20,8 @@ export default function NDRCallingQueue() {
   const [supervisorModalOpen, setSupervisorModalOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [attemptsFilter, setAttemptsFilter] = useState<string>('ALL');
+  const [executiveFilter, setExecutiveFilter] = useState<string>('ALL');
+  const [reasonFilter, setReasonFilter] = useState<string>('ALL');
 
   const loadQueue = async () => {
     setLoading(true);
@@ -27,7 +29,6 @@ export default function NDRCallingQueue() {
       const { data } = await fetchNDRShipments({
         hubId: selectedHub?.id || undefined,
         workflowStatus: 'Calling Pending',
-        attempts: attemptsFilter !== 'ALL' ? attemptsFilter : undefined,
         limit: 150,
       });
 
@@ -67,7 +68,26 @@ export default function NDRCallingQueue() {
     return () => {
       window.removeEventListener('ndr-data-updated', handleUpdate);
     };
-  }, [selectedHub, attemptsFilter, outletCtx?.refreshTrigger]);
+  }, [selectedHub, outletCtx?.refreshTrigger]);
+
+  const executiveOptions = useMemo(
+    () => [...new Set(shipments.map((item) => item.delivery_executive?.trim()).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b)),
+    [shipments]
+  );
+
+  const reasonOptions = useMemo(
+    () => [...new Set(shipments.map((item) => item.original_ndr_reason?.trim()).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b)),
+    [shipments]
+  );
+
+  const filteredShipments = useMemo(() => shipments.filter((item) => {
+    const attempts = item.total_attempts || 1;
+    if (attemptsFilter === 'fresh' && attempts !== 1) return false;
+    if (attemptsFilter === 'reattempt' && attempts < 2) return false;
+    if (executiveFilter !== 'ALL' && item.delivery_executive !== executiveFilter) return false;
+    if (reasonFilter !== 'ALL' && item.original_ndr_reason !== reasonFilter) return false;
+    return true;
+  }), [shipments, attemptsFilter, executiveFilter, reasonFilter]);
 
   const handleSupervisorSuccess = () => {
     setToastMsg('Customer call and supervisor action saved.');
@@ -114,7 +134,7 @@ export default function NDRCallingQueue() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs">
             <Filter className="h-3.5 w-3.5 text-neutral-400" />
             <select
@@ -128,8 +148,32 @@ export default function NDRCallingQueue() {
             </select>
           </div>
 
+          <div className="flex min-w-[170px] flex-1 items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-800 dark:bg-neutral-900 sm:flex-none">
+            <select
+              aria-label="Filter by executive"
+              value={executiveFilter}
+              onChange={(e) => setExecutiveFilter(e.target.value)}
+              className="w-full bg-transparent font-semibold text-neutral-800 focus:outline-none dark:text-neutral-200"
+            >
+              <option value="ALL">All Executives</option>
+              {executiveOptions.map((executive) => <option key={executive} value={executive}>{executive}</option>)}
+            </select>
+          </div>
+
+          <div className="flex min-w-[180px] flex-1 items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-800 dark:bg-neutral-900 sm:flex-none">
+            <select
+              aria-label="Filter by NDR reason"
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+              className="w-full bg-transparent font-semibold text-neutral-800 focus:outline-none dark:text-neutral-200"
+            >
+              <option value="ALL">All Reasons</option>
+              {reasonOptions.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+            </select>
+          </div>
+
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-            {shipments.length} Pending Calls
+            {filteredShipments.length}{filteredShipments.length !== shipments.length ? ` / ${shipments.length}` : ''} Pending Calls
           </span>
         </div>
       </div>
@@ -140,8 +184,8 @@ export default function NDRCallingQueue() {
             <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
             <span className="text-xs">Loading Calling Queue...</span>
           </div>
-        ) : shipments.length === 0 ? (
-          <div className="py-16 text-center text-neutral-500 text-sm">No pending calling shipments in queue.</div>
+        ) : filteredShipments.length === 0 ? (
+          <div className="py-16 text-center text-neutral-500 text-sm">No pending calls match the selected filters.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -158,7 +202,7 @@ export default function NDRCallingQueue() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                {shipments.map((s) => (
+                {filteredShipments.map((s) => (
                   <tr key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30">
                     <td className="px-4 py-3"><AWBCopyButton awb={s.awb_number} /></td>
                     <td className="px-4 py-3">{getAttemptBadge(s.total_attempts)}</td>
