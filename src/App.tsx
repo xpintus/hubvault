@@ -133,7 +133,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const isCleanPublicSeoUrl = [
+  const isCleanPublicSeoUrl = window.location.pathname === '/blog' || window.location.pathname.startsWith('/blog/') || [
     '/buy-hubvault',
     '/about',
     '/tools/cash-calculator',
@@ -163,6 +163,8 @@ export default function App() {
                           <Route path="/cod-reconciliation-software" element={<CodReconciliationSoftware />} />
                           <Route path="/daily-closing-software" element={<DailyClosingSoftware />} />
                           <Route path="/logistics-cash-collection-software" element={<LogisticsCashCollectionSoftware />} />
+                          <Route path="/blog" element={<BlogList />} />
+                          <Route path="/blog/:slug" element={<BlogPost />} />
                         </Route>
                         <Route path="*" element={<HashAppRedirect />} />
                       </Routes>

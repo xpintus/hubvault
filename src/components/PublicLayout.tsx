@@ -39,7 +39,7 @@ const FOOTER_LINKS = {
   ],
 };
 
-const CLEAN_PUBLIC_LINKS = new Set(['/buy-hubvault','/about','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software']);
+const CLEAN_PUBLIC_LINKS = new Set(['/buy-hubvault','/about','/blog','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software']);
 
 function isHashLink(path: string) {
   return path.includes('#');

@@ -36,6 +36,14 @@
     {
       "source": "/logistics-cash-collection-software",
       "destination": "/logistics-cash-collection-software.html"
+    },
+    {
+      "source": "/blog",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/blog/:path*",
+      "destination": "/index.html"
     }
   ]
 }
