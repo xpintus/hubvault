@@ -26,12 +26,30 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('Uncaught error caught by ErrorBoundary:', error, errorInfo);
   }
 
-  private handleReset = () => {
+  private isStaleChunkError = () => {
+    const message = this.state.error?.message || '';
+    return /dynamically imported module|loading chunk|chunkloaderror|importing a module script/i.test(message);
+  };
+
+  private handleReset = async () => {
+    if (this.isStaleChunkError()) {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.filter((name) => name.startsWith('hubvault-cache-')).map((name) => caches.delete(name)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        await registration?.update();
+      }
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: null });
   };
 
   public render() {
     if (this.state.hasError) {
+      const staleChunk = this.isStaleChunkError();
       return (
         <div className="p-6 max-w-lg mx-auto my-12">
           <Card className="p-6 text-center space-y-4 border border-rose-500/20 bg-rose-500/5">
@@ -43,7 +61,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 {this.props.fallbackTitle || 'Something went wrong'}
               </h3>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                {this.state.error?.message || 'An unexpected runtime error occurred.'}
+                {staleChunk
+                  ? 'A newer HubVault version is available. Reload to update this page.'
+                  : this.state.error?.message || 'An unexpected runtime error occurred.'}
               </p>
             </div>
             <div className="pt-2">
@@ -54,7 +74,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 className="min-h-[44px]"
               >
-                Try Again
+                {staleChunk ? 'Reload Latest Version' : 'Try Again'}
               </Button>
             </div>
           </Card>

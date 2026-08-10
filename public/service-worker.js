@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hubvault-cache-v7';
+const CACHE_NAME = 'hubvault-cache-v8';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to cache for offline support including index.html app shell

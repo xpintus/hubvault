@@ -56,6 +56,15 @@ export default function AppLayout() {
   const menuRef = useRef<HTMLDivElement>(null);
   const hubMenuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    document.documentElement.classList.add('workspace-active');
+    document.body.classList.add('workspace-active');
+    return () => {
+      document.documentElement.classList.remove('workspace-active');
+      document.body.classList.remove('workspace-active');
+    };
+  }, []);
+
   const subDetails = getSubscriptionDetails(profile, settings.subscription_grace_days);
 
   const isHubAdminPending = profile?.role === 'hub_admin' && profile?.license_status === 'pending';
