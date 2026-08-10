@@ -252,22 +252,24 @@ export default function NDRDashboard() {
   ];
 
   return (
-    <div className="space-y-5 rounded-[28px] border border-neutral-200/70 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-950 dark:via-neutral-950 dark:to-indigo-950/20 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white px-5 py-5 shadow-[0_20px_60px_-46px_rgba(15,23,42,.65)] dark:border-white/10 dark:bg-slate-900 sm:px-6">
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-indigo-50/80 to-transparent dark:from-indigo-500/5" />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">Command center</p>
-          <h2 className="mt-1 text-xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-2xl">Today&apos;s NDR overview</h2>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Prioritise pending calls, approvals and reattempts from one place.</p>
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-indigo-600 dark:text-indigo-300"><span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,.12)]" /> Operations overview</div>
+          <h2 className="text-xl font-black tracking-[-.025em] text-slate-950 dark:text-white sm:text-2xl">Today&apos;s NDR Command Center</h2>
+          <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Live workload, resolution queues and exception intelligence.</p>
         </div>
-        <button onClick={loadData} className="inline-flex w-fit items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-sm transition hover:border-brand-300 hover:text-brand-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200">
+        <button onClick={loadData} className="inline-flex min-h-10 w-fit items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-indigo-500/10">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh data
         </button>
-      </div>
+      </div></section>
       {/* Enterprise Data Management Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">
-          <Archive className="h-4 w-4 text-brand-600" />
-          <span>NDR Operational Data Management</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-950 p-3 text-white shadow-[0_18px_45px_-30px_rgba(15,23,42,.9)] dark:border-white/10 sm:px-4">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+          <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/10"><Archive className="h-4 w-4 text-indigo-300" /></span>
+          <span>Data controls</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -276,7 +278,7 @@ export default function NDRDashboard() {
               setResetLevel(1);
               setResetModalOpen(true);
             }}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 font-bold text-amber-700 transition hover:bg-amber-100 active:scale-95 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+            className="flex items-center gap-1.5 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3.5 py-2 font-bold text-amber-200 transition hover:bg-amber-400/20 active:scale-95"
           >
             Reset Current Report
           </button>
@@ -285,20 +287,20 @@ export default function NDRDashboard() {
               setResetLevel(3);
               setResetModalOpen(true);
             }}
-            className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 font-bold text-rose-700 transition hover:bg-rose-100 active:scale-95 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-300/20 bg-rose-400/10 px-3.5 py-2 font-bold text-rose-200 transition hover:bg-rose-400/20 active:scale-95"
           >
             Delete All
           </button>
           <button
             onClick={() => setRecycleBinOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2 font-bold text-neutral-700 transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/10 px-3.5 py-2 font-bold text-slate-200 transition hover:bg-white/15 active:scale-95"
           >
             Recycle Bin
           </button>
         </div>
       </div>
       {/* 8 Operational Summary KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 min-[440px]:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -307,15 +309,15 @@ export default function NDRDashboard() {
               key={card.label}
               onClick={() => navigate(card.route)}
               aria-label={`Open ${card.label}: ${card.value}`}
-              className={`group relative min-h-[155px] w-full cursor-pointer overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[.98] sm:p-5 ${card.bgColor}`}
+              className={`group relative min-h-[138px] w-full cursor-pointer overflow-hidden rounded-2xl border bg-white p-4 text-left shadow-[0_16px_40px_-34px_rgba(15,23,42,.7)] transition-all hover:-translate-y-1 hover:border-indigo-300 hover:shadow-[0_24px_55px_-35px_rgba(79,70,229,.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[.98] dark:bg-slate-900 sm:p-5 ${card.bgColor}`}
             >
-              <div className="absolute inset-x-0 top-0 h-1 bg-current opacity-50" />
+              <div className="absolute inset-x-0 top-0 h-[3px] bg-current opacity-70" />
               <div className="flex h-full flex-col justify-between gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-400 sm:text-xs">
+                <span className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 sm:text-[11px]">
                   {card.label}
                 </span>
-                <span className="rounded-xl bg-white/70 p-2 shadow-sm dark:bg-neutral-900/50"><Icon className={`h-5 w-5 ${card.color} transition-transform group-hover:scale-110`} /></span>
+                <span className="rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 dark:border-white/10 dark:bg-white/5"><Icon className={`h-5 w-5 ${card.color} transition-transform group-hover:scale-110`} /></span>
               </div>
 
               {card.badge && (
@@ -338,15 +340,15 @@ export default function NDRDashboard() {
       </div>
 
       {/* 11 Reason-Wise KPI Cards */}
-      <div className="space-y-4 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-6">
+      <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-[0_20px_60px_-48px_rgba(15,23,42,.7)] dark:border-white/10 dark:bg-slate-900 sm:p-6">
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-brand-500/10 text-brand-600">
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                Reason-Wise NDR Analytics
+              <h2 className="text-sm font-black text-slate-950 dark:text-white uppercase tracking-wider">
+                Exception Intelligence
               </h2>
               <p className="text-xs text-neutral-500">Click any reason card to view filtered NDR shipments.</p>
             </div>
@@ -362,7 +364,7 @@ export default function NDRDashboard() {
                 key={r.label}
                 onClick={() => navigate(`/operations/ndr/shipments?reason=${encodeURIComponent(r.reason)}`)}
                 aria-label={`Filter by ${r.label}: ${r.count}`}
-                className={`group min-h-[112px] w-full cursor-pointer rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[.98] ${r.bgColor}`}
+                className={`group min-h-[108px] w-full cursor-pointer rounded-2xl border bg-slate-50/70 p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[.98] dark:bg-white/[.035] ${r.bgColor}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 line-clamp-1">{r.label}</span>
