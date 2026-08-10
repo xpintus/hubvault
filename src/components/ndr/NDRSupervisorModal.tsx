@@ -109,7 +109,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex h-dvh w-full flex-col overflow-hidden border border-neutral-200 bg-[var(--card-bg)] shadow-2xl dark:border-neutral-800 sm:h-auto sm:max-h-[92dvh] sm:max-w-2xl sm:rounded-2xl">
+      <div className="flex h-dvh w-full flex-col overflow-hidden border border-neutral-200 bg-[var(--card-bg)] shadow-2xl dark:border-neutral-800 sm:h-auto sm:max-h-[92dvh] sm:max-w-3xl sm:rounded-2xl">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -127,7 +127,8 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:space-y-5 sm:p-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 pb-6 sm:space-y-5 sm:p-6 sm:pb-7">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200">
               {errorMsg}
@@ -233,7 +234,9 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
             />
           </div>
 
-          <div className="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-end gap-2 border-t border-neutral-200 bg-[var(--card-bg)] px-4 py-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.55)] dark:border-neutral-800 sm:-mx-6 sm:-mb-6 sm:gap-3 sm:px-6 sm:py-4">
+          </div>
+
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-neutral-200 bg-[var(--card-bg)] px-4 py-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.45)] dark:border-neutral-800 sm:gap-3 sm:px-6 sm:py-4">
             <button
               type="button"
               onClick={onClose}
