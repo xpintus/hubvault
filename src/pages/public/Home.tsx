@@ -245,10 +245,6 @@ export default function Home() {
             </div>
             <a href="/tools/cash-calculator" className="mt-6 inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3 text-sm font-bold text-white shadow-glow transition active:scale-95 lg:mt-0"><Banknote className="h-5 w-5" />Open Cash Calculator<ArrowRight className="h-4 w-4" /></a>
           </div>
-          <div className="mt-5 rounded-3xl border border-violet-600/15 bg-gradient-to-br from-white to-violet-50 p-7 shadow-soft dark:from-neutral-900 dark:to-violet-950/30 dark:border-violet-500/20 sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
-            <div className="max-w-2xl"><span className="text-sm font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">Logistics Planning</span><h2 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Distribute route load fairly</h2><p className="mt-3 text-neutral-500 dark:text-neutral-400">Assign shipments among delivery executives by capacity, pincode, route, priority, COD and weight. Excel and CSV supported, no login required.</p></div>
-            <a href="/tools/route-load-distributor" className="mt-6 inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-brand-600 px-6 py-3 text-sm font-bold text-white shadow-glow transition active:scale-95 lg:mt-0"><Users className="h-5 w-5"/>Open Load Distributor<ArrowRight className="h-4 w-4"/></a>
-          </div>
         </div>
       </section>
 
