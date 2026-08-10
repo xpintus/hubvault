@@ -453,6 +453,70 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
   .drs-kpi-grid > * { min-height: 8.25rem; padding: .875rem; }
 }
 
+/* NDR Operations — shared premium workspace */
+.ndr-pro {
+  --ndr-accent: 99 102 241;
+  isolation: isolate;
+}
+
+.ndr-masthead::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / .07), transparent 30%, transparent 72%, rgb(34 211 238 / .055)),
+    repeating-linear-gradient(90deg, transparent 0 79px, rgb(255 255 255 / .018) 80px);
+  mask-image: linear-gradient(to bottom, black, transparent 94%);
+}
+
+.ndr-nav a {
+  min-height: 2.65rem;
+}
+
+.ndr-workspace > * {
+  animation: ndr-enter .28s ease-out both;
+}
+
+.ndr-workspace :where(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ndr-workspace :where(thead th) {
+  height: 3rem;
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.ndr-workspace :where(tbody tr) {
+  transition: background-color .16s ease, transform .16s ease;
+}
+
+.ndr-workspace :where(input, select, textarea) {
+  min-height: 2.65rem;
+  border-radius: .8rem;
+}
+
+.ndr-workspace :where(button, a) svg {
+  stroke-width: 2.15;
+}
+
+@keyframes ndr-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 639px) {
+  .ndr-masthead { border-radius: 1.25rem; padding: 1rem; }
+  .ndr-nav { position: static; border-radius: 1rem; }
+  .ndr-nav a { padding-inline: .75rem; }
+  .ndr-workspace > div { border-radius: 1.15rem; }
+  .ndr-workspace :where(button) { min-height: 2.5rem; }
+}
+
 .dark input,
 .dark select,
 .dark textarea {
