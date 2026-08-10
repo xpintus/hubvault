@@ -55,6 +55,7 @@ const ReferEarn = lazy(() => import('@/pages/ReferEarn'));
 const Payouts = lazy(() => import('@/pages/Payouts'));
 const SettingsPage = lazy(() => import('@/pages/Settings'));
 const MailCampaigns = lazy(() => import('@/pages/MailCampaigns'));
+const BlogManager = lazy(() => import('@/pages/BlogManager'));
 
 const KhataBookLayout = lazy(() => import('@/pages/khatabook/KhataBookLayout'));
 const KhataBookDashboard = lazy(() => import('@/pages/khatabook/Dashboard'));
@@ -368,6 +369,14 @@ export default function App() {
                             element={
                               <Suspense fallback={<FullPageSpinner message="Loading mail campaigns…" />}>
                                 <MailCampaigns />
+                              </Suspense>
+                            }
+                          />
+                          <Route
+                            path="/blog-manager"
+                            element={
+                              <Suspense fallback={<FullPageSpinner message="Loading Blog CMS…" />}>
+                                <BlogManager />
                               </Suspense>
                             }
                           />

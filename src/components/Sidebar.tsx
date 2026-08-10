@@ -10,6 +10,7 @@ import { clsx } from 'clsx';
 import {
   AlertCircle,
   Banknote,
+  BookOpenText,
   BookOpen,
   Building2,
   CalendarCheck2,
@@ -60,6 +61,7 @@ const NAV: NavItem[] = [
   { to: '/trial-users', label: 'Trial Users', icon: UserPlus, roles: ['super_admin'] },
   { to: '/messages', label: 'Messages', icon: Mail, roles: ['super_admin'] },
   { to: '/mail-campaigns', label: 'Mail Campaigns', icon: Send, roles: ['super_admin'] },
+  { to: '/blog-manager', label: 'Blog CMS', icon: BookOpenText, roles: ['super_admin'] },
   { to: '/purchases', label: 'Purchase Requests', icon: ShoppingBag, roles: ['super_admin'] },
   { to: '/audit-logs', label: 'Audit Logs', icon: ShieldAlert, roles: ['super_admin'] },
   { to: '/licenses', label: 'Licenses', icon: KeyRound, roles: ['super_admin'] },

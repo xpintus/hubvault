@@ -34,6 +34,7 @@ const TITLES: Record<string, string> = {
   '/activation-status': 'License & Subscription',
   '/operations': 'Hub Operations',
   '/mail-campaigns': 'Mail Campaigns',
+  '/blog-manager': 'Blog CMS',
 };
 
 export default function AppLayout() {
