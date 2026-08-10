@@ -88,7 +88,7 @@ export const NDRDeliveryModal: React.FC<NDRDeliveryModalProps> = ({ shipment, is
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form data-ndr-vertical-scroll onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />

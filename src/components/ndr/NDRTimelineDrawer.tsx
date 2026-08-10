@@ -57,7 +57,7 @@ export const NDRTimelineDrawer: React.FC<NDRTimelineDrawerProps> = ({ shipment, 
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-sm animate-fade-in flex justify-end">
-      <div className="w-full max-w-2xl bg-[var(--card-bg)] border-l border-neutral-200 dark:border-neutral-800 h-full flex flex-col shadow-2xl overflow-y-auto">
+      <div data-ndr-vertical-scroll className="w-full max-w-2xl bg-[var(--card-bg)] border-l border-neutral-200 dark:border-neutral-800 h-full flex flex-col shadow-2xl overflow-y-auto">
         {/* Drawer Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 sticky top-0 bg-[var(--card-bg)] z-10">
           <div>

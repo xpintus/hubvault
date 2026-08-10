@@ -174,7 +174,7 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div data-ndr-vertical-scroll className="flex-1 overflow-y-auto p-6 space-y-6">
           {errorMsg && (
             <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800/40 text-rose-600 dark:text-rose-400 text-sm flex items-start gap-2.5">
               <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -271,7 +271,7 @@ export const NDRImportModal: React.FC<NDRImportModalProps> = ({ isOpen, onClose,
 
 
               {/* Sample Data Table Preview */}
-              <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+              <div data-ndr-vertical-scroll className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 font-semibold sticky top-0">
                     <tr>
