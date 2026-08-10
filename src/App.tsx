@@ -553,7 +553,7 @@ function GuestAppLayout() {
             </div>
           </div>
         </header>
-        <main className="app-content h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-4 lg:p-6">
+        <main className="app-content min-h-0 min-w-0 max-w-full overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6">
           <div className="max-w-7xl mx-auto">
             {isKhataBookRoute?<Outlet/>:<GuestDashboard />}
 
