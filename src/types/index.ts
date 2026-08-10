@@ -110,6 +110,14 @@ export interface Collector {
   status: CollectorStatus;
   created_at: string;
   profile_id?: string | null;
+  delivery_pincodes?: string[];
+  delivery_route?: string | null;
+  delivery_area?: string | null;
+  delivery_capacity?: number;
+  current_pending_load?: number;
+  vehicle_type?: 'Bike' | 'Cycle' | 'EV' | 'Van' | 'Walking' | 'Other';
+  max_cod_amount?: number | null;
+  max_delivery_weight?: number | null;
   hub?: Hub | null;
 }
 

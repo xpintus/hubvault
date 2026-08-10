@@ -23,7 +23,7 @@ export default function Collectors() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Collector | null>(null);
-  const [form, setForm] = useState({ name: '', employee_id: '', phone: '', hub_id: '', status: 'active' as CollectorStatus });
+  const [form, setForm] = useState({ name: '', employee_id: '', phone: '', hub_id: '', status: 'active' as CollectorStatus, delivery_pincodes: '', delivery_route: '', delivery_area: '', delivery_capacity: 40, current_pending_load: 0, vehicle_type: 'Bike', max_cod_amount: '', max_delivery_weight: '' });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileData, setProfileData] = useState<Collector | null>(null);
@@ -102,14 +102,14 @@ export default function Collectors() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', employee_id: '', phone: '', hub_id: hubCtx.selectedHubId || (isSuperAdmin ? '' : (profile?.hub_id ?? '')), status: 'active' });
+    setForm({ name: '', employee_id: '', phone: '', hub_id: hubCtx.selectedHubId || (isSuperAdmin ? '' : (profile?.hub_id ?? '')), status: 'active', delivery_pincodes: '', delivery_route: '', delivery_area: '', delivery_capacity: 40, current_pending_load: 0, vehicle_type: 'Bike', max_cod_amount: '', max_delivery_weight: '' });
     setErrors({});
     setModalOpen(true);
   };
 
   const openEdit = (c: Collector) => {
     setEditing(c);
-    setForm({ name: c.name, employee_id: c.employee_id, phone: c.phone ?? '', hub_id: c.hub_id, status: c.status });
+    setForm({ name: c.name, employee_id: c.employee_id, phone: c.phone ?? '', hub_id: c.hub_id, status: c.status, delivery_pincodes: (c.delivery_pincodes ?? []).join(', '), delivery_route: c.delivery_route ?? '', delivery_area: c.delivery_area ?? '', delivery_capacity: c.delivery_capacity ?? 40, current_pending_load: c.current_pending_load ?? 0, vehicle_type: c.vehicle_type ?? 'Bike', max_cod_amount: c.max_cod_amount == null ? '' : String(c.max_cod_amount), max_delivery_weight: c.max_delivery_weight == null ? '' : String(c.max_delivery_weight) });
     setErrors({});
     setModalOpen(true);
   };
@@ -120,6 +120,9 @@ export default function Collectors() {
     if (!form.employee_id.trim()) e.employee_id = 'Employee ID is required';
     if (!form.hub_id) e.hub_id = 'Assign a hub';
     if (form.phone && !/^[0-9+\-\s]{7,15}$/.test(form.phone)) e.phone = 'Invalid phone number';
+    const pincodes = form.delivery_pincodes.split(',').map((p) => p.trim()).filter(Boolean);
+    if (pincodes.some((p) => !/^\d{6}$/.test(p))) e.delivery_pincodes = 'Enter valid 6-digit pincodes separated by commas';
+    if (form.delivery_capacity < 0 || !Number.isInteger(form.delivery_capacity)) e.delivery_capacity = 'Capacity must be a whole number';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -134,6 +137,14 @@ export default function Collectors() {
         phone: form.phone.trim() || null,
         hub_id: form.hub_id,
         status: form.status,
+        delivery_pincodes: Array.from(new Set(form.delivery_pincodes.split(',').map((p) => p.trim()).filter(Boolean))),
+        delivery_route: form.delivery_route.trim() || null,
+        delivery_area: form.delivery_area.trim() || null,
+        delivery_capacity: form.delivery_capacity,
+        current_pending_load: form.current_pending_load,
+        vehicle_type: form.vehicle_type as Collector['vehicle_type'],
+        max_cod_amount: form.max_cod_amount === '' ? null : Number(form.max_cod_amount),
+        max_delivery_weight: form.max_delivery_weight === '' ? null : Number(form.max_delivery_weight),
       };
 
       if (!navigator.onLine) {
@@ -358,6 +369,7 @@ export default function Collectors() {
                         <div className="min-w-0">
                           <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">{c.name}</p>
                           <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:hidden font-mono">{c.employee_id}</p>
+                          <p className="mt-0.5 max-w-56 truncate text-[10px] font-medium text-brand-600">{c.delivery_pincodes?.length ? `PIN: ${c.delivery_pincodes.join(', ')}` : 'No delivery pincode'}</p>
                         </div>
                       </div>
                     </td>
@@ -415,6 +427,24 @@ export default function Collectors() {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </Select>
+          </div>
+          <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 dark:border-brand-800/40 dark:bg-brand-950/20">
+            <p className="mb-3 text-xs font-black uppercase tracking-[.14em] text-brand-600">Delivery Coverage</p>
+            <Input label="Delivery Pincodes" name="delivery_pincodes" value={form.delivery_pincodes} onChange={(e) => setForm({ ...form, delivery_pincodes: e.target.value })} error={errors.delivery_pincodes} placeholder="851101, 851117, 851218" />
+            <p className="mt-1 text-[11px] text-neutral-500">Comma se multiple 6-digit pincodes add karein.</p>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input label="Route (optional)" value={form.delivery_route} onChange={(e) => setForm({ ...form, delivery_route: e.target.value })} placeholder="BGU-02" />
+              <Input label="Area (optional)" value={form.delivery_area} onChange={(e) => setForm({ ...form, delivery_area: e.target.value })} placeholder="Begusarai Town" />
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input label="Daily Capacity" type="number" min="0" step="1" value={form.delivery_capacity} onChange={(e) => setForm({ ...form, delivery_capacity: Math.max(0, Number(e.target.value) || 0) })} error={errors.delivery_capacity} />
+              <Input label="Current Pending" type="number" min="0" step="1" value={form.current_pending_load} onChange={(e) => setForm({ ...form, current_pending_load: Math.max(0, Number(e.target.value) || 0) })} />
+              <Select label="Vehicle" value={form.vehicle_type} onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })}>{['Bike','Cycle','EV','Van','Walking','Other'].map((v) => <option key={v}>{v}</option>)}</Select>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input label="Maximum COD (optional)" type="number" min="0" value={form.max_cod_amount} onChange={(e) => setForm({ ...form, max_cod_amount: e.target.value })} />
+              <Input label="Maximum Weight kg (optional)" type="number" min="0" value={form.max_delivery_weight} onChange={(e) => setForm({ ...form, max_delivery_weight: e.target.value })} />
+            </div>
           </div>
         </div>
       </Modal>
