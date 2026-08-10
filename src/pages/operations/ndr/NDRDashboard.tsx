@@ -115,7 +115,7 @@ export default function NDRDashboard() {
       icon: PhoneCall,
       color: 'text-purple-600 font-bold',
       bgColor: 'bg-purple-500/10 border-purple-500/20 shadow-sm',
-      route: '/operations/ndr/calling-queue',
+      route: '/operations/ndr/my-queue',
       badge: 'Action Required',
     },
     {
@@ -124,7 +124,7 @@ export default function NDRDashboard() {
       icon: ShieldCheck,
       color: 'text-rose-500 font-bold',
       bgColor: 'bg-rose-500/10 border-rose-500/20',
-      route: '/operations/ndr/supervisor-review',
+      route: '/operations/ndr/shipments?workflowStatus=Supervisor%20Pending',
     },
     {
       label: 'Follow-up Today',
@@ -148,7 +148,7 @@ export default function NDRDashboard() {
       icon: CheckCircle2,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-500/10 border-emerald-500/20',
-      route: '/operations/ndr/delivered-after-ndr',
+      route: '/operations/ndr/shipments?workflowStatus=Delivered',
     },
     {
       label: 'RTO Closed',
@@ -156,7 +156,7 @@ export default function NDRDashboard() {
       icon: RotateCcw,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10 border-red-500/20',
-      route: '/operations/ndr/rto-queue',
+      route: '/operations/ndr/shipments?workflowStatus=RTO',
     },
   ];
 
@@ -302,10 +302,12 @@ export default function NDRDashboard() {
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div
+            <button
+              type="button"
               key={card.label}
               onClick={() => navigate(card.route)}
-              className={`group relative min-h-[155px] cursor-pointer overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg sm:p-5 ${card.bgColor}`}
+              aria-label={`Open ${card.label}: ${card.value}`}
+              className={`group relative min-h-[155px] w-full cursor-pointer overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[.98] sm:p-5 ${card.bgColor}`}
             >
               <div className="absolute inset-x-0 top-0 h-1 bg-current opacity-50" />
               <div className="flex h-full flex-col justify-between gap-3">
@@ -330,7 +332,7 @@ export default function NDRDashboard() {
                   Open <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </div></div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -355,10 +357,12 @@ export default function NDRDashboard() {
           {reasonKpis.map((r) => {
             const Icon = r.icon;
             return (
-              <div
+              <button
+                type="button"
                 key={r.label}
                 onClick={() => navigate(`/operations/ndr/shipments?reason=${encodeURIComponent(r.reason)}`)}
-                className={`group min-h-[112px] cursor-pointer rounded-2xl border p-3.5 transition-all hover:-translate-y-0.5 hover:shadow-md ${r.bgColor}`}
+                aria-label={`Filter by ${r.label}: ${r.count}`}
+                className={`group min-h-[112px] w-full cursor-pointer rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 active:scale-[.98] ${r.bgColor}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 line-clamp-1">{r.label}</span>
@@ -368,7 +372,7 @@ export default function NDRDashboard() {
                   <span className={`font-mono text-2xl font-black ${r.color}`}>{r.count}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
