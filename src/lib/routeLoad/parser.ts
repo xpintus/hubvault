@@ -1,7 +1,7 @@
 import { ColumnMapping, ParsedFile, Priority, Shipment, ShipmentField, ValidatedShipments } from './types';
 
 const aliases: Record<ShipmentField,string[]> = {
-  awb:['awb','awb number','awb no','tracking number','tracking id','shipment id','shipment number'], pincode:['pincode','pin code','postal code','zip'], area:['area','delivery area','zone'], route:['route','route code','route name'], locality:['locality','location','city'], priority:['priority','shipment priority'], paymentType:['payment type','payment mode','mode','cod prepaid'], codAmount:['cod amount','cod value','collectable amount','amount','cod'], weight:['weight','shipment weight','wt'], currentStatus:['current status','status','shipment status']
+  awb:['awb','awb number','awb no','tracking number','tracking id','shipment id','shipment number'], pincode:['customer pincode','delivery pincode','consignee pincode','destination pincode','pincode','pin code','postal code','zip'], area:['customer city','delivery city','consignee city','destination city','area','delivery area','zone'], route:['route','route code','route name'], locality:['locality','location','city'], priority:['priority','shipment priority'], paymentType:['payment type','payment mode','mode','cod prepaid'], codAmount:['cod amount','cod value','collectable amount','amount','cod'], weight:['weight','shipment weight','wt'], currentStatus:['current status','status','shipment status']
 };
 const key=(v:string)=>v.toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
 export function suggestColumns(headers:string[]):ColumnMapping { const out:ColumnMapping={}; (Object.keys(aliases) as ShipmentField[]).forEach(field=>{const found=headers.find(h=>aliases[field].includes(key(h)));if(found)out[field]=found;});return out; }
