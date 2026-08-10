@@ -14,6 +14,32 @@ const CALLER_RESULTS: NDRCallerResult[] = [
   'Delivery Executive Did Not Visit', 'Other',
 ];
 
+const getTomorrowDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatFollowupDate = (value: string) => {
+  if (!value) return 'the next scheduled date';
+  const [year, month, day] = value.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+const buildSupervisorRemark = (
+  action: NDRSupervisorActionType,
+  result: NDRCallerResult,
+  followupDate: string
+) => {
+  const callSummary = `Customer call result: ${result}.`;
+  if (action === 'Approve Delivery') return `${callSummary} Delivery approved by supervisor.`;
+  if (action === 'Approve RTO') return `${callSummary} RTO approved by supervisor.`;
+  return `${callSummary} Reattempt approved. Next follow-up scheduled for ${formatFollowupDate(followupDate)}.`;
+};
+
 interface NDRSupervisorModalProps {
   shipment: NDRShipment | null;
   isOpen: boolean;
@@ -32,6 +58,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
   const [callLogged, setCallLogged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [supervisorRemarkIsAuto, setSupervisorRemarkIsAuto] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -42,10 +69,12 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
     setActionTaken('Approve Reattempt');
-    setSupervisorRemarks('');
+    const tomorrow = getTomorrowDate();
+    setSupervisorRemarks(buildSupervisorRemark('Approve Reattempt', 'Customer Wants Reattempt', tomorrow));
+    setSupervisorRemarkIsAuto(true);
     setCallerResult('Customer Wants Reattempt');
     setCallerRemarks('');
-    setNextFollowupDate('');
+    setNextFollowupDate(tomorrow);
     setAlternateNumber('');
     setCallLogged(false);
     setErrorMsg(null);
@@ -54,6 +83,11 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, shipment?.id, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !supervisorRemarkIsAuto) return;
+    setSupervisorRemarks(buildSupervisorRemark(actionTaken, callerResult, nextFollowupDate));
+  }, [isOpen, actionTaken, callerResult, nextFollowupDate, supervisorRemarkIsAuto]);
 
   if (!isOpen || !shipment) return null;
 
@@ -158,13 +192,13 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
             <div className="space-y-3">
               <div>
                 <label className="mb-1.5 block text-xs font-bold">Call Result *</label>
-                <select value={callerResult} onChange={(e) => setCallerResult(e.target.value as NDRCallerResult)} className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-xs font-semibold dark:border-neutral-800 dark:bg-neutral-900">
+                <select value={callerResult} onChange={(e) => { setCallerResult(e.target.value as NDRCallerResult); setSupervisorRemarkIsAuto(true); }} className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-xs font-semibold dark:border-neutral-800 dark:bg-neutral-900">
                   {CALLER_RESULTS.map((result) => <option key={result} value={result}>{result}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="text-xs font-bold">Next Follow-up Date
-                  <input type="date" value={nextFollowupDate} onChange={(e) => setNextFollowupDate(e.target.value)} className="mt-1.5 w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 font-semibold dark:border-neutral-800 dark:bg-neutral-900" />
+                  <input type="date" value={nextFollowupDate} onChange={(e) => { setNextFollowupDate(e.target.value); setSupervisorRemarkIsAuto(true); }} className="mt-1.5 w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 font-semibold dark:border-neutral-800 dark:bg-neutral-900" />
                 </label>
                 <label className="text-xs font-bold">Alternate Number
                   <input type="tel" value={alternateNumber} onChange={(e) => setAlternateNumber(e.target.value)} placeholder="Alternate phone..." className="mt-1.5 w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 font-semibold dark:border-neutral-800 dark:bg-neutral-900" />
@@ -184,7 +218,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
             <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
               <button
                 type="button"
-                onClick={() => setActionTaken('Approve Delivery')}
+                onClick={() => { setActionTaken('Approve Delivery'); setSupervisorRemarkIsAuto(true); }}
                 className={`min-h-12 rounded-xl border p-3 text-xs font-bold transition flex min-[430px]:flex-col items-center justify-center gap-1.5 ${
                   actionTaken === 'Approve Delivery'
                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/30'
@@ -196,7 +230,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
 
               <button
                 type="button"
-                onClick={() => setActionTaken('Approve Reattempt')}
+                onClick={() => { setActionTaken('Approve Reattempt'); setSupervisorRemarkIsAuto(true); }}
                 className={`min-h-12 rounded-xl border p-3 text-xs font-bold transition flex min-[430px]:flex-col items-center justify-center gap-1.5 ${
                   actionTaken === 'Approve Reattempt'
                     ? 'bg-orange-600 text-white border-orange-600 shadow-md ring-2 ring-orange-500/30'
@@ -208,7 +242,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
 
               <button
                 type="button"
-                onClick={() => setActionTaken('Approve RTO')}
+                onClick={() => { setActionTaken('Approve RTO'); setSupervisorRemarkIsAuto(true); }}
                 className={`min-h-12 rounded-xl border p-3 text-xs font-bold transition flex min-[430px]:flex-col items-center justify-center gap-1.5 ${
                   actionTaken === 'Approve RTO'
                     ? 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-500/30'
@@ -228,7 +262,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
               rows={3}
               placeholder="Enter mandatory supervisor instructions..."
               value={supervisorRemarks}
-              onChange={(e) => setSupervisorRemarks(e.target.value)}
+              onChange={(e) => { setSupervisorRemarks(e.target.value); setSupervisorRemarkIsAuto(false); }}
               className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-medium"
               required
             />
