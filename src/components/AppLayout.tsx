@@ -84,7 +84,7 @@ export default function AppLayout() {
     };
     scroller.addEventListener('wheel', handleWheel, { passive: false });
     return () => scroller.removeEventListener('wheel', handleWheel);
-  }, [profile?.id]);
+  });
 
   const subDetails = getSubscriptionDetails(profile, settings.subscription_grace_days);
 
