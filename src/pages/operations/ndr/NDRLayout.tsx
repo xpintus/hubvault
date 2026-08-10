@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useHub } from '@/lib/hubContext';
 import {
@@ -26,20 +26,8 @@ export default function NDRLayout() {
   const { selectedHub } = useHub();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleWorkspaceWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    if (!event.deltaY || event.ctrlKey) return;
-    const target = event.target as HTMLElement;
-    const nestedVerticalScroller = target.closest<HTMLElement>('[data-ndr-vertical-scroll]');
-    if (nestedVerticalScroller && nestedVerticalScroller.scrollHeight > nestedVerticalScroller.clientHeight) return;
-
-    const appScroller = event.currentTarget.closest<HTMLElement>('.app-content');
-    if (!appScroller || appScroller.scrollHeight <= appScroller.clientHeight) return;
-    event.preventDefault();
-    appScroller.scrollTop += event.deltaY;
-  }, []);
-
   return (
-    <div className="ndr-pro space-y-5" onWheel={handleWorkspaceWheel}>
+    <div className="ndr-pro space-y-5">
       {/* Top Operations Header */}
       <div className="ndr-masthead relative overflow-hidden rounded-[30px] border border-indigo-400/20 bg-gradient-to-br from-[#071127] via-[#17245f] to-[#4c1d95] p-5 text-white shadow-[0_28px_80px_-42px_rgba(49,46,129,.95)] sm:p-7">
         <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl" />

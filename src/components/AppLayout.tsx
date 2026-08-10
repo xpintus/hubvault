@@ -55,6 +55,7 @@ export default function AppLayout() {
   const [licenseCountdown, setLicenseCountdown] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const hubMenuRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.add('workspace-active');
@@ -64,6 +65,26 @@ export default function AppLayout() {
       document.body.classList.remove('workspace-active');
     };
   }, []);
+
+  useEffect(() => {
+    const scroller = contentScrollRef.current;
+    if (!scroller) return;
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.deltaY || event.ctrlKey) return;
+      const target = event.target as HTMLElement | null;
+      const nestedScroller = target?.closest<HTMLElement>('[data-ndr-vertical-scroll]');
+      if (nestedScroller) {
+        const canScrollUp = event.deltaY < 0 && nestedScroller.scrollTop > 0;
+        const canScrollDown = event.deltaY > 0 && nestedScroller.scrollTop + nestedScroller.clientHeight < nestedScroller.scrollHeight - 1;
+        if (canScrollUp || canScrollDown) return;
+      }
+      if (scroller.scrollHeight <= scroller.clientHeight) return;
+      event.preventDefault();
+      scroller.scrollTop += event.deltaY;
+    };
+    scroller.addEventListener('wheel', handleWheel, { passive: false });
+    return () => scroller.removeEventListener('wheel', handleWheel);
+  }, [profile?.id]);
 
   const subDetails = getSubscriptionDetails(profile, settings.subscription_grace_days);
 
@@ -297,7 +318,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="app-content h-0 min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-5 lg:p-7">
+        <main ref={contentScrollRef} className="app-content h-0 min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-5 lg:p-7">
           <div className="mx-auto w-full min-w-0 max-w-[1500px]">
             {/* Subscription Warning / Expired Banner for monthly users */}
             {profile?.role !== 'super_admin' && subDetails.isNearExpiry && (
