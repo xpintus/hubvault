@@ -288,6 +288,8 @@ html.workspace-active #root {
 }
 
 .app-shell .app-content {
+  flex: 1 1 0%;
+  height: 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -351,7 +353,7 @@ html.workspace-active #root {
 
   .app-shell .app-content {
     flex: 1 1 0%;
-    height: auto;
+    height: 0;
     min-height: 0;
     overflow-x: hidden !important;
     overflow-y: auto !important;

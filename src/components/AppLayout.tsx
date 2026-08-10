@@ -297,7 +297,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="app-content min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-5 lg:p-7">
+        <main className="app-content h-0 min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-3 sm:p-5 lg:p-7">
           <div className="mx-auto w-full min-w-0 max-w-[1500px]">
             {/* Subscription Warning / Expired Banner for monthly users */}
             {profile?.role !== 'super_admin' && subDetails.isNearExpiry && (
