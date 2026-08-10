@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/lib/auth';
 import { logNDRCall, submitSupervisorAction } from '@/lib/ndr/ndrService';
 import { NDRCallerResult, NDRShipment, NDRSupervisorActionType } from '@/types/ndr';
@@ -34,6 +35,12 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
 
   useEffect(() => {
     if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
     setActionTaken('Approve Reattempt');
     setSupervisorRemarks('');
     setCallerResult('Customer Wants Reattempt');
@@ -42,7 +49,11 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
     setAlternateNumber('');
     setCallLogged(false);
     setErrorMsg(null);
-  }, [isOpen, shipment?.id]);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, shipment?.id, onClose]);
 
   if (!isOpen || !shipment) return null;
 
@@ -88,27 +99,35 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl bg-[var(--card-bg)] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[110] flex h-dvh w-screen items-end justify-center overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Supervisor decision"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="flex h-dvh w-full flex-col overflow-hidden border border-neutral-200 bg-[var(--card-bg)] shadow-2xl dark:border-neutral-800 sm:h-auto sm:max-h-[92dvh] sm:max-w-2xl sm:rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-600/15 text-rose-600 dark:text-rose-400">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Supervisor Decision</h2>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold text-neutral-900 dark:text-neutral-100 sm:text-lg">Supervisor Decision</h2>
               <div className="mt-1 text-xs text-neutral-500"><AWBCopyButton awb={shipment.awb_number} /></div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">
+          <button type="button" onClick={onClose} aria-label="Close supervisor action" className="shrink-0 rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:space-y-5 sm:p-6">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200">
               {errorMsg}
@@ -161,11 +180,11 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2">
               Supervisor Decision *
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
               <button
                 type="button"
                 onClick={() => setActionTaken('Approve Delivery')}
-                className={`p-3 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1.5 ${
+                className={`min-h-12 rounded-xl border p-3 text-xs font-bold transition flex min-[430px]:flex-col items-center justify-center gap-1.5 ${
                   actionTaken === 'Approve Delivery'
                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/30'
                     : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
@@ -177,7 +196,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
               <button
                 type="button"
                 onClick={() => setActionTaken('Approve Reattempt')}
-                className={`p-3 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1.5 ${
+                className={`min-h-12 rounded-xl border p-3 text-xs font-bold transition flex min-[430px]:flex-col items-center justify-center gap-1.5 ${
                   actionTaken === 'Approve Reattempt'
                     ? 'bg-orange-600 text-white border-orange-600 shadow-md ring-2 ring-orange-500/30'
                     : 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/20'
@@ -189,7 +208,7 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
               <button
                 type="button"
                 onClick={() => setActionTaken('Approve RTO')}
-                className={`p-3 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1.5 ${
+                className={`min-h-12 rounded-xl border p-3 text-xs font-bold transition flex min-[430px]:flex-col items-center justify-center gap-1.5 ${
                   actionTaken === 'Approve RTO'
                     ? 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-500/30'
                     : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30 hover:bg-red-500/20'
@@ -214,28 +233,29 @@ export const NDRSupervisorModal: React.FC<NDRSupervisorModalProps> = ({ shipment
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-end gap-2 border-t border-neutral-200 bg-[var(--card-bg)] px-4 py-3 shadow-[0_-12px_30px_-24px_rgba(15,23,42,.55)] dark:border-neutral-800 sm:-mx-6 sm:-mb-6 sm:gap-3 sm:px-6 sm:py-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              className="min-h-11 flex-1 rounded-xl px-4 py-2.5 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 sm:flex-none"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-glow transition flex items-center gap-1.5"
+              className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-glow transition hover:bg-rose-500 disabled:opacity-60 sm:flex-none"
             >
               {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Save Decision
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 function Detail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div><span className="block text-neutral-500">{label}</span><span className={`font-semibold text-neutral-900 dark:text-neutral-100 ${mono ? 'font-mono' : ''}`}>{value}</span></div>;
+  return <div className="min-w-0"><span className="block text-neutral-500">{label}</span><span className={`block break-words font-semibold text-neutral-900 dark:text-neutral-100 ${mono ? 'font-mono' : ''}`}>{value}</span></div>;
 }
