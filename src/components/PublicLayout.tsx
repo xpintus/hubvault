@@ -27,6 +27,7 @@ const FOOTER_LINKS = {
     { label: 'Blog', path: '/blog' },
     { label: 'Cash Calculator', path: '/tools/cash-calculator' },
     { label: 'COD Calculator', path: '/tools/cod-reconciliation-calculator' },
+    { label: 'Route Load Distributor', path: '/tools/route-load-distributor' },
   ],
   Company: [
     { label: 'About Us', path: '/about' },
@@ -39,7 +40,7 @@ const FOOTER_LINKS = {
   ],
 };
 
-const CLEAN_PUBLIC_LINKS = new Set(['/buy-hubvault','/about','/blog','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software']);
+const CLEAN_PUBLIC_LINKS = new Set(['/buy-hubvault','/about','/blog','/tools/cash-calculator','/tools/cod-reconciliation-calculator','/tools/route-load-distributor','/collection-reconciliation-software','/cod-reconciliation-software','/daily-closing-software','/logistics-cash-collection-software']);
 
 function isHashLink(path: string) {
   return path.includes('#');

@@ -4,7 +4,7 @@ import { confirm } from '@/lib/confirm';
 import { useToast } from '@/components/ui/Toast';
 import { ArrowLeft, BookOpenText, CheckCircle2, Clock3, Eye, FilePenLine, Globe2, Loader2, Plus, Save, Search, Trash2 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 const emptyPost: BlogPostInput = {
   title: '', slug: '', excerpt: '', content: '', category: 'Operations', cover_image_url: '',

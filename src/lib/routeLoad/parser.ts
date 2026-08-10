@@ -1,0 +1,17 @@
+import { ColumnMapping, ParsedFile, Priority, Shipment, ShipmentField, ValidatedShipments } from './types';
+
+const aliases: Record<ShipmentField,string[]> = {
+  awb:['awb','awb number','awb no','tracking number','tracking id','shipment id','shipment number'], pincode:['pincode','pin code','postal code','zip'], area:['area','delivery area','zone'], route:['route','route code','route name'], locality:['locality','location','city'], priority:['priority','shipment priority'], paymentType:['payment type','payment mode','mode','cod prepaid'], codAmount:['cod amount','cod value','collectable amount','amount','cod'], weight:['weight','shipment weight','wt'], currentStatus:['current status','status','shipment status']
+};
+const key=(v:string)=>v.toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+export function suggestColumns(headers:string[]):ColumnMapping { const out:ColumnMapping={}; (Object.keys(aliases) as ShipmentField[]).forEach(field=>{const found=headers.find(h=>aliases[field].includes(key(h)));if(found)out[field]=found;});return out; }
+export async function parseShipmentFile(file:File):Promise<ParsedFile>{
+  if(!/\.(xlsx|xls|csv)$/i.test(file.name))throw new Error('Only XLSX, XLS and CSV files are supported.'); if(file.size>25*1024*1024)throw new Error('File is too large. Maximum supported size is 25 MB.');
+  try{const XLSX=await import('xlsx');const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];if(!ws)throw new Error('Workbook contains no sheet.');const rows=XLSX.utils.sheet_to_json<Record<string,unknown>>(ws,{defval:'',raw:false});const headers=rows.length?Object.keys(rows[0]):[];if(!headers.length)throw new Error('No header row was found.');return{headers,rows,suggestedMapping:suggestColumns(headers)};}catch(e){throw new Error(e instanceof Error?`Could not read file: ${e.message}`:'Could not read this file.');}
+}
+const text=(v:unknown)=>String(v??'').trim(); const number=(v:unknown)=>{const n=Number(text(v).replace(/[₹,$\s]/g,''));return Number.isFinite(n)&&n>=0?n:0;};
+const priority=(v:unknown):Priority=>{const p=text(v).toLowerCase();return p==='urgent'?'Urgent':p==='high'?'High':p==='low'?'Low':'Normal';};
+export function validateRows(rows:Record<string,unknown>[],mapping:ColumnMapping):ValidatedShipments{
+  if(!mapping.awb)return{valid:[],invalid:rows.map((original,i)=>({row:i+2,reason:'AWB column is not mapped.',original}))}; const seen=new Set<string>();const valid:Shipment[]=[];const invalid:ValidatedShipments['invalid']=[];
+  rows.forEach((original,index)=>{const get=(f:ShipmentField)=>mapping[f]?original[mapping[f]!] : '';const awb=text(get('awb'));const normalized=awb.toLowerCase();if(!awb){invalid.push({row:index+2,reason:'Blank AWB',original});return;}if(seen.has(normalized)){invalid.push({row:index+2,awb,reason:'Duplicate AWB',original});return;}seen.add(normalized);valid.push({id:`row-${index+2}-${normalized}`,awb,pincode:text(get('pincode')).replace(/\.0$/,''),area:text(get('area')),route:text(get('route')),locality:text(get('locality')),priority:priority(get('priority')),paymentType:text(get('paymentType'))||'Unknown',codAmount:number(get('codAmount')),weight:number(get('weight')),currentStatus:text(get('currentStatus')),sourceRow:index+2,original:{...original}});});return{valid,invalid};
+}

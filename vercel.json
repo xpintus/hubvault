@@ -22,6 +22,10 @@
       "destination": "/cod-reconciliation-calculator.html"
     },
     {
+      "source": "/tools/route-load-distributor",
+      "destination": "/index.html"
+    },
+    {
       "source": "/collection-reconciliation-software",
       "destination": "/hubvault-software.html"
     },

@@ -318,6 +318,21 @@ div.grid:has(> div > img[alt="HubVault UPI payment QR code"]) {
   }
 }
 
+.action {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: .4rem;
+  border: 1px solid rgb(var(--neutral-200-rgb));
+  border-radius: .75rem;
+  padding: .55rem .8rem;
+  font-size: .75rem;
+  font-weight: 800;
+}
+.action svg { width: .9rem; height: .9rem; }
+.dark .action { border-color: rgb(var(--neutral-800-rgb)); }
+@media print { header, footer, button, nav { display: none !important; } }
+
 /* Keep one explicit content scroller on mobile. `svh` avoids the blank/hidden
    content state caused by dynamic browser toolbars changing `dvh`. */
 @media (max-width: 1023px) {

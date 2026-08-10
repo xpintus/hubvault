@@ -35,6 +35,7 @@ import Home from '@/pages/public/Home';
 import Privacy from '@/pages/public/Privacy';
 import Terms from '@/pages/public/Terms';
 import TrialSignup from '@/pages/public/TrialSignup';
+import RouteLoadDistributor from '@/pages/public/RouteLoadDistributor';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const ActivateLicense = lazy(() => import('@/pages/ActivateLicense'));
@@ -138,6 +139,7 @@ export default function App() {
     '/about',
     '/tools/cash-calculator',
     '/tools/cod-reconciliation-calculator',
+    '/tools/route-load-distributor',
     '/collection-reconciliation-software',
     '/cod-reconciliation-software',
     '/daily-closing-software',
@@ -159,6 +161,7 @@ export default function App() {
                           <Route path="/about" element={<OrganizationPage />} />
                           <Route path="/tools/cash-calculator" element={<CashCalculator />} />
                           <Route path="/tools/cod-reconciliation-calculator" element={<CodReconciliationCalculator />} />
+                          <Route path="/tools/route-load-distributor" element={<RouteLoadDistributor />} />
                           <Route path="/collection-reconciliation-software" element={<CollectionReconciliationSoftware />} />
                           <Route path="/cod-reconciliation-software" element={<CodReconciliationSoftware />} />
                           <Route path="/daily-closing-software" element={<DailyClosingSoftware />} />
@@ -186,6 +189,7 @@ export default function App() {
                           <Route path="/blog" element={<BlogList />} />
                           <Route path="/blog/:slug" element={<BlogPost />} />
                           <Route path="/tools/cash-calculator" element={<CashCalculator />} />
+                          <Route path="/tools/route-load-distributor" element={<RouteLoadDistributor />} />
                         </Route>
 
                         {/* Login */}
