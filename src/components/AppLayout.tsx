@@ -137,7 +137,7 @@ export default function AppLayout() {
   }, []);
 
   if (loading) return <FullPageSpinner message="Loading your workspace…" />;
-  if (!profile) return null;
+  if (!profile) return <FullPageSpinner message="Preparing your workspace…" />;
 
   const title = TITLES[location.pathname] ?? 'HubVault';
 
