@@ -12,8 +12,8 @@ function resultFor(executives: Executive[], assignments: Assignment[]): Distribu
     const finalLoad = executive.pendingLoad + newLoad; const utilization = executive.maxCapacity > 0 ? finalLoad / executive.maxCapacity * 100 : 0;
     return { executive, assignments: mine, newLoad, finalLoad, codAmount: mine.reduce((n,a)=>n+a.shipment.codAmount,0), weight: mine.reduce((n,a)=>n+a.shipment.weight,0), utilization, status: executive.pendingLoad > executive.maxCapacity ? 'Overloaded' : utilization >= 100 ? 'Full' : utilization >= 85 ? 'Near Capacity' : 'Balanced' };
   });
-  const assigned = assignments.filter(a=>a.status==='Assigned').length; const totalCapacity = executives.filter(e=>e.active).reduce((n,e)=>n+availableCapacity(e),0);
-  return { assignments, executiveResults, total: assignments.length, assigned, unassigned: assignments.length-assigned, totalCapacity, totalCod: assignments.reduce((n,a)=>n+a.shipment.codAmount,0), utilization: totalCapacity ? assigned/totalCapacity*100 : 0 };
+  const assigned = assignments.filter(a=>a.status==='Assigned').length;const review=assignments.filter(a=>a.status==='Review').length;const unassigned=assignments.filter(a=>a.status==='Unassigned').length; const totalCapacity = executives.filter(e=>e.active).reduce((n,e)=>n+availableCapacity(e),0);
+  return { assignments, executiveResults, total: assignments.length, assigned, review, unassigned, totalCapacity, totalCod: assignments.reduce((n,a)=>n+a.shipment.codAmount,0), utilization: totalCapacity ? (assigned+review)/totalCapacity*100 : 0 };
 }
 
 function locationMatch(s: Shipment, e: Executive): { rank: number; reason: AssignmentReason } | null {
@@ -48,7 +48,8 @@ export function distributeShipments(shipments: Shipment[], executives: Executive
         const al=(a.executive.pendingLoad+sa.count)/Math.max(1,a.executive.maxCapacity),bl=(b.executive.pendingLoad+sb.count)/Math.max(1,b.executive.maxCapacity); return al-bl || executives.indexOf(a.executive)-executives.indexOf(b.executive);
       });
       const chosen=candidates[0], current=state.get(chosen.executive.id)!; current.count++;current.cod+=shipment.codAmount;current.weight+=shipment.weight;
-      assignments.push({shipment,executiveId:chosen.executive.id,status:'Assigned',reason:chosen.match?.reason ?? (settings.method==='equal'?'Equal Distribution':settings.method==='priority'?'Priority Distribution':'Balanced by Capacity')});
+      const reason=chosen.match?.reason ?? (settings.method==='equal'?'Equal Distribution':settings.method==='priority'?'Priority Distribution':'Balanced by Capacity');
+      assignments.push({shipment,executiveId:chosen.executive.id,status:reason==='Matched by Pincode'?'Review':'Assigned',reason:reason==='Matched by Pincode'?'Pincode Review Required':reason});
     } else {
       const potential=active.filter(e=>!settings.useLocationRules||locationMatch(shipment,e)); let reason:AssignmentReason='Unassigned – No Matching Executive';
       if(potential.length){ if(potential.every(e=>state.get(e.id)!.count>=availableCapacity(e)))reason='Unassigned – Capacity Full'; else if(settings.balanceCod)reason='Unassigned – COD Limit'; else if(settings.considerWeight)reason='Unassigned – Weight Limit'; }
