@@ -112,6 +112,7 @@ export interface Collector {
   profile_id?: string | null;
   delivery_pincodes?: string[];
   delivery_route?: string | null;
+  delivery_routes?: string[];
   delivery_area?: string | null;
   delivery_areas?: string[];
   delivery_capacity?: number;

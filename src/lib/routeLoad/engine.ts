@@ -23,7 +23,8 @@ function locationMatch(s: Shipment, e: Executive): { rank: number; reason: Assig
   const pincodeMatch=Boolean(s.pincode&&e.pincodes.some(p=>norm(p)===norm(s.pincode)));
   if(pincodeMatch&&employeeAreas.some(area=>fuzzyAreaMatch(addressArea,area))) return {rank:1,reason:'Matched by Area Alias'};
   if (pincodeMatch) return { rank: 2, reason: 'Matched by Pincode' };
-  if (s.route && e.route && norm(s.route) === norm(e.route)) return { rank: 3, reason: 'Matched by Route' };
+  const employeeRoutes=(e.routes?.length?e.routes:e.route.split(',')).map(norm).filter(Boolean);
+  if (s.route && employeeRoutes.some(route=>route===norm(s.route))) return { rank: 3, reason: 'Matched by Route' };
   return null;
 }
 

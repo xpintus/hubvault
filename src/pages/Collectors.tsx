@@ -111,7 +111,7 @@ export default function Collectors() {
 
   const openEdit = (c: Collector) => {
     setEditing(c);
-    setForm({ name: c.name, employee_id: c.employee_id, phone: c.phone ?? '', hub_id: c.hub_id, status: c.status, delivery_pincodes: (c.delivery_pincodes ?? []).join(', '), delivery_route: c.delivery_route ?? '', delivery_area: (c.delivery_areas?.length ? c.delivery_areas : c.delivery_area ? [c.delivery_area] : []).join(', '), delivery_capacity: c.delivery_capacity ?? 40, current_pending_load: c.current_pending_load ?? 0, vehicle_type: c.vehicle_type ?? 'Bike', max_cod_amount: c.max_cod_amount == null ? '' : String(c.max_cod_amount), max_delivery_weight: c.max_delivery_weight == null ? '' : String(c.max_delivery_weight) });
+    setForm({ name: c.name, employee_id: c.employee_id, phone: c.phone ?? '', hub_id: c.hub_id, status: c.status, delivery_pincodes: (c.delivery_pincodes ?? []).join(', '), delivery_route: (c.delivery_routes?.length ? c.delivery_routes : c.delivery_route ? [c.delivery_route] : []).join(', '), delivery_area: (c.delivery_areas?.length ? c.delivery_areas : c.delivery_area ? [c.delivery_area] : []).join(', '), delivery_capacity: c.delivery_capacity ?? 40, current_pending_load: c.current_pending_load ?? 0, vehicle_type: c.vehicle_type ?? 'Bike', max_cod_amount: c.max_cod_amount == null ? '' : String(c.max_cod_amount), max_delivery_weight: c.max_delivery_weight == null ? '' : String(c.max_delivery_weight) });
     setErrors({});
     setModalOpen(true);
   };
@@ -140,7 +140,8 @@ export default function Collectors() {
         hub_id: form.hub_id,
         status: form.status,
         delivery_pincodes: Array.from(new Set(form.delivery_pincodes.split(',').map((p) => p.trim()).filter(Boolean))),
-        delivery_route: form.delivery_route.trim() || null,
+        delivery_route: form.delivery_route.split(',').map((route) => route.trim()).filter(Boolean)[0] || null,
+        delivery_routes: Array.from(new Set(form.delivery_route.split(',').map((route) => route.trim()).filter(Boolean))).slice(0,3),
         delivery_area: form.delivery_area.split(',').map((area) => area.trim()).filter(Boolean)[0] || null,
         delivery_areas: Array.from(new Set(form.delivery_area.split(',').map((area) => area.trim()).filter(Boolean))),
         delivery_capacity: form.delivery_capacity,
@@ -436,7 +437,7 @@ export default function Collectors() {
             <Input label="Delivery Pincodes" name="delivery_pincodes" value={form.delivery_pincodes} onChange={(e) => setForm({ ...form, delivery_pincodes: e.target.value })} error={errors.delivery_pincodes} placeholder="851101, 851117, 851218" />
             <p className="mt-1 text-[11px] text-neutral-500">Comma se multiple 6-digit pincodes add karein.</p>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Select label="Delivery Route" value={form.delivery_route} onChange={(e) => {const route=deliveryRoutes.find(item=>item.code===e.target.value);const existing=form.delivery_area.split(',').map(area=>area.trim()).filter(Boolean);const merged=Array.from(new Map([...existing,...(route?.areas??[])].map(area=>[area.toLowerCase(),area])).values());setForm({...form,delivery_route:e.target.value,delivery_area:merged.join(', ')});}}><option value="">Select route…</option>{deliveryRoutes.map(route=><option value={route.code} key={route.id}>{route.code} · {route.name}</option>)}</Select>
+              <div className="sm:col-span-2"><p className="mb-2 text-xs font-bold text-neutral-600 dark:text-neutral-300">Delivery Routes (maximum 3)</p><div className="grid gap-3 sm:grid-cols-3">{[0,1,2].map(index=>{const selected=form.delivery_route.split(',').map(route=>route.trim()).filter(Boolean);return <select aria-label={`Delivery Route ${index+1}`} className="input-base" value={selected[index]??''} onChange={(e)=>{const next=[...selected];if(e.target.value)next[index]=e.target.value;else next.splice(index,1);const unique=Array.from(new Set(next.filter(Boolean))).slice(0,3);const routeAreas=unique.flatMap(code=>deliveryRoutes.find(route=>route.code===code)?.areas??[]);const existing=form.delivery_area.split(',').map(area=>area.trim()).filter(Boolean);const merged=Array.from(new Map([...existing,...routeAreas].map(area=>[area.toLowerCase(),area])).values());setForm({...form,delivery_route:unique.join(', '),delivery_area:merged.join(', ')});}} key={index}><option value="">Route {index+1}</option>{deliveryRoutes.filter(route=>!selected.includes(route.code)||selected[index]===route.code).map(route=><option value={route.code} key={route.id}>{route.code} · {route.name}</option>)}</select>})}</div></div>
               <Input label="Delivery Areas (comma separated)" value={form.delivery_area} onChange={(e) => setForm({ ...form, delivery_area: e.target.value })} placeholder="Pokharia, Bagha, Singhaul, Lohiya Nagar" />
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
