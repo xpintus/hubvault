@@ -1,7 +1,7 @@
 import { Assignment, AssignmentReason, DistributionResult, DistributionSettings, Executive, ExecutiveResult, Priority, Shipment } from './types';
 
 const PRIORITY: Record<Priority, number> = { Urgent: 0, High: 1, Normal: 2, Low: 3 };
-const norm = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
+const norm = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 export const availableCapacity = (e: Executive) => Math.max(0, Math.floor(e.maxCapacity) - Math.max(0, Math.floor(e.pendingLoad)));
 
 function resultFor(executives: Executive[], assignments: Assignment[]): DistributionResult {
@@ -17,7 +17,11 @@ function resultFor(executives: Executive[], assignments: Assignment[]): Distribu
 function locationMatch(s: Shipment, e: Executive): { rank: number; reason: AssignmentReason } | null {
   if (s.pincode && e.pincodes.some(p => norm(p) === norm(s.pincode))) return { rank: 0, reason: 'Matched by Pincode' };
   if (s.route && e.route && norm(s.route) === norm(e.route)) return { rank: 1, reason: 'Matched by Route' };
-  if ((s.area || s.locality) && e.area && [s.area,s.locality].some(v => v && norm(v) === norm(e.area))) return { rank: 2, reason: 'Matched by Area' };
+  if (e.area) {
+    const employeeArea=norm(e.area);
+    const addressArea=norm(`${s.area} ${s.locality}`);
+    if(employeeArea && ` ${addressArea} `.includes(` ${employeeArea} `)) return { rank: 2, reason: 'Matched by Area' };
+  }
   return null;
 }
 
