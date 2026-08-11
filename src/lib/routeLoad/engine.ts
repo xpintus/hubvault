@@ -2,6 +2,8 @@ import { Assignment, AssignmentReason, DistributionResult, DistributionSettings,
 
 const PRIORITY: Record<Priority, number> = { Urgent: 0, High: 1, Normal: 2, Low: 3 };
 const norm = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+const distance=(left:string,right:string)=>{const a=norm(left),b=norm(right);const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let previous=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const saved=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,previous+(a[i-1]===b[j-1]?0:1));previous=saved;}}return row[b.length];};
+const fuzzyAreaMatch=(address:string,area:string)=>{const target=norm(area);if(target.length<5)return false;const words=norm(address).split(' ').filter(Boolean);const targetWords=target.split(' ').length;for(let size=Math.max(1,targetWords-1);size<=targetWords+1;size++){for(let i=0;i+size<=words.length;i++){const candidate=words.slice(i,i+size).join(' ');const limit=Math.min(2,Math.max(1,Math.ceil(target.length*.22)));if(Math.abs(candidate.length-target.length)<=limit&&distance(candidate,target)<=limit)return true;}}return false;};
 export const availableCapacity = (e: Executive) => Math.max(0, Math.floor(e.maxCapacity) - Math.max(0, Math.floor(e.pendingLoad)));
 
 function resultFor(executives: Executive[], assignments: Assignment[]): DistributionResult {
@@ -18,8 +20,10 @@ function locationMatch(s: Shipment, e: Executive): { rank: number; reason: Assig
   const employeeAreas=(e.areas?.length?e.areas:e.area.split(',')).map(norm).filter(Boolean);
   const addressArea=norm(`${s.area} ${s.locality}`);
   if(employeeAreas.some(area=>` ${addressArea} `.includes(` ${area} `))) return { rank: 0, reason: 'Matched by Area' };
-  if (s.pincode && e.pincodes.some(p => norm(p) === norm(s.pincode))) return { rank: 1, reason: 'Matched by Pincode' };
-  if (s.route && e.route && norm(s.route) === norm(e.route)) return { rank: 2, reason: 'Matched by Route' };
+  const pincodeMatch=Boolean(s.pincode&&e.pincodes.some(p=>norm(p)===norm(s.pincode)));
+  if(pincodeMatch&&employeeAreas.some(area=>fuzzyAreaMatch(addressArea,area))) return {rank:1,reason:'Matched by Area Alias'};
+  if (pincodeMatch) return { rank: 2, reason: 'Matched by Pincode' };
+  if (s.route && e.route && norm(s.route) === norm(e.route)) return { rank: 3, reason: 'Matched by Route' };
   return null;
 }
 

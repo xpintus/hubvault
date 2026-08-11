@@ -14,7 +14,7 @@ export interface Executive {
   maxCodAmount?: number; maxWeight?: number; locked?: boolean;
 }
 export interface DistributionSettings { method: DistributionMethod; balanceCod: boolean; considerWeight: boolean; useLocationRules: boolean }
-export type AssignmentReason = 'Matched by Pincode'|'Matched by Route'|'Matched by Area'|'Balanced by Capacity'|'Equal Distribution'|'Priority Distribution'|'Unassigned – No Matching Executive'|'Unassigned – Capacity Full'|'Unassigned – COD Limit'|'Unassigned – Weight Limit';
+export type AssignmentReason = 'Matched by Pincode'|'Matched by Route'|'Matched by Area'|'Matched by Area Alias'|'Balanced by Capacity'|'Equal Distribution'|'Priority Distribution'|'Unassigned – No Matching Executive'|'Unassigned – Capacity Full'|'Unassigned – COD Limit'|'Unassigned – Weight Limit';
 export interface Assignment { shipment: Shipment; executiveId: string | null; reason: AssignmentReason; status: 'Assigned'|'Unassigned'; manual?: boolean }
 export interface ExecutiveResult { executive: Executive; assignments: Assignment[]; newLoad: number; finalLoad: number; codAmount: number; weight: number; utilization: number; status: 'Balanced'|'Near Capacity'|'Full'|'Overloaded' }
 export interface DistributionResult { assignments: Assignment[]; executiveResults: ExecutiveResult[]; total: number; assigned: number; unassigned: number; totalCapacity: number; totalCod: number; utilization: number }
