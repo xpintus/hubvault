@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, PackageCheck, PackageX, Truck } from 'lucide-react';
+import { BarChart3, PackageCheck, PackageX, Truck } from 'lucide-react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useHub } from '@/lib/hubContext';
@@ -33,13 +33,6 @@ const OPERATION_TABS = [
     icon: PackageCheck,
     match: '/operations/route-load-distributor',
   },
-  {
-    to: '/operations/oda-shipments',
-    label: 'ODA Shipments',
-    description: 'Unmatched delivery areas and pincodes',
-    icon: AlertTriangle,
-    match: '/operations/oda-shipments',
-  },
 ];
 
 export default function HubOperationsLayout() {
@@ -61,7 +54,7 @@ export default function HubOperationsLayout() {
           </span>
         </div>
 
-        <nav className="grid gap-2 p-2 sm:grid-cols-2 xl:grid-cols-5">
+        <nav className="grid gap-2 p-2 sm:grid-cols-2 xl:grid-cols-4">
           {OPERATION_TABS.map((tab) => {
             const Icon = tab.icon;
             return (

@@ -77,7 +77,6 @@ const NDRImportHistory = lazy(() => import('@/pages/operations/ndr/NDRImportHist
 const DRSPerformanceReport = lazy(() => import('@/pages/operations/drs/DRSPerformanceReport'));
 const RTOBulkUpload = lazy(() => import('@/pages/operations/rto/RTOBulkUpload'));
 const RouteLoadDistributor = lazy(() => import('@/pages/operations/RouteLoadDistributor'));
-const ODAShipments = lazy(() => import('@/pages/operations/ODAShipments'));
 const HubOperationsLayout = lazy(() => import('@/pages/operations/HubOperationsLayout'));
 
 
@@ -284,14 +283,7 @@ export default function App() {
                               </Suspense>
                             }
                           />
-                          <Route
-                            path="/operations/oda-shipments"
-                            element={
-                              <Suspense fallback={<FullPageSpinner message="Loading ODA Shipmentsâ€¦" />}>
-                                <ODAShipments />
-                              </Suspense>
-                            }
-                          />
+                          <Route path="/operations/oda-shipments" element={<Navigate to="/operations/route-load-distributor" replace />} />
                           </Route>
 
 

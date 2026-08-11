@@ -27,6 +27,7 @@ export function toODAShipments(assignments:Assignment[]):ODAShipment[]{
 export function saveODAShipments(hubId:string,assignments:Assignment[]){
   if(typeof window==='undefined'||!hubId)return;
   localStorage.setItem(key(hubId),JSON.stringify({updatedAt:new Date().toISOString(),shipments:toODAShipments(assignments)}));
+  window.dispatchEvent(new CustomEvent('hubvault:oda-updated',{detail:{hubId}}));
 }
 
 export function loadODAShipments(hubId:string):{updatedAt:string;shipments:ODAShipment[]}{
