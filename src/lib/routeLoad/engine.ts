@@ -15,13 +15,11 @@ function resultFor(executives: Executive[], assignments: Assignment[]): Distribu
 }
 
 function locationMatch(s: Shipment, e: Executive): { rank: number; reason: AssignmentReason } | null {
-  if (s.pincode && e.pincodes.some(p => norm(p) === norm(s.pincode))) return { rank: 0, reason: 'Matched by Pincode' };
-  if (s.route && e.route && norm(s.route) === norm(e.route)) return { rank: 1, reason: 'Matched by Route' };
-  if (e.area) {
-    const employeeArea=norm(e.area);
-    const addressArea=norm(`${s.area} ${s.locality}`);
-    if(employeeArea && ` ${addressArea} `.includes(` ${employeeArea} `)) return { rank: 2, reason: 'Matched by Area' };
-  }
+  const employeeAreas=(e.areas?.length?e.areas:e.area.split(',')).map(norm).filter(Boolean);
+  const addressArea=norm(`${s.area} ${s.locality}`);
+  if(employeeAreas.some(area=>` ${addressArea} `.includes(` ${area} `))) return { rank: 0, reason: 'Matched by Area' };
+  if (s.pincode && e.pincodes.some(p => norm(p) === norm(s.pincode))) return { rank: 1, reason: 'Matched by Pincode' };
+  if (s.route && e.route && norm(s.route) === norm(e.route)) return { rank: 2, reason: 'Matched by Route' };
   return null;
 }
 

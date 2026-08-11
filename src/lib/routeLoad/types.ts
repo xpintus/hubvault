@@ -9,7 +9,7 @@ export interface Shipment {
 }
 export interface InvalidShipmentRow { row: number; reason: string; original: Record<string, unknown>; awb?: string }
 export interface Executive {
-  id: string; name: string; employeeId: string; route: string; area: string; pincodes: string[];
+  id: string; name: string; employeeId: string; route: string; area: string; areas?: string[]; pincodes: string[];
   maxCapacity: number; pendingLoad: number; vehicle: VehicleType; active: boolean;
   maxCodAmount?: number; maxWeight?: number; locked?: boolean;
 }

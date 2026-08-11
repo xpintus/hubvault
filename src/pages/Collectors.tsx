@@ -109,7 +109,7 @@ export default function Collectors() {
 
   const openEdit = (c: Collector) => {
     setEditing(c);
-    setForm({ name: c.name, employee_id: c.employee_id, phone: c.phone ?? '', hub_id: c.hub_id, status: c.status, delivery_pincodes: (c.delivery_pincodes ?? []).join(', '), delivery_route: c.delivery_route ?? '', delivery_area: c.delivery_area ?? '', delivery_capacity: c.delivery_capacity ?? 40, current_pending_load: c.current_pending_load ?? 0, vehicle_type: c.vehicle_type ?? 'Bike', max_cod_amount: c.max_cod_amount == null ? '' : String(c.max_cod_amount), max_delivery_weight: c.max_delivery_weight == null ? '' : String(c.max_delivery_weight) });
+    setForm({ name: c.name, employee_id: c.employee_id, phone: c.phone ?? '', hub_id: c.hub_id, status: c.status, delivery_pincodes: (c.delivery_pincodes ?? []).join(', '), delivery_route: c.delivery_route ?? '', delivery_area: (c.delivery_areas?.length ? c.delivery_areas : c.delivery_area ? [c.delivery_area] : []).join(', '), delivery_capacity: c.delivery_capacity ?? 40, current_pending_load: c.current_pending_load ?? 0, vehicle_type: c.vehicle_type ?? 'Bike', max_cod_amount: c.max_cod_amount == null ? '' : String(c.max_cod_amount), max_delivery_weight: c.max_delivery_weight == null ? '' : String(c.max_delivery_weight) });
     setErrors({});
     setModalOpen(true);
   };
@@ -139,7 +139,8 @@ export default function Collectors() {
         status: form.status,
         delivery_pincodes: Array.from(new Set(form.delivery_pincodes.split(',').map((p) => p.trim()).filter(Boolean))),
         delivery_route: form.delivery_route.trim() || null,
-        delivery_area: form.delivery_area.trim() || null,
+        delivery_area: form.delivery_area.split(',').map((area) => area.trim()).filter(Boolean)[0] || null,
+        delivery_areas: Array.from(new Set(form.delivery_area.split(',').map((area) => area.trim()).filter(Boolean))),
         delivery_capacity: form.delivery_capacity,
         current_pending_load: form.current_pending_load,
         vehicle_type: form.vehicle_type as Collector['vehicle_type'],
@@ -434,7 +435,7 @@ export default function Collectors() {
             <p className="mt-1 text-[11px] text-neutral-500">Comma se multiple 6-digit pincodes add karein.</p>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label="Route (optional)" value={form.delivery_route} onChange={(e) => setForm({ ...form, delivery_route: e.target.value })} placeholder="BGU-02" />
-              <Input label="Area (optional)" value={form.delivery_area} onChange={(e) => setForm({ ...form, delivery_area: e.target.value })} placeholder="Begusarai Town" />
+              <Input label="Delivery Areas (comma separated)" value={form.delivery_area} onChange={(e) => setForm({ ...form, delivery_area: e.target.value })} placeholder="Pokharia, Bagha, Singhaul, Lohiya Nagar" />
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input label="Daily Capacity" type="number" min="0" step="1" value={form.delivery_capacity} onChange={(e) => setForm({ ...form, delivery_capacity: Math.max(0, Number(e.target.value) || 0) })} error={errors.delivery_capacity} />

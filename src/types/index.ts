@@ -113,6 +113,7 @@ export interface Collector {
   delivery_pincodes?: string[];
   delivery_route?: string | null;
   delivery_area?: string | null;
+  delivery_areas?: string[];
   delivery_capacity?: number;
   current_pending_load?: number;
   vehicle_type?: 'Bike' | 'Cycle' | 'EV' | 'Van' | 'Walking' | 'Other';
