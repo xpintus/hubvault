@@ -25,6 +25,7 @@ export default function Collectors() {
   const [editing, setEditing] = useState<Collector | null>(null);
   const [form, setForm] = useState({ name: '', employee_id: '', phone: '', hub_id: '', status: 'active' as CollectorStatus, delivery_pincodes: '', delivery_route: '', delivery_area: '', delivery_capacity: 40, current_pending_load: 0, vehicle_type: 'Bike', max_cod_amount: '', max_delivery_weight: '' });
   const [saving, setSaving] = useState(false);
+  const [deliveryRoutes,setDeliveryRoutes]=useState<{id:string;code:string;name:string;areas:string[]}[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileData, setProfileData] = useState<Collector | null>(null);
   const [profileDues, setProfileDues] = useState<Due[]>([]);
@@ -90,6 +91,7 @@ export default function Collectors() {
   }, [profile, isSuperAdmin, hubCtx.selectedHubId, hubCtx.accessibleHubs, toast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(()=>{if(!form.hub_id){setDeliveryRoutes([]);return;}const loadRoutes=async()=>{const {data}=await supabase.from('delivery_routes').select('id,code,name,areas').eq('hub_id',form.hub_id).eq('active',true).order('code');setDeliveryRoutes(data??[]);};void loadRoutes();const refresh=()=>void loadRoutes();window.addEventListener('hubvault:routes-updated',refresh);return()=>window.removeEventListener('hubvault:routes-updated',refresh);},[form.hub_id]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -434,7 +436,7 @@ export default function Collectors() {
             <Input label="Delivery Pincodes" name="delivery_pincodes" value={form.delivery_pincodes} onChange={(e) => setForm({ ...form, delivery_pincodes: e.target.value })} error={errors.delivery_pincodes} placeholder="851101, 851117, 851218" />
             <p className="mt-1 text-[11px] text-neutral-500">Comma se multiple 6-digit pincodes add karein.</p>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input label="Route (optional)" value={form.delivery_route} onChange={(e) => setForm({ ...form, delivery_route: e.target.value })} placeholder="BGU-02" />
+              <Select label="Delivery Route" value={form.delivery_route} onChange={(e) => {const route=deliveryRoutes.find(item=>item.code===e.target.value);const existing=form.delivery_area.split(',').map(area=>area.trim()).filter(Boolean);const merged=Array.from(new Map([...existing,...(route?.areas??[])].map(area=>[area.toLowerCase(),area])).values());setForm({...form,delivery_route:e.target.value,delivery_area:merged.join(', ')});}}><option value="">Select route…</option>{deliveryRoutes.map(route=><option value={route.code} key={route.id}>{route.code} · {route.name}</option>)}</Select>
               <Input label="Delivery Areas (comma separated)" value={form.delivery_area} onChange={(e) => setForm({ ...form, delivery_area: e.target.value })} placeholder="Pokharia, Bagha, Singhaul, Lohiya Nagar" />
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
