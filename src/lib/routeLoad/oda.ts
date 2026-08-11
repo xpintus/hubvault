@@ -47,9 +47,16 @@ export function loadODAShipments(hubId:string):{updatedAt:string;shipments:ODASh
   try{return JSON.parse(localStorage.getItem(key(hubId))??'') as {updatedAt:string;shipments:ODAShipment[]};}catch{return{updatedAt:'',shipments:[]};}
 }
 
+export function clearODAShipments(hubId:string){
+  if(typeof window==='undefined'||!hubId)return;
+  localStorage.removeItem(key(hubId));
+  window.dispatchEvent(new CustomEvent('hubvault:oda-updated',{detail:{hubId}}));
+}
+
 export function markODAAssigned(hubId:string,awb:string,employee:{id:string;name:string},area:string){
   const current=loadODAShipments(hubId);const assignedAt=new Date().toISOString();
   const shipments=current.shipments.map(row=>row.awb===awb?{...row,suggestedArea:area,assignedEmployeeId:employee.id,assignedEmployeeName:employee.name,assignedAt}:row);
   localStorage.setItem(key(hubId),JSON.stringify({...current,shipments}));
   window.dispatchEvent(new CustomEvent('hubvault:oda-updated',{detail:{hubId}}));
+  window.dispatchEvent(new CustomEvent('hubvault:oda-assigned',{detail:{hubId,awb,employeeId:employee.id,employeeName:employee.name,area}}));
 }
