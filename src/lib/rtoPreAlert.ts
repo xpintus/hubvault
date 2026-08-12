@@ -60,6 +60,10 @@ function tripFromText(text: string, fileName: string) {
     ['connectionId',/Connection\s*ID\s*[:|]?\s*([A-Z0-9-]+)/i],
   ];
   labels.forEach(([field, pattern]) => { const match = compact.match(pattern); if (match) details[field] = normalize(match[1]); });
+  const transporterCell = text.match(/\[TRANSPORTER_CELL\]\s*([^\n\r]+)/i)?.[1];
+  const driverCell = text.match(/\[DRIVER_CELL\]\s*([^\n\r]+)/i)?.[1];
+  if (!details.transporterName && transporterCell) details.transporterName = normalize(transporterCell).replace(/^[^a-z0-9]+/i, '');
+  if (!details.driverName && driverCell) details.driverName = normalize(driverCell).replace(/^[^a-z0-9]+/i, '');
   // Log10 trip sheets do not always print explicit "Origin/Destination Hub Code"
   // labels. OCR also commonly inserts spaces around slashes and hyphens.
   if (!details.tripId) {
@@ -161,6 +165,14 @@ async function recognizeImage(image: File | HTMLCanvasElement) {
       await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK });
       const panel = await worker.recognize(source, { rectangle: { left: Math.floor(source.width * .48), top: Math.floor(source.height * .43), width: Math.floor(source.width * .5), height: Math.floor(source.height * .55) } });
       text += `\n${panel.data.text}`;
+      // Valmo mobile trip sheet: scan the two narrow value cells separately.
+      // Removing labels, grid borders and barcode gives OCR enough pixels for names.
+      await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE });
+      const valueLeft = Math.floor(source.width * .615);
+      const valueWidth = Math.floor(source.width * .355);
+      const transporter = await worker.recognize(source, { rectangle: { left: valueLeft, top: Math.floor(source.height * .735), width: valueWidth, height: Math.floor(source.height * .04) } });
+      const driver = await worker.recognize(source, { rectangle: { left: valueLeft, top: Math.floor(source.height * .775), width: valueWidth, height: Math.floor(source.height * .04) } });
+      text += `\n[TRANSPORTER_CELL] ${transporter.data.text.replace(/\s+/g, ' ').trim()}\n[DRIVER_CELL] ${driver.data.text.replace(/\s+/g, ' ').trim()}`;
     }
     return text;
   } finally { await worker.terminate(); }
