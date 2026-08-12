@@ -76,6 +76,7 @@ const NDRReports = lazy(() => import('@/pages/operations/ndr/NDRReports'));
 const NDRImportHistory = lazy(() => import('@/pages/operations/ndr/NDRImportHistory'));
 const DRSPerformanceReport = lazy(() => import('@/pages/operations/drs/DRSPerformanceReport'));
 const RTOBulkUpload = lazy(() => import('@/pages/operations/rto/RTOBulkUpload'));
+const RTOPreAlertMail = lazy(() => import('@/pages/operations/rto/RTOPreAlertMail'));
 const RouteLoadDistributor = lazy(() => import('@/pages/operations/RouteLoadDistributor'));
 const HubOperationsLayout = lazy(() => import('@/pages/operations/HubOperationsLayout'));
 
@@ -272,6 +273,14 @@ export default function App() {
                             element={
                               <Suspense fallback={<FullPageSpinner message="Loading RTO Bulk Upload…" />}>
                                 <RTOBulkUpload />
+                              </Suspense>
+                            }
+                          />
+                          <Route
+                            path="/operations/rto-pre-alert-mail"
+                            element={
+                              <Suspense fallback={<FullPageSpinner message="Loading RTO Pre-Alert Mail…" />}>
+                                <RTOPreAlertMail />
                               </Suspense>
                             }
                           />

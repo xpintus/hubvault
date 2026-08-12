@@ -1,4 +1,4 @@
-import { BarChart3, PackageCheck, PackageX, Truck } from 'lucide-react';
+import { BarChart3, Mail, PackageCheck, PackageX, Truck } from 'lucide-react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useHub } from '@/lib/hubContext';
@@ -33,6 +33,13 @@ const OPERATION_TABS = [
     icon: PackageCheck,
     match: '/operations/route-load-distributor',
   },
+  {
+    to: '/operations/rto-pre-alert-mail',
+    label: 'RTO Pre-Alert',
+    description: 'Bag-wise pre-alert mail generator',
+    icon: Mail,
+    match: '/operations/rto-pre-alert-mail',
+  },
 ];
 
 export default function HubOperationsLayout() {
@@ -54,7 +61,7 @@ export default function HubOperationsLayout() {
           </span>
         </div>
 
-        <nav className="grid gap-2 p-2 sm:grid-cols-2 xl:grid-cols-4">
+        <nav className="grid gap-2 p-2 sm:grid-cols-2 xl:grid-cols-5">
           {OPERATION_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
