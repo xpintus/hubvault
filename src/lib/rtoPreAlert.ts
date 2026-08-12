@@ -47,7 +47,7 @@ export async function parseRTOPreAlertFile(file: File): Promise<RTOPreAlertResul
 const emptyTrip = (fileName: string): RTOTripDetails => ({ fileName, tripId:'',originHubCode:'',originAddress:'',destinationHubCode:'',destinationAddress:'',dispatchTime:'',movementType:'',transporterName:'',driverName:'',vehicleNumber:'',vehicleType:'',connectionId:'',totalManifests:'',totalShipments:'',totalWeight:'',totalValue:'' });
 function tripFromText(text: string, fileName: string) {
   const details = emptyTrip(fileName);
-  const compact = text.replace(/\s+/g, ' ').trim();
+  const compact = text.replace(/[|]/g, ' ').replace(/\s+/g, ' ').trim();
   const labels: Array<[keyof RTOTripDetails, RegExp]> = [
     ['tripId',/Trip\s*ID\s*[:|]?\s*(TR-[A-Z0-9-]+)/i],
     ['originHubCode',/Origin\s*Hub\s*Code\s*[:|]?\s*([A-Z0-9/.-]+)/i],
@@ -60,18 +60,55 @@ function tripFromText(text: string, fileName: string) {
     ['connectionId',/Connection\s*ID\s*[:|]?\s*([A-Z0-9-]+)/i],
   ];
   labels.forEach(([field, pattern]) => { const match = compact.match(pattern); if (match) details[field] = normalize(match[1]); });
+  // Log10 trip sheets do not always print explicit "Origin/Destination Hub Code"
+  // labels. OCR also commonly inserts spaces around slashes and hyphens.
+  if (!details.tripId) {
+    const match = compact.match(/\bTR\s*[-–—]\s*\d[\d\s-]{5,}\d\b/i);
+    if (match) details.tripId = match[0].replace(/\s+/g, '').replace(/[–—]/g, '-').toUpperCase();
+  }
+  if (!details.originHubCode) {
+    const match = compact.match(/(?:Route\s*\/\s*Sort\s*Center\s*Movement\s*[:\-]?\s*)?([A-Z]\d\s*\/\s*[A-Z0-9]+\s*\/\s*\d+\s*\/\s*[A-Z0-9]+)\s+(?:Origin(?:\s+Hub)?(?:\s+Code)?|Origin\s+Address)/i);
+    if (match) details.originHubCode = match[1].replace(/\s*\/\s*/g, '/').toUpperCase();
+  }
+  if (!details.destinationHubCode) {
+    const match = compact.match(/(?:\bto\b|Destination(?:\s+Sort\s+Center)?(?:\s+Hub)?(?:\s+Code)?\s*[:\-]?)\s*([A-Z][A-Z0-9.-]{2,})\s+(?:Destination\s+Address|Movement\s+Type)/i);
+    if (match) details.destinationHubCode = match[1].toUpperCase();
+  }
   if (!details.tripId || !details.originHubCode || !details.destinationHubCode) throw new Error('Trip ID, origin or destination could not be read. Please upload a clearer trip sheet.');
   return details;
 }
 
+async function prepareImage(file: File) {
+  const bitmap = await createImageBitmap(file);
+  const maxSide = Math.max(bitmap.width, bitmap.height);
+  const scale = Math.max(1, Math.min(3, 2200 / Math.max(1, maxSide)));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Image processing is not supported in this browser.');
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  for (let index = 0; index < pixels.data.length; index += 4) {
+    const gray = .299 * pixels.data[index] + .587 * pixels.data[index + 1] + .114 * pixels.data[index + 2];
+    const enhanced = gray < 190 ? Math.max(0, gray * .72) : Math.min(255, gray * 1.08);
+    pixels.data[index] = enhanced; pixels.data[index + 1] = enhanced; pixels.data[index + 2] = enhanced;
+  }
+  context.putImageData(pixels, 0, 0);
+  return canvas;
+}
+
 async function recognizeImage(image: File | HTMLCanvasElement) {
   const Tesseract = await import('tesseract.js');
-  const result = await Tesseract.recognize(image, 'eng');
+  const source = image instanceof File ? await prepareImage(image) : image;
+  const result = await Tesseract.recognize(source, 'eng', { errorHandler: (error) => console.error('Trip sheet OCR worker error', error) });
   return result.data.text;
 }
 
 export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> {
   if (!/\.(pdf|png|jpe?g)$/i.test(file.name)) throw new Error('Please upload a PDF, PNG, JPG or JPEG trip sheet.');
+  if (file.size > 15 * 1024 * 1024) throw new Error('Trip sheet image/PDF must be 15 MB or less.');
   let text = '';
   if (/\.pdf$/i.test(file.name)) {
     const pdfjs = await import('pdfjs-dist');
@@ -89,7 +126,14 @@ export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> 
         text += `${await recognizeImage(canvas)}\n`;
       }
     }
-  } else text = await recognizeImage(file);
+  } else {
+    try { text = await recognizeImage(file); }
+    catch (cause) {
+      console.error('Trip sheet image OCR failed', cause);
+      throw new Error('Image OCR could not start. Check your internet once for the OCR language download, then retry with a clear JPG or PNG.');
+    }
+  }
+  if (!text.trim()) throw new Error('No readable text was found in this image. Upload a clear, straight trip-sheet photo.');
   return tripFromText(text.replace(/\r/g, '\n'), file.name);
 }
 
