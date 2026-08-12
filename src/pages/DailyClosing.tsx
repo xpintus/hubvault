@@ -1,14 +1,14 @@
 import { useToast } from '@/components/ui/Toast';
 import { Badge,Button,Card,EmptyState,Input,Select,Spinner,Textarea } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
-import { buildClosingVarianceRemark,calculateClosingVariances,finalizeDailyClosingDay,getDailyClosingSource,loadClosingHistory,reopenDailyClosing,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
+import { buildClosingVarianceRemark,calculateClosingVariances,finalizeDailyClosingDay,getDailyClosingSource,loadClosingHistory,reviewDailyClosing,submitDailyClosing } from '@/lib/dailyClosing';
 import { exportDailyClosingsExcel,printDailyClosingsPdf } from '@/lib/dailyClosingExport';
 import { formatDate,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
 import { supabase } from '@/lib/supabase';
 import { Collector,DailyClosing,DailyClosingFinalization,DailyClosingHistory,DailyClosingStatus } from '@/types';
-import { AlertTriangle,ArchiveRestore,CalendarDays,CheckCircle2,Download,FileText,History,Lock,Pencil,RefreshCw,Send,ShieldCheck,XCircle } from 'lucide-react';
+import { AlertTriangle,CalendarDays,CheckCircle2,Download,FileText,History,Lock,Pencil,RefreshCw,Send,ShieldCheck,XCircle } from 'lucide-react';
 import { useCallback,useEffect,useMemo,useState } from 'react';
 
 const statusColor: Record<DailyClosingStatus, string> = { submitted: 'blue', approved: 'green', rejected: 'red', reopened: 'amber' };
@@ -139,13 +139,6 @@ export default function DailyClosingPage() {
 
   const correctRejected=(closing:DailyClosing)=>{setCollectorId(closing.collector_id);setActualCash(String(closing.actual_cash));setActualOnline(String(closing.online_amount));setNotes(closing.notes??'');document.getElementById('daily-closing-entry')?.scrollIntoView({behavior:'smooth',block:'start'});};
 
-  const reopen = async (closing: DailyClosing) => {
-    const reason = window.prompt('Reason for reopening this approved closing:');
-    if (!reason?.trim()) return;
-    try { await reopenDailyClosing(closing.id, reason); toast.success('Closing reopened'); await load(); }
-    catch (error) { toast.error(error instanceof Error ? error.message : 'Reopen failed'); }
-  };
-
   const showHistory = async (closing: DailyClosing) => {
     if (!navigator.onLine) { toast.warning('Audit history requires an internet connection'); return; }
     try { setHistoryFor(closing); setHistory(await loadClosingHistory(closing.id)); }
@@ -216,17 +209,8 @@ export default function DailyClosingPage() {
         </Card>
       )}
 
-      {!finalization && (profile?.role === 'hub_admin' || profile?.role === 'supervisor') && closings.some((closing) => closing.status === 'approved') && (
-        <Card className="border-neutral-200 p-4 dark:border-neutral-700">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="font-bold">Reopen approved closing</p><p className="text-xs text-neutral-500">Choose an employee to unlock the approved amount for correction.</p></div>
-            <div className="flex flex-wrap gap-2">{closings.filter((closing) => closing.status === 'approved').map((closing) => <Button key={closing.id} size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(closing)}>Reopen {closing.collector?.name ?? 'Employee'}</Button>)}</div>
-          </div>
-        </Card>
-      )}
-
       <Card className="overflow-hidden">
-        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Cash Var.</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Online Var.</th><th className="p-3">Total Var.</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => { const rowVariance = calculateClosingVariances(Number(c.expected_cash), Number(c.expected_online_amount || 0), Number(c.actual_cash), Number(c.online_amount)); return <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><VarianceCell value={rowVariance.cash} /><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><VarianceCell value={rowVariance.online} /><VarianceCell value={rowVariance.total} /><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{rowVariance.reconciled ? <Badge color="green">Reconciled</Badge> : <Badge color="amber">Mismatch</Badge>}{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{!finalization && canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}{!finalization && profile?.role === 'super_admin' && c.status === 'approved' && <Button size="sm" variant="outline" icon={<ArchiveRestore className="h-3.5 w-3.5" />} onClick={() => reopen(c)}>Reopen</Button>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>; })}</tbody></table></div>}
+        {loading ? <div className="p-10 text-center"><Spinner /></div> : closings.length === 0 ? <EmptyState title="No daily closings" message="Submit the first collector closing for this date." /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs uppercase text-neutral-500"><tr><th className="p-3">Employee</th><th className="p-3">Expected Cash</th><th className="p-3">Actual Cash</th><th className="p-3">Cash Var.</th><th className="p-3">Expected Online</th><th className="p-3">Actual Online</th><th className="p-3">Online Var.</th><th className="p-3">Total Var.</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{closings.map((c) => { const rowVariance = calculateClosingVariances(Number(c.expected_cash), Number(c.expected_online_amount || 0), Number(c.actual_cash), Number(c.online_amount)); return <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800"><td className="p-3 font-semibold">{c.collector?.name ?? collectors.find((x) => x.id === c.collector_id)?.name ?? 'Employee'}</td><td className="p-3">{formatINR(c.expected_cash)}</td><td className="p-3">{formatINR(c.actual_cash)}</td><VarianceCell value={rowVariance.cash} /><td className="p-3">{formatINR(c.expected_online_amount || 0)}</td><td className="p-3">{formatINR(c.online_amount)}</td><VarianceCell value={rowVariance.online} /><VarianceCell value={rowVariance.total} /><td className="p-3"><Badge color={statusColor[c.status]}>{c.status}</Badge>{rowVariance.reconciled ? <Badge color="green">Reconciled</Badge> : <Badge color="amber">Mismatch</Badge>}{c.status === 'approved' && <Lock className="inline h-3.5 w-3.5 ml-1 text-neutral-400" />}</td><td className="p-3"><div className="flex flex-wrap gap-1">{!finalization && canReview && c.status === 'submitted' && <><Button size="sm" variant="secondary" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => review(c, 'approved')}>Approve</Button><Button size="sm" variant="danger" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => review(c, 'rejected')}>Reject</Button></>}<Button size="sm" variant="ghost" icon={<History className="h-3.5 w-3.5" />} onClick={() => showHistory(c)}>History</Button></div></td></tr>; })}</tbody></table></div>}
       </Card>
 
       {isManager && <Card className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-3"><div className="rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3"><ShieldCheck className="h-5 w-5 text-brand-600" /></div><div><h2 className="font-bold">Final Daily Close</h2>{finalization ? <><p className="text-sm text-success-600">Daily Closing verified by {finalization.finalizer?.name ?? 'Authorized user'}</p><p className="text-xs text-neutral-500">{finalization.finalizer?.role?.replace('_', ' ')} · {new Date(finalization.finalized_at).toLocaleString('en-IN')}</p></> : <p className="text-sm text-neutral-500">Approved: {requiredCollectorIds.filter(id => approvedCollectorIds.has(id)).length}/{requiredCollectorIds.length} employees</p>}</div></div>{finalization ? <Button variant="outline" icon={<FileText className="h-4 w-4" />} onClick={exportPdf}>Final Report</Button> : <Button icon={<ShieldCheck className="h-4 w-4" />} loading={finalizing} disabled={!allApproved || !navigator.onLine} onClick={finalizeDay}>Final Submit & Generate Report</Button>}</div>{!finalization && !allApproved && <p className="mt-3 text-xs text-warning-600">All employees with collection entries must be approved before final submission.</p>}</Card>}
