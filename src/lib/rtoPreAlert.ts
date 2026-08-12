@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 export interface RTOBagSummary { bagId: string; shipmentCount: number; awbs: string[]; totalValue: number }
 export interface RTOPreAlertResult { fileName: string; totalShipments: number; totalValue: number; bags: RTOBagSummary[]; ignoredRows: number }
@@ -65,6 +66,7 @@ export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> 
   let text = '';
   if (/\.pdf$/i.test(file.name)) {
     const pdfjs = await import('pdfjs-dist');
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
     for (let pageNumber = 1; pageNumber <= Math.min(pdf.numPages, 5); pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
