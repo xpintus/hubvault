@@ -20,16 +20,17 @@ describe('RTO pre-alert mail', () => {
     ]));
     expect(result.totalShipments).toBe(3);
     expect(result.bags).toEqual([
-      { bagId: 'BAG-01', shipmentCount: 2, awbs: ['A1', 'A2'] },
-      { bagId: 'BAG-02', shipmentCount: 1, awbs: ['A3'] },
+      { bagId: 'BAG-01', shipmentCount: 2, awbs: ['A1', 'A2'], totalValue: 0 },
+      { bagId: 'BAG-02', shipmentCount: 1, awbs: ['A3'], totalValue: 0 },
     ]);
   });
 
   it('generates bag ids and counts in the mail', async () => {
     const result = await parseRTOPreAlertFile(file([{ 'Bag No': 'RTO-9', 'Waybill No': 'AWB-1' }]));
-    const mail = buildRTOPreAlertMail({ result, hubName: 'Valmo-JDG', dispatchDate: '2026-08-12', recipientName: 'RTO Team', remarks: 'Seal verified' });
+    const mail = buildRTOPreAlertMail({ result, trip: null, footageLinks: { 'RTO-9': 'https://drive.google.com/example' }, hubName: 'Valmo-JDG', dispatchDate: '2026-08-12', recipientName: 'RTO Team', remarks: 'Seal verified' });
     expect(mail.subject).toContain('Valmo-JDG');
     expect(mail.body).toContain('Bag ID: RTO-9 — 1 shipment');
+    expect(mail.body).toContain('https://drive.google.com/example');
     expect(mail.body).toContain('Seal verified');
   });
 });
