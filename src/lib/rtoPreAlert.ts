@@ -68,7 +68,25 @@ function tripFromText(text: string, fileName: string) {
     vehicleNumber: cell('vehicleNumber'), vehicleType: cell('vehicleType'), connectionId: cell('connectionId'),
     totalValue: cell('totalValue'), totalWeight: cell('totalWeight'), totalManifests: cell('totalManifests'), totalShipments: cell('totalShipments'),
   };
-  Object.entries(cellValues).forEach(([field, value]) => { if (value) details[field as keyof RTOTripDetails] = value; });
+  const validCell: Partial<Record<keyof RTOTripDetails, (value: string) => boolean>> = {
+    tripId: (value) => /^TR[-\s]*\d[\d-]{5,}$/i.test(value),
+    originHubCode: (value) => /^(?:E?1|I|L)\s*\/\s*[A-Z0-9]+\s*\/\s*\d+\s*\/\s*[A-Z0-9]+$/i.test(value),
+    destinationHubCode: (value) => /^[A-Z][A-Z0-9.-]{2,10}$/i.test(value) && !/DETAIL/i.test(value),
+    movementType: (value) => /^(RLH|LH|FM|LM|RTO)$/i.test(value),
+    transporterName: (value) => value.length >= 4 && !/(DETAIL|NAME|TRANSPORTER)/i.test(value),
+    driverName: (value) => value.length >= 4 && !/(DETAIL|NAME|DRIVER)/i.test(value),
+    vehicleNumber: (value) => /^[A-Z]{2}\s*\d{1,2}\s*[A-Z]{1,3}\s*\d{3,4}$/i.test(value),
+    connectionId: (value) => /^\d{7,12}$/.test(value.replace(/\D/g, '')),
+    dispatchTime: (value) => /\d{4}[-/]\d{2}[-/]\d{2}/.test(value),
+    totalValue: (value) => /\d/.test(value), totalWeight: (value) => /\d/.test(value),
+    totalManifests: (value) => /^\d+$/.test(value), totalShipments: (value) => /^\d+$/.test(value),
+    originAddress: (value) => value.length > 12 && !/DETAIL/i.test(value),
+    destinationAddress: (value) => value.length > 12 && !/DETAIL/i.test(value),
+  };
+  Object.entries(cellValues).forEach(([fieldName, value]) => {
+    const field = fieldName as keyof RTOTripDetails;
+    if (value && (validCell[field]?.(value) ?? true)) details[field] = value;
+  });
   // Log10 trip sheets do not always print explicit "Origin/Destination Hub Code"
   // labels. OCR also commonly inserts spaces around slashes and hyphens.
   if (!details.tripId) {
@@ -123,7 +141,7 @@ async function prepareImage(file: File) {
   };
   // Exclude the phone navigation/gesture area at the bottom. Otherwise its
   // dark scrollbar is mistaken for document content and shifts every crop.
-  let top = 0; let bottom = Math.max(0, Math.floor(bitmap.height * .92));
+  let top = 0; let bottom = Math.max(0, Math.floor(bitmap.height * .80));
   while (top < bottom && !rowHasContent(top)) top += 2;
   while (bottom > top && !rowHasContent(bottom)) bottom -= 2;
   // Ignore a dark mobile browser toolbar when a white document begins below it.
@@ -179,12 +197,12 @@ async function recognizeImage(image: File | HTMLCanvasElement) {
       // labels, grid borders and barcodes gives OCR enough pixels for small text.
       await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE });
       const cells: Array<[keyof RTOTripDetails, number, number, number, number]> = [
-        ['tripId', .34, .12, .40, .055],
-        ['originHubCode', .19, .605, .29, .04], ['originAddress', .19, .64, .29, .075], ['dispatchTime', .19, .705, .29, .04],
-        ['totalValue', .19, .755, .29, .04], ['totalWeight', .19, .795, .29, .04], ['totalManifests', .19, .84, .29, .055], ['totalShipments', .19, .915, .29, .055],
-        ['destinationHubCode', .62, .605, .35, .04], ['destinationAddress', .62, .635, .35, .075], ['movementType', .62, .695, .35, .04],
-        ['transporterName', .62, .735, .35, .04], ['driverName', .62, .77, .35, .04], ['vehicleNumber', .62, .805, .35, .04], ['vehicleType', .62, .835, .35, .04],
-        ['connectionId', .67, .93, .28, .055],
+        ['tripId', .34, .14, .40, .055],
+        ['originHubCode', .19, .61, .29, .038], ['originAddress', .19, .645, .29, .07], ['dispatchTime', .19, .705, .29, .038],
+        ['totalValue', .19, .77, .29, .038], ['totalWeight', .19, .81, .29, .038], ['totalManifests', .19, .855, .29, .052], ['totalShipments', .19, .925, .29, .052],
+        ['destinationHubCode', .62, .61, .35, .038], ['destinationAddress', .62, .635, .35, .07], ['movementType', .62, .695, .35, .038],
+        ['transporterName', .62, .735, .35, .038], ['driverName', .62, .77, .35, .038], ['vehicleNumber', .62, .805, .35, .038], ['vehicleType', .62, .835, .35, .038],
+        ['connectionId', .67, .925, .28, .06],
       ];
       for (const [field, x, y, width, height] of cells) {
         const result = await worker.recognize(source, { rectangle: { left: Math.floor(source.width * x), top: Math.floor(source.height * y), width: Math.floor(source.width * width), height: Math.floor(source.height * height) } });
