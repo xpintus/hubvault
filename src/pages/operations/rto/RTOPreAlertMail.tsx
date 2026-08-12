@@ -5,12 +5,12 @@ import { loadRTOSortCenters, RTOSortCenter } from '@/lib/rtoSortCenters';
 import RTOSortCenterDirectory from '@/components/rto/RTOSortCenterDirectory';
 import { buildRTOPreAlertMail, parseRTOPreAlertFile, parseRTOTripDocument, RTOTripDetails, RTOPreAlertResult } from '@/lib/rtoPreAlert';
 import { CheckCircle2, Clipboard, FileSpreadsheet, Mail, Package, RotateCcw, Send, Settings, Upload, XCircle } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function RTOPreAlertMail() {
-  const { selectedHub } = useHub();
+  const { selectedHub, selectedHubId } = useHub();
   const toast = useToast();
   const uploadRef = useRef<HTMLInputElement>(null);
   const tripRef = useRef<HTMLInputElement>(null);
@@ -26,9 +26,10 @@ export default function RTOPreAlertMail() {
   const [remarks, setRemarks] = useState('');
   const [sealNumber, setSealNumber] = useState('');
   const [tab, setTab] = useState<'generator'|'directory'>('generator');
-  const [sortCenters, setSortCenters] = useState<RTOSortCenter[]>(loadRTOSortCenters);
+  const [sortCenters, setSortCenters] = useState<RTOSortCenter[]>([]);
   const [sortCenterId, setSortCenterId] = useState('');
   const mail = useMemo(() => result ? buildRTOPreAlertMail({ result, trip, footageLinks, hubName: selectedHub?.name ?? 'Hub', dispatchDate, recipientName, remarks, sealNumber }) : null, [result, trip, footageLinks, selectedHub?.name, dispatchDate, recipientName, remarks, sealNumber]);
+  useEffect(() => { void loadRTOSortCenters(selectedHubId).then(setSortCenters).catch(() => setSortCenters([])); }, [selectedHubId]);
   function chooseSortCenter(id: string) { setSortCenterId(id); const center = sortCenters.find((item) => item.id === id); if (center) { setTo(center.toEmail); setCc(center.ccEmail); setRecipientName(center.name); } }
 
   async function upload(file?: File) {
