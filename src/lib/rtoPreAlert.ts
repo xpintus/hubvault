@@ -128,8 +128,20 @@ async function prepareImage(file: File) {
 async function recognizeImage(image: File | HTMLCanvasElement) {
   const Tesseract = await import('tesseract.js');
   const source = image instanceof File ? await prepareImage(image) : image;
-  const result = await Tesseract.recognize(source, 'eng', { errorHandler: (error) => console.error('Trip sheet OCR worker error', error) });
-  return result.data.text;
+  const base = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/tesseract`;
+  const worker = await Tesseract.createWorker('eng', Tesseract.OEM.LSTM_ONLY, {
+    workerPath: `${base}/worker.min.js`,
+    corePath: `${base}/core`,
+    langPath: `${base}/lang`,
+    workerBlobURL: false,
+    gzip: true,
+    errorHandler: (error) => console.error('Trip sheet OCR worker error', error),
+  });
+  try {
+    await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
+    const result = await worker.recognize(source);
+    return result.data.text;
+  } finally { await worker.terminate(); }
 }
 
 export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> {
