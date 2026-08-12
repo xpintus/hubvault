@@ -44,17 +44,42 @@ export async function parseRTOPreAlertFile(file: File): Promise<RTOPreAlertResul
 }
 
 const emptyTrip = (fileName: string): RTOTripDetails => ({ fileName, tripId:'',originHubCode:'',originAddress:'',destinationHubCode:'',destinationAddress:'',dispatchTime:'',movementType:'',transporterName:'',driverName:'',vehicleNumber:'',vehicleType:'',connectionId:'',totalManifests:'',totalShipments:'',totalWeight:'',totalValue:'' });
-export async function parseRTOTripHtml(file: File): Promise<RTOTripDetails> {
-  if (!/\.html?$/i.test(file.name)) throw new Error('Please upload the RTO trip HTML file.');
-  const document = new DOMParser().parseFromString(await file.text(), 'text/html');
-  const details = emptyTrip(file.name);
-  const map: Record<string, keyof RTOTripDetails> = {'trip id':'tripId','origin hub code':'originHubCode','origin address':'originAddress','destination hub code':'destinationHubCode','destination address':'destinationAddress','dispatch time':'dispatchTime','movement type':'movementType','transporter name':'transporterName','driver name':'driverName','vehicle number':'vehicleNumber','vehicle type':'vehicleType','connection id':'connectionId','total no. of manifests':'totalManifests','total no. of shipments':'totalShipments','total weight':'totalWeight','total value':'totalValue'};
-  document.querySelectorAll('tr').forEach((row) => {
-    const cells = [...row.querySelectorAll('th,td')].map((cell) => normalize(cell.textContent));
-    for (let index = 0; index < cells.length - 1; index += 1) { const field = map[cells[index].toLowerCase()]; if (field && !details[field]) details[field] = cells[index + 1]; }
-  });
-  if (!details.tripId || !details.originHubCode || !details.destinationHubCode) throw new Error('Trip ID, origin or destination details could not be found in this HTML file.');
+function tripFromText(text: string, fileName: string) {
+  const details = emptyTrip(fileName);
+  const labels: Array<[keyof RTOTripDetails, RegExp]> = [
+    ['tripId',/Trip\s*ID\s*[:|]?\s*(TR-[A-Z0-9-]+)/i],['originHubCode',/Origin\s*Hub\s*Code\s*[:|]?\s*([^\n|]+)/i],['originAddress',/Origin\s*Address\s*[:|]?\s*([^\n|]+)/i],['destinationHubCode',/Destination\s*Hub\s*Code\s*[:|]?\s*([^\n|]+)/i],['destinationAddress',/Destination\s*Address\s*[:|]?\s*([^\n|]+)/i],['dispatchTime',/Dispatch\s*Time\s*[:|]?\s*([^\n|]+)/i],['movementType',/Movement\s*Type\s*[:|]?\s*([^\n|]+)/i],['transporterName',/Transporter\s*Name\s*[:|]?\s*([^\n|]+)/i],['driverName',/Driver\s*Name\s*[:|]?\s*([^\n|]+)/i],['vehicleNumber',/Vehicle\s*Number\s*[:|]?\s*([^\n|]+)/i],['vehicleType',/Vehicle\s*Type\s*[:|]?\s*([^\n|]+)/i],['connectionId',/Connection\s*ID\s*[:|]?\s*([^\n|]+)/i],['totalManifests',/Total\s*No\.?\s*of\s*Manifests\s*[:|]?\s*([^\n|]+)/i],['totalShipments',/Total\s*No\.?\s*of\s*Shipments\s*[:|]?\s*([^\n|]+)/i],['totalWeight',/Total\s*Weight\s*[:|]?\s*([^\n|]+)/i],['totalValue',/Total\s*Value\s*[:|]?\s*([^\n|]+)/i],
+  ];
+  labels.forEach(([field, pattern]) => { const match = text.match(pattern); if (match) details[field] = normalize(match[1]); });
+  if (!details.tripId || !details.originHubCode || !details.destinationHubCode) throw new Error('Trip ID, origin or destination could not be read. Please upload a clearer trip sheet.');
   return details;
+}
+
+async function recognizeImage(image: File | HTMLCanvasElement) {
+  const Tesseract = await import('tesseract.js');
+  const result = await Tesseract.recognize(image, 'eng');
+  return result.data.text;
+}
+
+export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> {
+  if (!/\.(pdf|png|jpe?g)$/i.test(file.name)) throw new Error('Please upload a PDF, PNG, JPG or JPEG trip sheet.');
+  let text = '';
+  if (/\.pdf$/i.test(file.name)) {
+    const pdfjs = await import('pdfjs-dist');
+    const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+    for (let pageNumber = 1; pageNumber <= Math.min(pdf.numPages, 5); pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      text += `${content.items.map((item) => 'str' in item ? item.str : '').join(' ')}\n`;
+      if (text.replace(/\s/g, '').length < 80) {
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas'); canvas.width = viewport.width; canvas.height = viewport.height;
+        const context = canvas.getContext('2d'); if (!context) continue;
+        await page.render({ canvasContext: context, viewport }).promise;
+        text += `${await recognizeImage(canvas)}\n`;
+      }
+    }
+  } else text = await recognizeImage(file);
+  return tripFromText(text.replace(/\r/g, '\n'), file.name);
 }
 
 export function buildRTOPreAlertMail(input: { result: RTOPreAlertResult; trip: RTOTripDetails | null; footageLinks: Record<string,string>; hubName: string; dispatchDate: string; recipientName: string; remarks: string }) {
