@@ -74,20 +74,46 @@ function tripFromText(text: string, fileName: string) {
     const match = compact.match(/(?:\bto\b|Destination(?:\s+Sort\s+Center)?(?:\s+Hub)?(?:\s+Code)?\s*[:\-]?)\s*([A-Z][A-Z0-9.-]{2,})\s+(?:Destination\s+Address|Movement\s+Type)/i);
     if (match) details.destinationHubCode = match[1].toUpperCase();
   }
-  if (!details.tripId || !details.originHubCode || !details.destinationHubCode) throw new Error('Trip ID, origin or destination could not be read. Please upload a clearer trip sheet.');
   return details;
 }
 
 async function prepareImage(file: File) {
   const bitmap = await createImageBitmap(file);
-  const maxSide = Math.max(bitmap.width, bitmap.height);
-  const scale = Math.max(1, Math.min(3, 2200 / Math.max(1, maxSide)));
+  // Phone screenshots often contain a browser header and a large blank footer.
+  // Find the vertical document bounds before upscaling so table text stays large.
+  const probe = document.createElement('canvas');
+  probe.width = bitmap.width; probe.height = bitmap.height;
+  const probeContext = probe.getContext('2d', { willReadFrequently: true });
+  if (!probeContext) throw new Error('Image processing is not supported in this browser.');
+  probeContext.drawImage(bitmap, 0, 0);
+  const probePixels = probeContext.getImageData(0, 0, probe.width, probe.height).data;
+  const rowHasContent = (y: number) => {
+    let dark = 0;
+    for (let x = 0; x < probe.width; x += 4) {
+      const index = (y * probe.width + x) * 4;
+      if ((probePixels[index] + probePixels[index + 1] + probePixels[index + 2]) / 3 < 205) dark += 1;
+    }
+    return dark >= Math.max(3, Math.floor(probe.width / 120));
+  };
+  let top = 0; let bottom = bitmap.height - 1;
+  while (top < bottom && !rowHasContent(top)) top += 2;
+  while (bottom > top && !rowHasContent(bottom)) bottom -= 2;
+  // Ignore a dark mobile browser toolbar when a white document begins below it.
+  for (let y = top; y < Math.min(bottom, Math.floor(bitmap.height * .35)); y += 2) {
+    const index = (y * probe.width + Math.floor(probe.width / 2)) * 4;
+    const brightness = (probePixels[index] + probePixels[index + 1] + probePixels[index + 2]) / 3;
+    if (brightness > 235) { top = Math.max(0, y - 8); break; }
+  }
+  top = Math.max(0, top - 12); bottom = Math.min(bitmap.height - 1, bottom + 12);
+  const cropHeight = Math.max(1, bottom - top + 1);
+  const scale = Math.max(1.5, Math.min(4, 2600 / Math.max(bitmap.width, cropHeight)));
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
+  canvas.height = Math.round(cropHeight * scale);
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Image processing is not supported in this browser.');
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, top, bitmap.width, cropHeight, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
   for (let index = 0; index < pixels.data.length; index += 4) {
