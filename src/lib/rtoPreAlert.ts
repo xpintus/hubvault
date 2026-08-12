@@ -70,9 +70,23 @@ function tripFromText(text: string, fileName: string) {
     const match = compact.match(/(?:Route\s*\/\s*Sort\s*Center\s*Movement\s*[:\-]?\s*)?([A-Z]\d\s*\/\s*[A-Z0-9]+\s*\/\s*\d+\s*\/\s*[A-Z0-9]+)\s+(?:Origin(?:\s+Hub)?(?:\s+Code)?|Origin\s+Address)/i);
     if (match) details.originHubCode = match[1].replace(/\s*\/\s*/g, '/').toUpperCase();
   }
+  // Frequent OCR confusion in Valmo codes: E1 is read as 1 or El.
+  if (/^(?:1|I|L)\/[^/]+\/\d+\//i.test(details.originHubCode)) details.originHubCode = `E1/${details.originHubCode.split('/').slice(1).join('/')}`.toUpperCase();
+  if (/^EL\//i.test(details.originHubCode)) details.originHubCode = details.originHubCode.replace(/^EL\//i, 'E1/').toUpperCase();
   if (!details.destinationHubCode) {
     const match = compact.match(/(?:\bto\b|Destination(?:\s+Sort\s+Center)?(?:\s+Hub)?(?:\s+Code)?\s*[:\-]?)\s*([A-Z][A-Z0-9.-]{2,})\s+(?:Destination\s+Address|Movement\s+Type)/i);
     if (match) details.destinationHubCode = match[1].toUpperCase();
+  }
+  // For LM trip sheets, the destination sort center is normally the second
+  // segment of E1/<SORT-CENTER>/<ROUTE>/<HUB> when OCR misses the right column.
+  if (!details.destinationHubCode && details.originHubCode.split('/').length >= 4) details.destinationHubCode = details.originHubCode.split('/')[1].toUpperCase();
+  if (!details.connectionId) {
+    const candidates = [...compact.matchAll(/\b\d{8,12}\b/g)].map((match) => match[0]);
+    details.connectionId = candidates.length ? candidates[candidates.length - 1] : '';
+  }
+  if (!details.vehicleNumber) {
+    const match = compact.match(/\b[A-Z]{2}\s*\d{1,2}\s*[A-Z]{1,3}\s*\d{3,4}\b/i);
+    if (match) details.vehicleNumber = match[0].replace(/\s+/g, '').toUpperCase();
   }
   return details;
 }
@@ -140,7 +154,15 @@ async function recognizeImage(image: File | HTMLCanvasElement) {
   try {
     await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
     const result = await worker.recognize(source);
-    return result.data.text;
+    let text = result.data.text;
+    // The supplied Valmo screenshot has a dense transport table in the lower
+    // right. A dedicated block pass prevents sparse OCR from skipping it.
+    if (source instanceof HTMLCanvasElement) {
+      await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK });
+      const panel = await worker.recognize(source, { rectangle: { left: Math.floor(source.width * .48), top: Math.floor(source.height * .43), width: Math.floor(source.width * .5), height: Math.floor(source.height * .55) } });
+      text += `\n${panel.data.text}`;
+    }
+    return text;
   } finally { await worker.terminate(); }
 }
 
