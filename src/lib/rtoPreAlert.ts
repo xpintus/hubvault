@@ -60,16 +60,22 @@ function tripFromText(text: string, fileName: string) {
     ['connectionId',/Connection\s*ID\s*[:|]?\s*([A-Z0-9-]+)/i],
   ];
   labels.forEach(([field, pattern]) => { const match = compact.match(pattern); if (match) details[field] = normalize(match[1]); });
-  const transporterCell = text.match(/\[TRANSPORTER_CELL\]\s*([^\n\r]+)/i)?.[1];
-  const driverCell = text.match(/\[DRIVER_CELL\]\s*([^\n\r]+)/i)?.[1];
-  if (!details.transporterName && transporterCell) details.transporterName = normalize(transporterCell).replace(/^[^a-z0-9]+/i, '');
-  if (!details.driverName && driverCell) details.driverName = normalize(driverCell).replace(/^[^a-z0-9]+/i, '');
+  const cell = (name: string) => normalize(text.match(new RegExp(`\\[CELL:${name}\\]\\s*([^\\n\\r]+)`, 'i'))?.[1]).replace(/^[^a-z0-9₹]+/i, '');
+  const cellValues: Partial<Record<keyof RTOTripDetails, string>> = {
+    tripId: cell('tripId'), originHubCode: cell('originHubCode'), originAddress: cell('originAddress'),
+    dispatchTime: cell('dispatchTime'), destinationHubCode: cell('destinationHubCode'), destinationAddress: cell('destinationAddress'),
+    movementType: cell('movementType'), transporterName: cell('transporterName'), driverName: cell('driverName'),
+    vehicleNumber: cell('vehicleNumber'), vehicleType: cell('vehicleType'), connectionId: cell('connectionId'),
+    totalValue: cell('totalValue'), totalWeight: cell('totalWeight'), totalManifests: cell('totalManifests'), totalShipments: cell('totalShipments'),
+  };
+  Object.entries(cellValues).forEach(([field, value]) => { if (value) details[field as keyof RTOTripDetails] = value; });
   // Log10 trip sheets do not always print explicit "Origin/Destination Hub Code"
   // labels. OCR also commonly inserts spaces around slashes and hyphens.
   if (!details.tripId) {
     const match = compact.match(/\bTR\s*[-–—]\s*\d[\d\s-]{5,}\d\b/i);
     if (match) details.tripId = match[0].replace(/\s+/g, '').replace(/[–—]/g, '-').toUpperCase();
   }
+  details.tripId = details.tripId.replace(/\s+/g, '').replace(/[–—]/g, '-').toUpperCase();
   if (!details.originHubCode) {
     const match = compact.match(/(?:Route\s*\/\s*Sort\s*Center\s*Movement\s*[:\-]?\s*)?([A-Z]\d\s*\/\s*[A-Z0-9]+\s*\/\s*\d+\s*\/\s*[A-Z0-9]+)\s+(?:Origin(?:\s+Hub)?(?:\s+Code)?|Origin\s+Address)/i);
     if (match) details.originHubCode = match[1].replace(/\s*\/\s*/g, '/').toUpperCase();
@@ -92,6 +98,8 @@ function tripFromText(text: string, fileName: string) {
     const match = compact.match(/\b[A-Z]{2}\s*\d{1,2}\s*[A-Z]{1,3}\s*\d{3,4}\b/i);
     if (match) details.vehicleNumber = match[0].replace(/\s+/g, '').toUpperCase();
   }
+  details.vehicleNumber = details.vehicleNumber.replace(/\s+/g, '').toUpperCase();
+  details.connectionId = details.connectionId.replace(/\D/g, '');
   return details;
 }
 
@@ -113,7 +121,9 @@ async function prepareImage(file: File) {
     }
     return dark >= Math.max(3, Math.floor(probe.width / 120));
   };
-  let top = 0; let bottom = bitmap.height - 1;
+  // Exclude the phone navigation/gesture area at the bottom. Otherwise its
+  // dark scrollbar is mistaken for document content and shifts every crop.
+  let top = 0; let bottom = Math.max(0, Math.floor(bitmap.height * .92));
   while (top < bottom && !rowHasContent(top)) top += 2;
   while (bottom > top && !rowHasContent(bottom)) bottom -= 2;
   // Ignore a dark mobile browser toolbar when a white document begins below it.
@@ -165,14 +175,22 @@ async function recognizeImage(image: File | HTMLCanvasElement) {
       await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK });
       const panel = await worker.recognize(source, { rectangle: { left: Math.floor(source.width * .48), top: Math.floor(source.height * .43), width: Math.floor(source.width * .5), height: Math.floor(source.height * .55) } });
       text += `\n${panel.data.text}`;
-      // Valmo mobile trip sheet: scan the two narrow value cells separately.
-      // Removing labels, grid borders and barcode gives OCR enough pixels for names.
+      // Valmo mobile trip sheet: scan every value cell separately. Removing
+      // labels, grid borders and barcodes gives OCR enough pixels for small text.
       await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE });
-      const valueLeft = Math.floor(source.width * .615);
-      const valueWidth = Math.floor(source.width * .355);
-      const transporter = await worker.recognize(source, { rectangle: { left: valueLeft, top: Math.floor(source.height * .735), width: valueWidth, height: Math.floor(source.height * .04) } });
-      const driver = await worker.recognize(source, { rectangle: { left: valueLeft, top: Math.floor(source.height * .775), width: valueWidth, height: Math.floor(source.height * .04) } });
-      text += `\n[TRANSPORTER_CELL] ${transporter.data.text.replace(/\s+/g, ' ').trim()}\n[DRIVER_CELL] ${driver.data.text.replace(/\s+/g, ' ').trim()}`;
+      const cells: Array<[keyof RTOTripDetails, number, number, number, number]> = [
+        ['tripId', .34, .12, .40, .055],
+        ['originHubCode', .19, .605, .29, .04], ['originAddress', .19, .64, .29, .075], ['dispatchTime', .19, .705, .29, .04],
+        ['totalValue', .19, .755, .29, .04], ['totalWeight', .19, .795, .29, .04], ['totalManifests', .19, .84, .29, .055], ['totalShipments', .19, .915, .29, .055],
+        ['destinationHubCode', .62, .605, .35, .04], ['destinationAddress', .62, .635, .35, .075], ['movementType', .62, .695, .35, .04],
+        ['transporterName', .62, .735, .35, .04], ['driverName', .62, .77, .35, .04], ['vehicleNumber', .62, .805, .35, .04], ['vehicleType', .62, .835, .35, .04],
+        ['connectionId', .67, .93, .28, .055],
+      ];
+      for (const [field, x, y, width, height] of cells) {
+        const result = await worker.recognize(source, { rectangle: { left: Math.floor(source.width * x), top: Math.floor(source.height * y), width: Math.floor(source.width * width), height: Math.floor(source.height * height) } });
+        const value = result.data.text.replace(/\s+/g, ' ').trim();
+        if (value) text += `\n[CELL:${field}] ${value}`;
+      }
     }
     return text;
   } finally { await worker.terminate(); }
