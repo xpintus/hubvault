@@ -51,13 +51,20 @@ function tripFromText(text: string, fileName: string) {
   const labels: Array<[keyof RTOTripDetails, RegExp]> = [
     ['tripId',/Trip\s*ID\s*[:|]?\s*(TR-[A-Z0-9-]+)/i],
     ['originHubCode',/Origin\s*Hub\s*Code\s*[:|]?\s*([A-Z0-9/.-]+)/i],
+    ['originAddress',/Origin\s*Address\s*[:|]?\s*(.+?)(?=\s+Dispatch\s*Time\b)/i],
+    ['dispatchTime',/Dispatch\s*Time\s*[:|]?\s*(\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2})/i],
     ['destinationHubCode',/Destination\s*Hub\s*Code\s*[:|]?\s*([A-Z0-9/.-]+)/i],
+    ['destinationAddress',/Destination\s*Address\s*[:|]?\s*(.+?)(?=\s+Movement\s*Type\b)/i],
     ['movementType',/Movement\s*Type\s*[:|]?\s*([A-Z0-9_-]+)/i],
     ['transporterName',/Transporter\s*Name\s*[:|]?\s*(.+?)(?=\s+Driver\s*Name\b)/i],
     ['driverName',/Driver\s*Name\s*[:|]?\s*(.+?)(?=\s+Vehicle\s*Number\b)/i],
     ['vehicleNumber',/Vehicle\s*Number\s*[:|]?\s*([A-Z0-9-]+)/i],
     ['vehicleType',/Vehicle\s*Type\s*[:|]?\s*(.+?)(?=\s+Connection\s*ID\b)/i],
     ['connectionId',/Connection\s*ID\s*[:|]?\s*([A-Z0-9-]+)/i],
+    ['totalValue',/Total\s*Value\s*[:|]?\s*([\d,.]+)/i],
+    ['totalWeight',/Total\s*Weight\s*[:|]?\s*([\d,.]+)/i],
+    ['totalManifests',/Total\s*No\.?\s*of\s*Manifests\s*[:|]?\s*(\d+)/i],
+    ['totalShipments',/Total\s*No\.?\s*of\s*Shipments\s*[:|]?\s*(\d+)/i],
   ];
   labels.forEach(([field, pattern]) => { const match = compact.match(pattern); if (match) details[field] = normalize(match[1]); });
   const cell = (name: string) => normalize(text.match(new RegExp(`\\[CELL:${name}\\]\\s*([^\\n\\r]+)`, 'i'))?.[1]).replace(/^[^a-z0-9₹]+/i, '');
@@ -215,10 +222,20 @@ async function recognizeImage(image: File | HTMLCanvasElement) {
 }
 
 export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> {
-  if (!/\.(pdf|png|jpe?g)$/i.test(file.name)) throw new Error('Please upload a PDF, PNG, JPG or JPEG trip sheet.');
+  if (!/\.(pdf|png|jpe?g|mht|mhtml)$/i.test(file.name)) throw new Error('Please upload a PDF, PNG, JPG, JPEG, MHT or MHTML trip sheet.');
   if (file.size > 15 * 1024 * 1024) throw new Error('Trip sheet image/PDF must be 15 MB or less.');
   let text = '';
-  if (/\.pdf$/i.test(file.name)) {
+  if (/\.(?:mht|mhtml)$/i.test(file.name)) {
+    const source = await file.text();
+    const htmlStart = source.search(/<!doctype\s+html|<html\b/i);
+    const boundary = source.match(/boundary="?([^"\r\n;]+)"?/i)?.[1];
+    if (htmlStart < 0) throw new Error('No readable HTML trip sheet was found in this MHT file.');
+    let html = source.slice(htmlStart);
+    if (boundary) html = html.split(`--${boundary}`)[0];
+    const document = new DOMParser().parseFromString(html, 'text/html');
+    document.querySelectorAll('script,style,noscript').forEach((element) => element.remove());
+    text = (document.body?.innerText || document.body?.textContent || '').replace(/\s+/g, ' ').trim();
+  } else if (/\.pdf$/i.test(file.name)) {
     const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
