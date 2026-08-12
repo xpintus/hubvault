@@ -47,10 +47,19 @@ export async function parseRTOPreAlertFile(file: File): Promise<RTOPreAlertResul
 const emptyTrip = (fileName: string): RTOTripDetails => ({ fileName, tripId:'',originHubCode:'',originAddress:'',destinationHubCode:'',destinationAddress:'',dispatchTime:'',movementType:'',transporterName:'',driverName:'',vehicleNumber:'',vehicleType:'',connectionId:'',totalManifests:'',totalShipments:'',totalWeight:'',totalValue:'' });
 function tripFromText(text: string, fileName: string) {
   const details = emptyTrip(fileName);
+  const compact = text.replace(/\s+/g, ' ').trim();
   const labels: Array<[keyof RTOTripDetails, RegExp]> = [
-    ['tripId',/Trip\s*ID\s*[:|]?\s*(TR-[A-Z0-9-]+)/i],['originHubCode',/Origin\s*Hub\s*Code\s*[:|]?\s*([^\n|]+)/i],['originAddress',/Origin\s*Address\s*[:|]?\s*([^\n|]+)/i],['destinationHubCode',/Destination\s*Hub\s*Code\s*[:|]?\s*([^\n|]+)/i],['destinationAddress',/Destination\s*Address\s*[:|]?\s*([^\n|]+)/i],['dispatchTime',/Dispatch\s*Time\s*[:|]?\s*([^\n|]+)/i],['movementType',/Movement\s*Type\s*[:|]?\s*([^\n|]+)/i],['transporterName',/Transporter\s*Name\s*[:|]?\s*([^\n|]+)/i],['driverName',/Driver\s*Name\s*[:|]?\s*([^\n|]+)/i],['vehicleNumber',/Vehicle\s*Number\s*[:|]?\s*([^\n|]+)/i],['vehicleType',/Vehicle\s*Type\s*[:|]?\s*([^\n|]+)/i],['connectionId',/Connection\s*ID\s*[:|]?\s*([^\n|]+)/i],['totalManifests',/Total\s*No\.?\s*of\s*Manifests\s*[:|]?\s*([^\n|]+)/i],['totalShipments',/Total\s*No\.?\s*of\s*Shipments\s*[:|]?\s*([^\n|]+)/i],['totalWeight',/Total\s*Weight\s*[:|]?\s*([^\n|]+)/i],['totalValue',/Total\s*Value\s*[:|]?\s*([^\n|]+)/i],
+    ['tripId',/Trip\s*ID\s*[:|]?\s*(TR-[A-Z0-9-]+)/i],
+    ['originHubCode',/Origin\s*Hub\s*Code\s*[:|]?\s*([A-Z0-9/.-]+)/i],
+    ['destinationHubCode',/Destination\s*Hub\s*Code\s*[:|]?\s*([A-Z0-9/.-]+)/i],
+    ['movementType',/Movement\s*Type\s*[:|]?\s*([A-Z0-9_-]+)/i],
+    ['transporterName',/Transporter\s*Name\s*[:|]?\s*(.+?)(?=\s+Driver\s*Name\b)/i],
+    ['driverName',/Driver\s*Name\s*[:|]?\s*(.+?)(?=\s+Vehicle\s*Number\b)/i],
+    ['vehicleNumber',/Vehicle\s*Number\s*[:|]?\s*([A-Z0-9-]+)/i],
+    ['vehicleType',/Vehicle\s*Type\s*[:|]?\s*(.+?)(?=\s+Connection\s*ID\b)/i],
+    ['connectionId',/Connection\s*ID\s*[:|]?\s*([A-Z0-9-]+)/i],
   ];
-  labels.forEach(([field, pattern]) => { const match = text.match(pattern); if (match) details[field] = normalize(match[1]); });
+  labels.forEach(([field, pattern]) => { const match = compact.match(pattern); if (match) details[field] = normalize(match[1]); });
   if (!details.tripId || !details.originHubCode || !details.destinationHubCode) throw new Error('Trip ID, origin or destination could not be read. Please upload a clearer trip sheet.');
   return details;
 }
@@ -85,7 +94,8 @@ export async function parseRTOTripDocument(file: File): Promise<RTOTripDetails> 
 }
 
 export function buildRTOPreAlertMail(input: { result: RTOPreAlertResult; trip: RTOTripDetails | null; footageLinks: Record<string,string>; hubName: string; dispatchDate: string; recipientName: string; remarks: string }) {
-  const { result, trip, footageLinks, hubName, dispatchDate, recipientName, remarks } = input;
+  return buildCompactRTOPreAlertMail(input);
+  /* legacy formatter retained below for migration safety
   const date = dispatchDate ? new Date(`${dispatchDate}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
   const route = trip ? `${trip.originHubCode} to ${trip.destinationHubCode}` : hubName || 'Hub';
   const subject = `RTO Pre-Alert | ${trip?.tripId || route} | ${result.totalShipments} Shipments`;
@@ -115,6 +125,46 @@ Bag-wise Summary:
 ${bagLines}
 ${remarks.trim() ? `\nRemarks: ${remarks.trim()}\n` : ''}
 The RTO manifest and trip sheet are attached for your reference. Kindly acknowledge receipt and arrange further processing at the destination sort center.
+
+Regards,
+${hubName || 'Hub Operations Team'}`;
+  return { subject, body };
+  */
+}
+
+function buildCompactRTOPreAlertMail(input: { result: RTOPreAlertResult; trip: RTOTripDetails | null; footageLinks: Record<string,string>; hubName: string; dispatchDate: string; recipientName: string; remarks: string }) {
+  const { result, trip, footageLinks, hubName, dispatchDate, recipientName, remarks } = input;
+  const date = dispatchDate ? new Date(`${dispatchDate}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+  const route = trip ? `${trip.originHubCode} to ${trip.destinationHubCode}` : hubName || 'Hub';
+  const subject = `RTO Pre-Alert | ${trip?.tripId || route} | ${result.totalShipments} Shipments`;
+  const rows = result.bags.map((bag) => ({ bag: bag.bagId, count: String(bag.shipmentCount), footage: footageLinks[bag.bagId]?.trim() || '-' }));
+  const bagWidth = Math.max(6, ...rows.map((row) => row.bag.length));
+  const footageWidth = Math.max(15, ...rows.map((row) => row.footage.length));
+  const line = `+${'-'.repeat(bagWidth + 2)}+-----------+${'-'.repeat(footageWidth + 2)}+`;
+  const cell = (value: string, width: number) => ` ${value.padEnd(width)} `;
+  const table = [line, `|${cell('Bag ID', bagWidth)}|${cell('Shipments', 9)}|${cell('Bagging Footage', footageWidth)}|`, line, ...rows.map((row) => `|${cell(row.bag, bagWidth)}|${cell(row.count, 9)}|${cell(row.footage, footageWidth)}|`), line].join('\n');
+  const body = `Dear ${recipientName.trim() || 'Team'},
+
+Please find the RTO pre-alert details dated ${date}.
+
+TRIP DETAILS
+Trip ID       : ${trip?.tripId || 'N/A'}
+Route         : ${route}
+Connection ID : ${trip?.connectionId || 'N/A'}
+
+TRANSPORTER DETAILS
+Transporter   : ${trip?.transporterName || 'N/A'}
+Driver        : ${trip?.driverName || 'N/A'}
+Vehicle No.   : ${trip?.vehicleNumber || 'N/A'}
+Vehicle Type  : ${trip?.vehicleType || 'N/A'}
+
+Total Bags      : ${result.bags.length}
+Total Shipments : ${result.totalShipments}
+
+BAG-WISE SHIPMENT SUMMARY
+${table}
+${remarks.trim() ? `\nRemarks: ${remarks.trim()}\n` : ''}
+The RTO manifest and trip sheet are attached for reference. Kindly acknowledge receipt.
 
 Regards,
 ${hubName || 'Hub Operations Team'}`;

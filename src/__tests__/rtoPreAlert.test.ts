@@ -29,7 +29,8 @@ describe('RTO pre-alert mail', () => {
     const result = await parseRTOPreAlertFile(file([{ 'Bag No': 'RTO-9', 'Waybill No': 'AWB-1' }]));
     const mail = buildRTOPreAlertMail({ result, trip: null, footageLinks: { 'RTO-9': 'https://drive.google.com/example' }, hubName: 'Valmo-JDG', dispatchDate: '2026-08-12', recipientName: 'RTO Team', remarks: 'Seal verified' });
     expect(mail.subject).toContain('Valmo-JDG');
-    expect(mail.body).toContain('Bag ID: RTO-9 — 1 shipment');
+    expect(mail.body).toContain('RTO-9');
+    expect(mail.body).toContain('BAG-WISE SHIPMENT SUMMARY');
     expect(mail.body).toContain('https://drive.google.com/example');
     expect(mail.body).toContain('Seal verified');
   });
