@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { NDR_REASON_FILTERS, NDR_WORKFLOW_STATUS } from './ndrConstants';
 import { normalizeNDRReason } from './ndrReasonNormalizer';
 
-import {
+import type {
   NDRCallLog,
   NDRFilterParams,
   NDRImportBatch,
@@ -89,8 +89,16 @@ export async function fetchNDRShipments(
       query = query.ilike('otp_status', `%${otpStatus}%`);
     }
   }
-  if (deliveryStatus && deliveryStatus !== 'ALL') {
-    query = query.eq('shipment_status_current', deliveryStatus);
+  const currentStatus = deliveryStatus || status;
+  if (currentStatus && currentStatus !== 'ALL') {
+    query = query.eq('shipment_status_current', currentStatus);
+  }
+
+  if (startDate) {
+    query = query.gte('created_at', `${startDate}T00:00:00.000Z`);
+  }
+  if (endDate) {
+    query = query.lte('created_at', `${endDate}T23:59:59.999Z`);
   }
 
   const effectiveReason = normalizedReason || (reason && reason !== 'ALL' ? reason : undefined);
@@ -132,9 +140,9 @@ export async function fetchNDRShipments(
   const to = from + limit - 1;
 
   if (workflowStatus === NDR_WORKFLOW_STATUS.CALLING_PENDING || workflowStatus === 'Calling Pending') {
-    query = query.order('total_attempts', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
+    query = query.order('total_attempts', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
   } else {
-    query = query.order('created_at', { ascending: false }).range(from, to);
+    query = query.order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
   }
 
   let { data, count, error } = await query;
@@ -145,7 +153,7 @@ export async function fetchNDRShipments(
     if (workflowStatus && workflowStatus !== 'ALL') {
       fallbackQuery = fallbackQuery.eq('ndr_workflow_status', workflowStatus);
     }
-    fallbackQuery = fallbackQuery.order('created_at', { ascending: false }).range(from, to);
+    fallbackQuery = fallbackQuery.order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
     const fallbackRes = await fallbackQuery;
     data = fallbackRes.data;
     count = fallbackRes.count;
@@ -165,6 +173,64 @@ export async function fetchNDRShipments(
     data: rawList,
     count: count || 0,
   };
+}
+
+/**
+ * Fetches all NDR shipments across all pages matching the given filters.
+ * Batches requests to respect Supabase PostgREST row limits (default 1000).
+ * Deduplicates by shipment id/awb and preserves strict ordering.
+ */
+export async function fetchAllNDRShipments(
+  params: Omit<NDRFilterParams, 'page' | 'limit'> = {},
+  onProgress?: (loaded: number, total: number) => void,
+  batchSize = 1000
+): Promise<NDRShipment[]> {
+  const allShipments: NDRShipment[] = [];
+  const seenIds = new Set<string>();
+  let currentPage = 1;
+  let totalRecords = 0;
+
+  while (currentPage <= 1000) {
+    const { data, count } = await fetchNDRShipments({
+      ...params,
+      page: currentPage,
+      limit: batchSize,
+    });
+
+    if (totalRecords === 0 && count > 0) {
+      totalRecords = count;
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    for (const shipment of data) {
+      const identifier = shipment.id || shipment.awb_number;
+      if (identifier) {
+        if (!seenIds.has(identifier)) {
+          seenIds.add(identifier);
+          allShipments.push(shipment);
+        }
+      } else {
+        allShipments.push(shipment);
+      }
+    }
+
+    if (onProgress) {
+      onProgress(allShipments.length, Math.max(totalRecords, allShipments.length));
+    }
+
+    // Stop if we received fewer than batchSize (reached the end of records)
+    // or if we have collected all matching records
+    if (data.length < batchSize || (totalRecords > 0 && allShipments.length >= totalRecords)) {
+      break;
+    }
+
+    currentPage += 1;
+  }
+
+  return allShipments;
 }
 
 export async function fetchExistingAWBMap(

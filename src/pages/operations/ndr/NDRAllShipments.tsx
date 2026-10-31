@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useHub } from '@/lib/hubContext';
-import { fetchNDRShipments } from '@/lib/ndr/ndrService';
+import { fetchAllNDRShipments, fetchNDRShipments } from '@/lib/ndr/ndrService';
 import { exportNDRShipmentsToCSV, exportNDRShipmentsToExcel } from '@/lib/ndr/ndrExcel';
 import { NDR_WORKFLOW_STATUS } from '@/lib/ndr/ndrConstants';
 import { NDRFilterParams, NDRShipment, NDRWorkflowStatus } from '@/types/ndr';
@@ -33,6 +33,9 @@ export default function NDRAllShipments() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingCSV, setExportingCSV] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ loaded: number; total: number } | null>(null);
 
   // Filters State
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -116,36 +119,85 @@ export default function NDRAllShipments() {
     loadData();
   };
 
-  const handleExportExcel = () => {
-    exportNDRShipmentsToExcel(shipments, `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const getActiveFilterParams = (): Omit<NDRFilterParams, 'page' | 'limit'> => ({
+    hubId: selectedHub?.id || undefined,
+    search: search.trim() || undefined,
+    workflowStatus,
+    attempts: attempts !== 'ALL' ? attempts : undefined,
+    isToday,
+    vendor: vendor !== 'ALL' ? vendor : undefined,
+    executive: executive !== 'ALL' ? executive : undefined,
+    reason: reason !== 'ALL' ? reason : undefined,
+    otpStatus: otpStatus !== 'ALL' ? otpStatus : undefined,
+    aging,
+  });
+
+  const handleExportExcel = async () => {
+    if (exportingExcel || exportingCSV) return;
+    setExportingExcel(true);
+    setExportProgress(null);
+    try {
+      const allShipments = await fetchAllNDRShipments(
+        getActiveFilterParams(),
+        (loaded, total) => {
+          setExportProgress({ loaded, total });
+        }
+      );
+
+      if (!allShipments.length) {
+        setToastMsg('No shipments found matching active filters to export.');
+        return;
+      }
+
+      await exportNDRShipmentsToExcel(
+        allShipments,
+        `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.xlsx`
+      );
+      setToastMsg(`Successfully exported all ${allShipments.length} shipments to Excel.`);
+    } catch (err) {
+      console.error('Failed to export all NDR shipments to Excel:', err);
+      setToastMsg('Failed to export shipments to Excel. Please try again.');
+    } finally {
+      setExportingExcel(false);
+      setExportProgress(null);
+    }
   };
 
-  const handleExportCSV = () => {
-    exportNDRShipmentsToCSV(shipments, `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.csv`);
+  const handleExportCSV = async () => {
+    if (exportingExcel || exportingCSV) return;
+    setExportingCSV(true);
+    setExportProgress(null);
+    try {
+      const allShipments = await fetchAllNDRShipments(
+        getActiveFilterParams(),
+        (loaded, total) => {
+          setExportProgress({ loaded, total });
+        }
+      );
+
+      if (!allShipments.length) {
+        setToastMsg('No shipments found matching active filters to export.');
+        return;
+      }
+
+      await exportNDRShipmentsToCSV(
+        allShipments,
+        `ndr_shipments_export_${new Date().toISOString().split('T')[0]}.csv`
+      );
+      setToastMsg(`Successfully exported all ${allShipments.length} shipments to CSV.`);
+    } catch (err) {
+      console.error('Failed to export all NDR shipments to CSV:', err);
+      setToastMsg('Failed to export shipments to CSV. Please try again.');
+    } finally {
+      setExportingCSV(false);
+      setExportProgress(null);
+    }
   };
 
   const handleCopyAllAwbs = async () => {
     try {
-      const allAwbs: string[] = [];
-      let copyPage = 1;
-      let expectedCount = totalCount;
-      do {
-        const result = await fetchNDRShipments({
-          hubId: selectedHub?.id || undefined, search, workflowStatus,
-          attempts: attempts !== 'ALL' ? attempts : undefined, isToday,
-          vendor: vendor !== 'ALL' ? vendor : undefined,
-          executive: executive !== 'ALL' ? executive : undefined,
-          reason: reason !== 'ALL' ? reason : undefined,
-          otpStatus: otpStatus !== 'ALL' ? otpStatus : undefined,
-          aging, page: copyPage, limit: 500,
-        });
-        expectedCount = result.count;
-        allAwbs.push(...result.data.map((shipment) => shipment.awb_number).filter(Boolean));
-        if (result.data.length < 500) break;
-        copyPage += 1;
-      } while (allAwbs.length < expectedCount);
-
-      const uniqueAwbs = [...new Set(allAwbs)];
+      const allData = await fetchAllNDRShipments(getActiveFilterParams());
+      const uniqueAwbs = [...new Set(allData.map((shipment) => shipment.awb_number).filter(Boolean))];
       if (!uniqueAwbs.length) return setToastMsg('No AWBs found to copy.');
       await navigator.clipboard.writeText(uniqueAwbs.join('\n'));
       setToastMsg(`${uniqueAwbs.length} filtered AWBs copied!`);
@@ -286,7 +338,7 @@ export default function NDRAllShipments() {
         <div className="flex w-full items-center gap-2 md:w-auto">
           <button
             onClick={handleCopyAllAwbs}
-            disabled={loading || totalCount === 0}
+            disabled={loading || exportingExcel || exportingCSV || totalCount === 0}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-bold text-violet-700 transition hover:bg-violet-100 disabled:opacity-50 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 md:flex-none"
             title="Copy every AWB matching the active filters"
           >
@@ -294,15 +346,47 @@ export default function NDRAllShipments() {
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 md:flex-none"
+            disabled={loading || exportingExcel || exportingCSV || totalCount === 0}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 md:flex-none"
+            title="Download all shipments across all pages to Excel"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+            {exportingExcel ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span>
+                  {exportProgress && exportProgress.total > 0
+                    ? `Exporting (${exportProgress.loaded}/${exportProgress.total})...`
+                    : 'Exporting...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>Excel</span>
+              </>
+            )}
           </button>
           <button
             onClick={handleExportCSV}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300 md:flex-none"
+            disabled={loading || exportingExcel || exportingCSV || totalCount === 0}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300 md:flex-none"
+            title="Download all shipments across all pages to CSV"
           >
-            <Download className="h-3.5 w-3.5" /> CSV
+            {exportingCSV ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span>
+                  {exportProgress && exportProgress.total > 0
+                    ? `Exporting (${exportProgress.loaded}/${exportProgress.total})...`
+                    : 'Exporting...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <Download className="h-3.5 w-3.5" />
+                <span>CSV</span>
+              </>
+            )}
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { NDRExcelImportPreview, NDRShipment, ParsedNDRExcelRow } from '@/types/ndr';
+import type { NDRExcelImportPreview, NDRShipment, ParsedNDRExcelRow } from '@/types/ndr';
 
 export function normalizeHeader(value: unknown): string {
   return String(value ?? '')
@@ -436,6 +436,8 @@ export async function parseNDRExcelFile(
  * Export shipment dataset to Excel (.xlsx)
  */
 export async function exportNDRShipmentsToExcel(shipments: NDRShipment[], filename = 'ndr_shipments.xlsx') {
+  if (!shipments || shipments.length === 0) return;
+
   const rows = shipments.map((s) => ({
     'AWB Number': s.awb_number,
     'DRS Code': s.drs_code || '',
@@ -458,12 +460,15 @@ export async function exportNDRShipmentsToExcel(shipments: NDRShipment[], filena
     'NDR Cycle': s.ndr_cycle,
     'Assigned Caller': s.assigned_caller?.name || '',
     'Assigned Supervisor': s.assigned_supervisor?.name || '',
+    'Latest Caller Remark': s.last_caller_remark || '',
+    'Latest Supervisor Remark': s.last_supervisor_remark || '',
     'Delivered Date': s.delivered_date ? new Date(s.delivered_date).toLocaleDateString() : '',
     'POD Reference': s.pod_reference || '',
     'COD Collected': s.cod_collected_amount ?? '',
     'RTO Date': s.rto_date ? new Date(s.rto_date).toLocaleDateString() : '',
     'RTO Reason': s.rto_reason || '',
-    'Created At': new Date(s.created_at).toLocaleDateString(),
+    'Created At': s.created_at ? new Date(s.created_at).toLocaleDateString() : '',
+    'Updated At': s.updated_at ? new Date(s.updated_at).toLocaleDateString() : '',
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -476,6 +481,7 @@ export async function exportNDRShipmentsToExcel(shipments: NDRShipment[], filena
  * Export shipment dataset to CSV
  */
 export async function exportNDRShipmentsToCSV(shipments: NDRShipment[], filename = 'ndr_shipments.csv') {
+  if (!shipments || shipments.length === 0) return;
   const rows = shipments.map((s) => ({
     AWB: s.awb_number,
     Client: s.client_name || '',
@@ -487,6 +493,8 @@ export async function exportNDRShipmentsToCSV(shipments: NDRShipment[], filename
     Amount: s.amount_payable,
     Workflow_Status: s.ndr_workflow_status,
     Original_Reason: s.original_ndr_reason || '',
+    Latest_Caller_Remark: s.last_caller_remark || '',
+    Latest_Supervisor_Remark: s.last_supervisor_remark || '',
     Attempts: s.total_attempts,
     Cycle: s.ndr_cycle,
   }));
