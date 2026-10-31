@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { normalizeNDRReason } from '@/lib/ndr/ndrReasonNormalizer';
+import { parseReportDate } from '@/lib/ndr/ndrExcel';
 import { DRSReportRow } from '@/types/drs';
 
 export type DRSShipmentOutcome = 'undelivered' | 'delivered' | 'rto' | 'cancelled' | 'unknown';
@@ -106,11 +107,11 @@ export async function syncDRSUndelToNDR(
         ndr_workflow_status: 'Closed',
         final_action: delivered ? 'Delivered' : outcome === 'rto' ? 'RTO' : 'Cancelled',
         delivered_after_ndr: delivered,
-        delivered_date: delivered ? (row.pod_date || now) : existing.delivered_date,
-        rto_date: outcome === 'rto' ? (row.last_attempt_date || now) : existing.rto_date,
+        delivered_date: delivered ? (parseReportDate(row.pod_date) || now) : existing.delivered_date,
+        rto_date: outcome === 'rto' ? (parseReportDate(row.last_attempt_date) || now) : existing.rto_date,
         drs_code: row.drs_code || existing.drs_code,
-        drs_date: row.drs_date || fileMeta?.reportDate || existing.drs_date,
-        last_attempt_date: row.last_attempt_date || existing.last_attempt_date,
+        drs_date: parseReportDate(row.drs_date) || parseReportDate(fileMeta?.reportDate) || existing.drs_date,
+        last_attempt_date: parseReportDate(row.last_attempt_date) || existing.last_attempt_date,
         total_attempts: Math.max(existing.total_attempts || 1, row.total_attempts || 1),
         updated_at: now,
       }});
@@ -130,7 +131,7 @@ export async function syncDRSUndelToNDR(
     result.reasonCounts[reason] = (result.reasonCounts[reason] || 0) + 1;
 
     if (existing) {
-      const attemptDate = row.last_attempt_date || row.first_attempt_date || row.drs_date || fileMeta?.reportDate || now;
+      const attemptDate = parseReportDate(row.last_attempt_date) || parseReportDate(row.first_attempt_date) || parseReportDate(row.drs_date) || parseReportDate(fileMeta?.reportDate) || now;
       const unchanged =
         isActiveCase(existing) &&
         (existing.total_attempts || 1) === (row.total_attempts || 1) &&
@@ -149,7 +150,7 @@ export async function syncDRSUndelToNDR(
         last_attempt_date: attemptDate,
         otp_status: row.otp_details || existing.otp_status,
         drs_code: row.drs_code || existing.drs_code,
-        drs_date: row.drs_date || fileMeta?.reportDate || existing.drs_date,
+        drs_date: parseReportDate(row.drs_date) || parseReportDate(fileMeta?.reportDate) || existing.drs_date,
         delivery_executive: row.employee_name || existing.delivery_executive,
         consignee_name: row.consignee || existing.consignee_name,
         consignee_phone: row.consignee_phone || existing.consignee_phone,
@@ -180,8 +181,8 @@ export async function syncDRSUndelToNDR(
       shipment_status_original: 'UNDEL', shipment_status_current: 'UNDEL', ndr_workflow_status: 'Calling Pending',
       original_ndr_reason: row.reason || 'Undelivered Attempt', normalized_ndr_reason: reason,
       otp_status: row.otp_details || null, drs_status: row.drs_status || null,
-      drs_date: row.drs_date || fileMeta?.reportDate || now, first_attempt_date: row.first_attempt_date || now,
-      last_attempt_date: row.last_attempt_date || row.first_attempt_date || now, total_attempts: row.total_attempts || 1,
+      drs_date: parseReportDate(row.drs_date) || parseReportDate(fileMeta?.reportDate) || now, first_attempt_date: parseReportDate(row.first_attempt_date) || now,
+      last_attempt_date: parseReportDate(row.last_attempt_date) || parseReportDate(row.first_attempt_date) || now, total_attempts: row.total_attempts || 1,
       delivery_pincode: row.delivery_pincode, is_mobility: row.is_mobility, ndr_cycle: lastCycle + 1,
       hub_id: targetHubId, created_by: profile?.id || null, created_at: now, updated_at: now,
     });

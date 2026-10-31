@@ -172,4 +172,24 @@ describe('DRS → NDR Auto-Sync & Reason Normalizer System', () => {
     expect(result.reasonCounts['Customer Refused to Accept']).toBe(1);
     expect(result.reasonCounts['Customer Refused OTP']).toBe(1);
   });
+
+  it('correctly normalizes comma-separated DD-MM-YYYY dates when auto-syncing to Supabase', async () => {
+    const rowWithCommaDate = shipment({
+      waybill_no: 'AWB_COMMA_DATE',
+      shipment_status_raw: 'UNDEL',
+      shipment_status_normalized: 'Undelivered',
+      last_attempt_date: '31-10-2026, 09:21',
+      first_attempt_date: '25-10-2026 09:08',
+      drs_date: '31-10-2026, 09:21',
+      reason: 'Customer Refused',
+    });
+
+    const result = await syncDRSUndelToNDR([rowWithCommaDate], 'hub-test-01', { name: 'Admin', hub_id: 'hub-test-01' }, {
+      fileName: 'TEST_COMMA_DATE.xlsx',
+      reportDate: '2026-10-31',
+    });
+
+    expect(result.undelSentToNdr).toBe(1);
+    expect(result.newNdrCreated).toBe(1);
+  });
 });

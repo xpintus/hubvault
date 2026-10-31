@@ -120,17 +120,20 @@ export function parseReportDate(value: unknown): string | null {
   }
 
   if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value <= 0) return null;
     try {
       const parsed = XLSX.SSF.parse_date_code(value);
       if (!parsed) return null;
-      const date = new Date(
-        parsed.y,
-        parsed.m - 1,
-        parsed.d,
-        parsed.H ?? 0,
-        parsed.M ?? 0,
-        parsed.S ?? 0
-      );
+      const y = parsed.y;
+      const m = parsed.m;
+      const d = parsed.d;
+      const h = parsed.H ?? 0;
+      const min = parsed.M ?? 0;
+      const s = Math.floor(parsed.S ?? 0);
+      if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+      const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      if (d > daysInMonth) return null;
+      const date = new Date(Date.UTC(y, m - 1, d, h, min, s));
       return Number.isNaN(date.getTime()) ? null : date.toISOString();
     } catch {
       return null;
@@ -140,20 +143,94 @@ export function parseReportDate(value: unknown): string | null {
   const text = String(value).trim();
   if (!text) return null;
 
-  // Pattern: D-M-YYYY, HH:mm or D/M/YYYY HH:mm or D-M-YYYY
-  const match = text.match(
-    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:,\s*|\s+)?(\d{1,2})?:?(\d{2})?$/
+  // 1. DD-MM-YYYY or DD/MM/YYYY with optional time, seconds, and AM/PM
+  const dmyMatch = text.match(
+    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:(?:\s*,\s*|\s+)(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([AaPp][Mm]))?)?$/
   );
 
-  if (match) {
-    const [, day, month, year, hour = '0', minute = '0'] = match;
-    const date = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute)
-    );
+  if (dmyMatch) {
+    const [, day, month, year, hour = '0', minute = '0', second = '0', meridiem] = dmyMatch;
+    const y = Number(year);
+    const m = Number(month);
+    const d = Number(day);
+    let h = Number(hour);
+    const min = Number(minute);
+    const s = Number(second);
+
+    if (meridiem) {
+      const mUpper = meridiem.toUpperCase();
+      if (mUpper === 'PM' && h < 12) h += 12;
+      else if (mUpper === 'AM' && h === 12) h = 0;
+    }
+
+    if (
+      y < 1000 ||
+      y > 9999 ||
+      m < 1 ||
+      m > 12 ||
+      d < 1 ||
+      d > 31 ||
+      h < 0 ||
+      h > 23 ||
+      min < 0 ||
+      min > 59 ||
+      s < 0 ||
+      s > 59
+    ) {
+      return null;
+    }
+
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    if (d > daysInMonth) {
+      return null;
+    }
+
+    const date = new Date(Date.UTC(y, m - 1, d, h, min, s));
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  // 2. ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss... or YYYY-MM-DD HH:mm:ss
+  const isoMatch = text.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|([+-]\d{2}(?::?\d{2})?))?)?$/
+  );
+
+  if (isoMatch) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0', tz] = isoMatch;
+    const y = Number(year);
+    const m = Number(month);
+    const d = Number(day);
+    const h = Number(hour);
+    const min = Number(minute);
+    const s = Math.floor(Number(second));
+
+    if (
+      y < 1000 ||
+      y > 9999 ||
+      m < 1 ||
+      m > 12 ||
+      d < 1 ||
+      d > 31 ||
+      h < 0 ||
+      h > 23 ||
+      min < 0 ||
+      min > 59 ||
+      s < 0 ||
+      s > 59
+    ) {
+      return null;
+    }
+
+    const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    if (d > daysInMonth) {
+      return null;
+    }
+
+    if (tz || text.endsWith('Z')) {
+      const dObj = new Date(text);
+      return Number.isNaN(dObj.getTime()) ? null : dObj.toISOString();
+    }
+
+    const date = new Date(Date.UTC(y, m - 1, d, h, min, s));
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 

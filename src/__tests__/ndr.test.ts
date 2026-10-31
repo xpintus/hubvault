@@ -60,6 +60,29 @@ describe('NDR Management Utility & Parsing Tests', () => {
     expect(parseReportDate('invalid date string')).toBeNull();
   });
 
+  it('correctly handles regression date formats and rejects invalid dates', () => {
+    // 1. Comma-separated DD-MM-YYYY, HH:mm (production error format)
+    const d1 = parseReportDate('31-10-2026, 09:21');
+    expect(d1).toBe('2026-10-31T09:21:00.000Z');
+
+    // 2. Space-separated DD-MM-YYYY HH:mm
+    const d2 = parseReportDate('25-10-2026 09:08');
+    expect(d2).toBe('2026-10-25T09:08:00.000Z');
+
+    // 3. Valid ISO timestamp
+    const isoString = '2026-10-31T09:21:00.000Z';
+    expect(parseReportDate(isoString)).toBe(isoString);
+
+    // 4. Invalid date (e.g. Feb 31 does not exist) - must explicitly return null
+    expect(parseReportDate('31-02-2026, 09:21')).toBeNull();
+
+    // 5. Additional edge cases: null, empty string, malformed
+    expect(parseReportDate(null)).toBeNull();
+    expect(parseReportDate('')).toBeNull();
+    expect(parseReportDate('   ')).toBeNull();
+    expect(parseReportDate('31-04-2026, 09:21')).toBeNull(); // April has 30 days
+  });
+
   it('parses realistic Excel report sample buffer and generates accurate preview', async () => {
     const sampleRows = [
       {
