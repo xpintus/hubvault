@@ -24,7 +24,22 @@ export function normalizeStatus(rawStatus: unknown): NormalizedShipmentStatus {
   if (['UNDEL', 'UNDELIVERED', 'UN DELIVERED', 'UNDELIVERED ATTEMPT', 'NOT DELIVERED', 'ATTEMPTED', 'FAILED', 'DELIVERY FAILED', 'NDR'].includes(s) || s.includes('UNDEL')) return 'Undelivered';
   if (['CANCEL', 'CANCELLED', 'CANCELED'].includes(s)) return 'Cancelled';
   if (['RTO', 'RETURN TO ORIGIN', 'RETURNED'].includes(s)) return 'RTO';
+  if (['OFD', 'OUT FOR DELIVERY', 'OUT ON ROAD', 'DISPATCHED', 'IN TRANSIT'].includes(s) || s === 'OFD') return 'OFD';
   return 'Unknown';
+}
+
+// Determines if a shipment's operational status is currently OFD (Out for Delivery)
+export function isShipmentStatusOFD(row: DRSReportRow): boolean {
+  if (row.shipment_status_normalized === 'OFD') return true;
+  const raw = String(row.shipment_status_raw ?? '').trim().toUpperCase().replace(/[\s_-]+/g, ' ');
+  if (['OFD', 'OUT FOR DELIVERY', 'OUT ON ROAD', 'DISPATCHED', 'IN TRANSIT'].includes(raw) || raw === 'OFD') {
+    return true;
+  }
+  // Shipments awaiting a final outcome (neither Delivered, Undelivered, Cancelled, nor RTO)
+  if (row.shipment_status_normalized === 'Unknown' || !row.shipment_status_normalized) {
+    return true;
+  }
+  return false;
 }
 
 export function normalizeAmount(rawAmount: unknown): number {

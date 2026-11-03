@@ -1,4 +1,4 @@
-export type NormalizedShipmentStatus = 'Delivered' | 'Undelivered' | 'Cancelled' | 'RTO' | 'Unknown';
+export type NormalizedShipmentStatus = 'Delivered' | 'Undelivered' | 'Cancelled' | 'RTO' | 'OFD' | 'Unknown';
 
 export interface DRSReportRow {
   rowIndex: number;
@@ -37,6 +37,8 @@ export interface DRSReportRow {
 export interface EmployeeDRSMetrics {
   employee_name: string;
   total_ofd: number;
+  status_ofd: number;
+  pending: number;
   first_attempt_ofd: number;
   first_attempt_delivered: number;
   first_attempt_undel: number;
@@ -167,6 +169,8 @@ export interface OverallDRSSummary {
 
   // OFD Totals
   totalOfd: number; // Total unique valid AWBs
+  statusOfd: number; // Shipments with current status OFD
+  totalPending: number; // Shipments pending delivery outcome (totalOfd - totalDelivered)
   firstAttemptOfd: number;
   firstAttemptDelivered: number;
   firstAttemptUndel: number;

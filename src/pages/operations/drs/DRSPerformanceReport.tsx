@@ -31,24 +31,17 @@ import {
 import { parseDRSFile } from '@/lib/drs/drsParser';
 import { exportDRSPerformancePDF } from '@/lib/drs/drsPdfExporter';
 import {
-  ClientDRSMetrics,
   DRSFilterOptions,
   DRSReportComparison,
   DRSReportHistoryItem,
   DRSReportRow,
   EmployeeDRSMetrics,
-  NDRReasonMetrics,
   OverallDRSSummary,
-  PaymentAnalyticsMetrics,
-  RTOAnalyticsMetrics,
 } from '@/types/drs';
 import { DRSEmployeeDrawer } from '@/components/drs/DRSEmployeeDrawer';
 import { EmployeePerformanceLeaderboard } from '@/components/drs/EmployeePerformanceLeaderboard';
 import { NDRToast } from '@/components/ndr/NDRToast';
 import {
-  ArrowDownRight,
-  ArrowUpRight,
-  BarChart2,
   BarChart3,
   Banknote,
   Building2,
@@ -59,12 +52,9 @@ import {
   Columns,
   Copy,
   CreditCard,
-  Download,
   FileSpreadsheet,
   FileText,
-  Filter,
   History,
-  Layers,
   LayoutDashboard,
   Package,
   PieChart as PieIcon,
@@ -81,7 +71,6 @@ import {
   Upload,
   User,
   Users,
-  XCircle,
 } from 'lucide-react';
 
 type TabType =
@@ -102,7 +91,7 @@ export default function DRSPerformanceReport() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [parsingProgress, setParsingProgress] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const tabParam = new URLSearchParams(window.location.search).get('tab');
     if (tabParam && tabParam.toUpperCase() === 'EMPLOYEE') return 'EMPLOYEE';
@@ -431,7 +420,7 @@ export default function DRSPerformanceReport() {
       `Hub: ${selectedHub?.name || 'All hubs'}`,
       ...filteredEmployeeMetrics.map(
         (employee, index) =>
-          `#${index + 1} ${employee.employee_name} | OFD ${employee.total_ofd} | Delivered ${employee.total_delivered} | Pending ${employee.total_undel} | Reattempt ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall ${employee.overall_delivery_pct}% | COD ${employee.cod_shipments_count} | Prepaid ${employee.prepaid_ofd}`
+          `#${index + 1} ${employee.employee_name} | Total OFD ${employee.total_ofd} | Status OFD ${employee.status_ofd} | Delivered ${employee.total_delivered} | UNDEL ${employee.total_undel} | Pending ${employee.pending} | 1st ${employee.first_attempt_delivery_pct}% | Reattempt ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall ${employee.overall_delivery_pct}% | COD ${employee.cod_shipments_count} | Prepaid ${employee.prepaid_ofd}`
       ),
     ].join('\n');
 
@@ -464,23 +453,25 @@ export default function DRSPerformanceReport() {
       const cards = [
         ['EMPLOYEES', String(filteredEmployeeMetrics.length)],
         ['TOTAL OFD', String(filteredSummary?.totalOfd ?? 0)],
+        ['STATUS OFD', String(filteredSummary?.statusOfd ?? 0)],
+        ['DELIVERED', String(filteredSummary?.totalDelivered ?? 0)],
+        ['UNDEL', String(filteredSummary?.totalUndel ?? 0)],
+        ['PENDING', String(filteredSummary?.totalPending ?? 0)],
         ['OVERALL', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
-        ['COD FAD', `${paymentMetrics.codFadPercent}%`],
-        ['PREPAID FAD', `${paymentMetrics.prepaidFadPercent}%`],
-        ['PENDING', String(filteredSummary?.totalUndel ?? 0)],
       ];
       cards.forEach(([label, value], index) => {
-        const x = 38 + index * 220;
+        const x = 38 + index * 190;
         ctx.fillStyle = 'rgba(255,255,255,0.14)';
-        ctx.fillRect(x, 124, 204, 42);
+        ctx.fillRect(x, 124, 178, 42);
         ctx.fillStyle = '#ddd6fe'; ctx.font = '700 9px Arial'; ctx.fillText(label, x + 12, 140);
         ctx.fillStyle = '#ffffff'; ctx.font = '800 17px Arial'; ctx.fillText(value, x + 12, 160);
       });
 
       const columns = [
-        ['RANK', 35], ['EMPLOYEE', 105], ['OFD', 360], ['DEL.', 440], ['PENDING', 525],
-        ['1ST %', 625], ['RETRY COUNT', 735], ['RETRY %', 855], ['OVERALL %', 965],
-        ['COD COUNT', 1090], ['PREPAID', 1240],
+        ['RANK', 35], ['EMPLOYEE', 95], ['TOTAL OFD', 300], ['STATUS OFD', 390],
+        ['DEL.', 480], ['UNDEL', 550], ['PENDING', 620],
+        ['1ST %', 695], ['RETRY', 775], ['RETRY %', 855], ['OVERALL %', 945],
+        ['COD', 1050], ['PREPAID', 1150],
       ] as const;
       ctx.fillStyle = '#eef2ff'; ctx.fillRect(0, 180, width, 48);
       ctx.fillStyle = '#64748b'; ctx.font = '700 11px Arial';
@@ -491,16 +482,18 @@ export default function DRSPerformanceReport() {
         ctx.fillStyle = index % 2 === 0 ? '#ffffff' : '#f8fafc'; ctx.fillRect(0, y, width, rowHeight);
         ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, y + rowHeight - 1, width, 1);
         ctx.font = '700 14px Arial'; ctx.fillStyle = index < 3 ? '#b45309' : '#64748b'; ctx.fillText(`#${index + 1}`, 35, y + 34);
-        ctx.fillStyle = '#0f172a'; ctx.fillText(employee.employee_name, 105, y + 34);
-        ctx.font = '700 13px Arial'; ctx.fillText(String(employee.total_ofd), 360, y + 34);
-        ctx.fillStyle = '#059669'; ctx.fillText(String(employee.total_delivered), 440, y + 34);
-        ctx.fillStyle = '#e11d48'; ctx.fillText(String(employee.total_undel), 525, y + 34);
-        ctx.fillStyle = '#2563eb'; ctx.fillText(`${employee.first_attempt_delivery_pct}%`, 625, y + 34);
-        ctx.fillStyle = '#7c3aed'; ctx.fillText(String(employee.reattempt_ofd), 735, y + 34);
+        ctx.fillStyle = '#0f172a'; ctx.fillText(employee.employee_name, 95, y + 34);
+        ctx.font = '700 13px Arial'; ctx.fillText(String(employee.total_ofd), 300, y + 34);
+        ctx.fillStyle = '#b45309'; ctx.fillText(String(employee.status_ofd), 390, y + 34);
+        ctx.fillStyle = '#059669'; ctx.fillText(String(employee.total_delivered), 480, y + 34);
+        ctx.fillStyle = '#e11d48'; ctx.fillText(String(employee.total_undel), 550, y + 34);
+        ctx.fillStyle = '#475569'; ctx.fillText(String(employee.pending), 620, y + 34);
+        ctx.fillStyle = '#2563eb'; ctx.fillText(`${employee.first_attempt_delivery_pct}%`, 695, y + 34);
+        ctx.fillStyle = '#7c3aed'; ctx.fillText(String(employee.reattempt_ofd), 775, y + 34);
         ctx.fillText(`${employee.reattempt_delivery_pct}%`, 855, y + 34);
-        ctx.fillStyle = '#059669'; ctx.fillText(`${employee.overall_delivery_pct}%`, 965, y + 34);
-        ctx.fillStyle = '#0f172a'; ctx.fillText(String(employee.cod_shipments_count), 1090, y + 34);
-        ctx.fillText(String(employee.prepaid_ofd), 1240, y + 34);
+        ctx.fillStyle = '#059669'; ctx.fillText(`${employee.overall_delivery_pct}%`, 945, y + 34);
+        ctx.fillStyle = '#0f172a'; ctx.fillText(String(employee.cod_shipments_count), 1050, y + 34);
+        ctx.fillText(String(employee.prepaid_ofd), 1150, y + 34);
       });
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
 

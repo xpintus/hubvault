@@ -8,6 +8,7 @@ import {
   PaymentAnalyticsMetrics,
   RTOAnalyticsMetrics,
 } from '@/types/drs';
+import { isShipmentStatusOFD } from './drsParser';
 
 export function computeOverallDRSSummary(
   uniqueRows: DRSReportRow[],
@@ -21,6 +22,7 @@ export function computeOverallDRSSummary(
   }
 ): OverallDRSSummary {
   const totalOfd = uniqueRows.length;
+  let statusOfd = 0;
 
   let firstAttemptOfd = 0;
   let firstAttemptDelivered = 0;
@@ -95,6 +97,10 @@ export function computeOverallDRSSummary(
       }
     }
 
+    if (isShipmentStatusOFD(r)) {
+      statusOfd++;
+    }
+
     if (status === 'Delivered') {
       totalDelivered++;
     } else if (status === 'Undelivered') {
@@ -157,6 +163,8 @@ export function computeOverallDRSSummary(
     totalDrsCodes: drsCodesSet.size,
 
     totalOfd,
+    statusOfd,
+    totalPending: Math.max(totalOfd - totalDelivered, 0),
     firstAttemptOfd,
     firstAttemptDelivered,
     firstAttemptUndel,
@@ -220,6 +228,7 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
 
   map.forEach((rows, empName) => {
     const totalOfd = rows.length;
+    let statusOfd = 0;
     let firstAttemptOfd = 0;
     let firstAttemptDelivered = 0;
     let firstAttemptUndel = 0;
@@ -295,7 +304,11 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
         }
       }
 
-      if (status === 'Delivered') {
+      if (isShipmentStatusOFD(r)) {
+      statusOfd++;
+    }
+
+    if (status === 'Delivered') {
         totalDelivered++;
       } else if (status === 'Undelivered') {
         totalUndel++;
@@ -349,6 +362,8 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
     employeeMetrics.push({
       employee_name: empName,
       total_ofd: totalOfd,
+      status_ofd: statusOfd,
+      pending: Math.max(totalOfd - totalDelivered, 0),
 
       first_attempt_ofd: firstAttemptOfd,
       first_attempt_delivered: firstAttemptDelivered,

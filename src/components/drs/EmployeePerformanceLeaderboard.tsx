@@ -1,17 +1,16 @@
 import React, { useMemo } from 'react';
 import {
+  AlertCircle,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   Award,
-  Banknote,
   Building2,
   Calendar,
   CheckCircle2,
   ChevronRight,
   Clock,
   Copy,
-  CreditCard,
   Crown,
   Download,
   FileSpreadsheet,
@@ -23,7 +22,7 @@ import {
   Search,
   Sparkles,
   TrendingUp,
-  User,
+  Truck,
   Users,
   X,
 } from 'lucide-react';
@@ -85,7 +84,6 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
   reportDate,
   employeeMetrics,
   summary,
-  paymentMetrics,
   onSelectEmployee,
   onExportExcel,
   onExportPDF,
@@ -119,6 +117,9 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
       <ArrowDown className="h-3 w-3 text-brand-600 dark:text-brand-400" />
     );
   };
+
+  // Safe pending count calculation
+  const totalPending = summary?.totalPending ?? (summary ? Math.max(summary.totalOfd - summary.totalDelivered, 0) : 0);
 
   return (
     <div className="space-y-6">
@@ -248,9 +249,9 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
       </section>
 
       {/* ========================================================= */}
-      {/* 2. RESPONSIVE ROW OF 6 PREMIUM KPI CARDS                  */}
+      {/* 2. RESPONSIVE ROW OF 7 SEPARATE KPI CARDS                 */}
       {/* ========================================================= */}
-      <section className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-6">
+      <section className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {/* Card 1: Total Employees */}
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
           <div className="flex items-start justify-between gap-2">
@@ -266,7 +267,7 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
               <Users className="h-4.5 w-4.5" />
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-neutral-400">
+          <div className="mt-3 text-[10px] font-semibold text-slate-500 dark:text-neutral-400">
             <span>Active executives</span>
           </div>
         </div>
@@ -286,17 +287,97 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
               <Package className="h-4.5 w-4.5" />
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-neutral-400">
-            <span>Assigned shipments</span>
+          <div className="mt-3 text-[10px] font-semibold text-slate-500 dark:text-neutral-400">
+            <span>Total assigned shipments</span>
           </div>
         </div>
 
-        {/* Card 3: Overall Performance % */}
+        {/* Card 3: Shipment Status OFD */}
+        <div className="group relative overflow-hidden rounded-2xl border border-amber-200/90 bg-gradient-to-br from-white to-amber-50/30 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-amber-900/60 dark:from-neutral-900 dark:to-amber-950/20 sm:p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700 dark:text-amber-400">
+                Status OFD
+              </p>
+              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400 sm:text-3xl">
+                {summary?.statusOfd ?? 0}
+              </div>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+              <Truck className="h-4.5 w-4.5" />
+            </span>
+          </div>
+          <div className="mt-3 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+            <span>Active Out on Road</span>
+          </div>
+        </div>
+
+        {/* Card 4: Delivered */}
+        <div className="group relative overflow-hidden rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-white to-emerald-50/30 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/20 sm:p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
+                Delivered
+              </p>
+              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
+                {summary?.totalDelivered ?? 0}
+              </div>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+              <CheckCircle2 className="h-4.5 w-4.5" />
+            </span>
+          </div>
+          <div className="mt-3 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+            <span>Successfully completed</span>
+          </div>
+        </div>
+
+        {/* Card 5: UNDEL */}
+        <div className="group relative overflow-hidden rounded-2xl border border-rose-200/90 bg-gradient-to-br from-white to-rose-50/30 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400 hover:shadow-md dark:border-rose-900/60 dark:from-neutral-900 dark:to-rose-950/20 sm:p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-rose-700 dark:text-rose-400">
+                UNDEL
+              </p>
+              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400 sm:text-3xl">
+                {summary?.totalUndel ?? 0}
+              </div>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+              <Clock className="h-4.5 w-4.5" />
+            </span>
+          </div>
+          <div className="mt-3 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+            <span>Failed attempt / NDR</span>
+          </div>
+        </div>
+
+        {/* Card 6: Pending */}
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">
+                Pending
+              </p>
+              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-800 dark:text-neutral-200 sm:text-3xl">
+                {totalPending}
+              </div>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+              <AlertCircle className="h-4.5 w-4.5" />
+            </span>
+          </div>
+          <div className="mt-3 text-[10px] font-semibold text-slate-500 dark:text-neutral-400">
+            <span>UNDEL + Status OFD</span>
+          </div>
+        </div>
+
+        {/* Card 7: Overall Performance % */}
         <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">
-                Overall Performance
+                Overall %
               </p>
               <div className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
                 {summary?.overallDeliveryPct ?? 0}%
@@ -306,69 +387,8 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
               <TrendingUp className="h-4.5 w-4.5" />
             </span>
           </div>
-          <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-            <span>{summary?.totalDelivered ?? 0} delivered</span>
-            <span className="text-[9px] font-mono text-slate-400">of {summary?.totalOfd ?? 0}</span>
-          </div>
-        </div>
-
-        {/* Card 4: COD FAD % */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">
-                COD FAD %
-              </p>
-              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400 sm:text-3xl">
-                {paymentMetrics.codFadPercent}%
-              </div>
-            </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300">
-              <Banknote className="h-4.5 w-4.5" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-            <span>{paymentMetrics.codFirstAttemptDel}/{paymentMetrics.codFirstAttemptOfd} 1st attempt</span>
-          </div>
-        </div>
-
-        {/* Card 5: Prepaid FAD % */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">
-                Prepaid FAD %
-              </p>
-              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400 sm:text-3xl">
-                {paymentMetrics.prepaidFadPercent}%
-              </div>
-            </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-100 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-sky-300">
-              <CreditCard className="h-4.5 w-4.5" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-blue-700 dark:text-blue-400">
-            <span>{paymentMetrics.prepaidFirstAttemptDel}/{paymentMetrics.prepaidFirstAttemptOfd} 1st attempt</span>
-          </div>
-        </div>
-
-        {/* Card 6: Pending Shipments */}
-        <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">
-                Pending Shipments
-              </p>
-              <div className="mt-2 font-mono text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400 sm:text-3xl">
-                {summary?.totalUndel ?? 0}
-              </div>
-            </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/60 dark:text-rose-300">
-              <Clock className="h-4.5 w-4.5" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
-            <span>Needs NDR / Reattempt</span>
+          <div className="mt-3 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+            <span>Delivery success rate</span>
           </div>
         </div>
       </section>
@@ -380,7 +400,7 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-neutral-300">
             <Filter className="h-3.5 w-3.5 text-slate-400" />
-            <span>Min OFD Threshold:</span>
+            <span>Min Total OFD:</span>
           </div>
           {[0, 5, 10, 20].map((threshold) => (
             <button
@@ -417,31 +437,50 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
       {/* 4. EMPLOYEE LEADERBOARD TABLE (DESKTOP & TABLET)          */}
       {/* ========================================================= */}
       <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        {/* Table Container with Horizontal Scroll for Tablet / Laptop */}
+        {/* Table Container with Horizontal Scroll */}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-xs">
-            {/* Distinct Table Header */}
+            {/* Distinct Table Header with exact requested column order: */}
+            {/* Rank | Employee | Total OFD | Status OFD | Delivered | UNDEL | Pending | 1st Attempt % | Retry Count | Retry % | Overall % | COD Count | Prepaid */}
             <thead className="border-b border-slate-200/90 bg-slate-50/90 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-400">
               <tr>
+                {/* 1. Rank */}
                 <th className="px-4 py-3.5 w-16 text-center">Rank</th>
+
+                {/* 2. Employee */}
                 <th
                   onClick={() => onSortChange('employee_name')}
                   className="group cursor-pointer px-4 py-3.5 transition hover:text-slate-900 dark:hover:text-white"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>Employee Name</span>
+                    <span>Employee</span>
                     {renderSortIndicator('employee_name')}
                   </div>
                 </th>
+
+                {/* 3. Total OFD */}
                 <th
                   onClick={() => onSortChange('total_ofd')}
                   className="group cursor-pointer px-4 py-3.5 font-bold transition hover:text-slate-900 dark:hover:text-white"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>OFD</span>
+                    <span>Total OFD</span>
                     {renderSortIndicator('total_ofd')}
                   </div>
                 </th>
+
+                {/* 4. Status OFD */}
+                <th
+                  onClick={() => onSortChange('status_ofd')}
+                  className="group cursor-pointer px-4 py-3.5 font-bold text-amber-700 transition hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Status OFD</span>
+                    {renderSortIndicator('status_ofd')}
+                  </div>
+                </th>
+
+                {/* 5. Delivered */}
                 <th
                   onClick={() => onSortChange('total_delivered')}
                   className="group cursor-pointer px-4 py-3.5 font-bold text-emerald-700 transition hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
@@ -451,15 +490,30 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {renderSortIndicator('total_delivered')}
                   </div>
                 </th>
+
+                {/* 6. UNDEL */}
                 <th
                   onClick={() => onSortChange('total_undel')}
                   className="group cursor-pointer px-4 py-3.5 font-bold text-rose-700 transition hover:text-rose-900 dark:text-rose-400 dark:hover:text-rose-300"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>Pending</span>
+                    <span>UNDEL</span>
                     {renderSortIndicator('total_undel')}
                   </div>
                 </th>
+
+                {/* 7. Pending */}
+                <th
+                  onClick={() => onSortChange('pending')}
+                  className="group cursor-pointer px-4 py-3.5 font-bold text-slate-700 transition hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Pending</span>
+                    {renderSortIndicator('pending')}
+                  </div>
+                </th>
+
+                {/* 8. 1st Attempt % */}
                 <th
                   onClick={() => onSortChange('first_attempt_delivery_pct')}
                   className="group cursor-pointer px-4 py-3.5 font-bold text-blue-700 transition hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
@@ -469,6 +523,8 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {renderSortIndicator('first_attempt_delivery_pct')}
                   </div>
                 </th>
+
+                {/* 9. Retry Count */}
                 <th
                   onClick={() => onSortChange('reattempt_ofd')}
                   className="group cursor-pointer px-4 py-3.5 font-bold text-purple-700 transition hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
@@ -478,6 +534,8 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {renderSortIndicator('reattempt_ofd')}
                   </div>
                 </th>
+
+                {/* 10. Retry % */}
                 <th
                   onClick={() => onSortChange('reattempt_delivery_pct')}
                   className="group cursor-pointer px-4 py-3.5 font-bold text-purple-700 transition hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
@@ -487,6 +545,8 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {renderSortIndicator('reattempt_delivery_pct')}
                   </div>
                 </th>
+
+                {/* 11. Overall % */}
                 <th
                   onClick={() => onSortChange('overall_delivery_pct')}
                   className="group cursor-pointer px-4 py-3.5 font-black text-slate-900 min-w-36 transition hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
@@ -496,6 +556,8 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {renderSortIndicator('overall_delivery_pct')}
                   </div>
                 </th>
+
+                {/* 12. COD Count */}
                 <th
                   onClick={() => onSortChange('cod_shipments_count')}
                   className="group cursor-pointer px-4 py-3.5 text-right font-bold transition hover:text-slate-900 dark:hover:text-white"
@@ -505,6 +567,8 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {renderSortIndicator('cod_shipments_count')}
                   </div>
                 </th>
+
+                {/* 13. Prepaid */}
                 <th
                   onClick={() => onSortChange('prepaid_ofd')}
                   className="group cursor-pointer px-4 py-3.5 text-right font-bold transition hover:text-slate-900 dark:hover:text-white"
@@ -521,7 +585,7 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
             <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
               {employeeMetrics.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-500 dark:text-neutral-400">
+                  <td colSpan={13} className="py-12 text-center text-slate-500 dark:text-neutral-400">
                     <p className="text-sm font-semibold">No employee records match the active criteria.</p>
                     <button
                       type="button"
@@ -575,7 +639,7 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                       {/* 1. Rank */}
                       <td className="px-4 py-3.5 text-center">{rankBadge}</td>
 
-                      {/* 2. Employee Name with Initials Circular Avatar */}
+                      {/* 2. Employee with Avatar */}
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <div
@@ -591,25 +655,39 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                               {e.employee_name}
                             </span>
                             <span className="block text-[10px] font-medium text-slate-400 dark:text-neutral-500">
-                              {e.total_ofd} OFD • {e.total_delivered} delivered
+                              {e.total_ofd} total OFD • {e.status_ofd} on road
                             </span>
                           </div>
                         </div>
                       </td>
 
-                      {/* 3. OFD */}
+                      {/* 3. Total OFD */}
                       <td className="px-4 py-3.5 font-mono font-bold text-slate-800 dark:text-slate-200">
                         {e.total_ofd}
                       </td>
 
-                      {/* 4. Delivered (Green count) */}
+                      {/* 4. Status OFD */}
+                      <td className="px-4 py-3.5 font-mono font-bold">
+                        <span
+                          className={clsx(
+                            'inline-flex items-center rounded-md px-2 py-0.5',
+                            e.status_ofd > 0
+                              ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                              : 'text-slate-400 dark:text-neutral-600'
+                          )}
+                        >
+                          {e.status_ofd}
+                        </span>
+                      </td>
+
+                      {/* 5. Delivered */}
                       <td className="px-4 py-3.5">
                         <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 font-mono font-black text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                           {e.total_delivered}
                         </span>
                       </td>
 
-                      {/* 5. Pending (Red count) */}
+                      {/* 6. UNDEL */}
                       <td className="px-4 py-3.5">
                         <span
                           className={clsx(
@@ -623,22 +701,36 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                         </span>
                       </td>
 
-                      {/* 6. 1st Attempt % (Blue) */}
+                      {/* 7. Pending (Total OFD - Delivered) */}
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={clsx(
+                            'inline-flex items-center rounded-md px-2 py-0.5 font-mono font-bold',
+                            e.pending > 0
+                              ? 'bg-slate-100 text-slate-700 dark:bg-neutral-800 dark:text-neutral-300'
+                              : 'text-slate-400 dark:text-neutral-600'
+                          )}
+                        >
+                          {e.pending}
+                        </span>
+                      </td>
+
+                      {/* 8. 1st Attempt % */}
                       <td className="px-4 py-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
                         {e.first_attempt_delivery_pct}%
                       </td>
 
-                      {/* 7. Retry Count (Purple) */}
+                      {/* 9. Retry Count */}
                       <td className="px-4 py-3.5 font-mono font-bold text-purple-600 dark:text-purple-400">
                         {e.reattempt_ofd}
                       </td>
 
-                      {/* 8. Retry % (Purple) */}
+                      {/* 10. Retry % */}
                       <td className="px-4 py-3.5 font-mono font-bold text-purple-600 dark:text-purple-400">
                         {e.reattempt_delivery_pct}%
                       </td>
 
-                      {/* 9. Overall % (Horizontal Progress Bar + Percentage) */}
+                      {/* 11. Overall % with Progress Bar */}
                       <td className="min-w-36 px-4 py-3.5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-neutral-800">
@@ -653,12 +745,12 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                         </div>
                       </td>
 
-                      {/* 10. COD Count */}
+                      {/* 12. COD Count */}
                       <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-700 dark:text-neutral-300">
                         {e.cod_shipments_count}
                       </td>
 
-                      {/* 11. Prepaid */}
+                      {/* 13. Prepaid */}
                       <td className="px-4 py-3.5 text-right font-mono font-semibold text-slate-600 dark:text-neutral-400">
                         {e.prepaid_ofd}
                       </td>
@@ -724,7 +816,7 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                           </span>
                         </div>
                         <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                          {e.total_ofd} OFD Shipments
+                          {e.total_ofd} Total OFD • {e.status_ofd} Status OFD
                         </p>
                       </div>
                     </div>
@@ -742,8 +834,22 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     />
                   </div>
 
-                  {/* Grid of Key Employee Metrics */}
+                  {/* Grid of Key Employee Metrics: Total OFD, Status OFD, Delivered, UNDEL, Pending, 1st % */}
                   <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
+                      <div className="font-mono font-black text-slate-800 dark:text-slate-200">
+                        {e.total_ofd}
+                      </div>
+                      <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">Total OFD</div>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
+                      <div className="font-mono font-black text-amber-600 dark:text-amber-400">
+                        {e.status_ofd}
+                      </div>
+                      <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">Status OFD</div>
+                    </div>
+
                     <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
                       <div className="font-mono font-black text-emerald-600 dark:text-emerald-400">
                         {e.total_delivered}
@@ -755,6 +861,13 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                       <div className="font-mono font-black text-rose-600 dark:text-rose-400">
                         {e.total_undel}
                       </div>
+                      <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">UNDEL</div>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
+                      <div className="font-mono font-black text-slate-700 dark:text-neutral-300">
+                        {e.pending}
+                      </div>
                       <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">Pending</div>
                     </div>
 
@@ -763,27 +876,6 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                         {e.first_attempt_delivery_pct}%
                       </div>
                       <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">1st Attempt</div>
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
-                      <div className="font-mono font-bold text-purple-600 dark:text-purple-400">
-                        {e.reattempt_ofd}
-                      </div>
-                      <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">Retry Count</div>
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
-                      <div className="font-mono font-bold text-purple-600 dark:text-purple-400">
-                        {e.reattempt_delivery_pct}%
-                      </div>
-                      <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">Retry %</div>
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-2 dark:bg-neutral-800/60">
-                      <div className="font-mono font-bold text-slate-700 dark:text-neutral-300">
-                        {e.cod_shipments_count}
-                      </div>
-                      <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">COD Shipments</div>
                     </div>
                   </div>
                 </button>
@@ -827,7 +919,7 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
                     {topPerformer.employee_name}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-neutral-400">
-                    {topPerformer.total_delivered} of {topPerformer.total_ofd} shipments delivered
+                    {topPerformer.total_delivered} delivered of {topPerformer.total_ofd} Total OFD ({topPerformer.status_ofd} on road)
                   </p>
                 </div>
               </div>
@@ -876,37 +968,37 @@ export const EmployeePerformanceLeaderboard: React.FC<EmployeePerformanceLeaderb
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 dark:bg-neutral-800/60">
               <span className="text-xs font-semibold text-slate-600 dark:text-neutral-300">
-                Overall Delivery Rate
+                Total Assigned (Total OFD)
               </span>
-              <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
-                {summary?.overallDeliveryPct ?? 0}%
+              <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                {summary?.totalOfd ?? 0}
               </span>
             </div>
 
             <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 dark:bg-neutral-800/60">
               <span className="text-xs font-semibold text-slate-600 dark:text-neutral-300">
-                COD First Attempt Success
+                Active on Road (Status OFD)
               </span>
               <span className="font-mono text-sm font-black text-amber-600 dark:text-amber-400">
-                {paymentMetrics.codFadPercent}%
+                {summary?.statusOfd ?? 0}
               </span>
             </div>
 
             <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 dark:bg-neutral-800/60">
               <span className="text-xs font-semibold text-slate-600 dark:text-neutral-300">
-                Pending Undelivered AWBs
+                Total Delivered
+              </span>
+              <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                {summary?.totalDelivered ?? 0} ({summary?.overallDeliveryPct ?? 0}%)
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 dark:bg-neutral-800/60">
+              <span className="text-xs font-semibold text-slate-600 dark:text-neutral-300">
+                Pending Shipments (UNDEL + OFD)
               </span>
               <span className="font-mono text-sm font-black text-rose-600 dark:text-rose-400">
-                {summary?.totalUndel ?? 0}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 dark:bg-neutral-800/60">
-              <span className="text-xs font-semibold text-slate-600 dark:text-neutral-300">
-                Average Attempts per Shipment
-              </span>
-              <span className="font-mono text-sm font-black text-slate-800 dark:text-white">
-                {summary?.averageAttempts ?? 1}
+                {totalPending}
               </span>
             </div>
           </div>

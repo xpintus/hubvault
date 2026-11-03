@@ -46,6 +46,7 @@ export function exportDRSPerformanceWorkbook(
     ['Valid Operational Rows', summary.validRows],
     ['Invalid Rows (Missing AWB)', summary.invalidRows],
     ['Unique Shipment AWBs (Total OFD)', summary.totalOfd],
+    ['Shipment Status OFD (Out on Road)', summary.statusOfd],
     ['Duplicate AWBs Consolidated', summary.duplicateRows],
     ['Total Delivery Executives', summary.totalEmployees],
     ['Total DRS Codes', summary.totalDrsCodes],
@@ -53,6 +54,7 @@ export function exportDRSPerformanceWorkbook(
     ['DELIVERY PERFORMANCE METRICS'],
     ['Total Delivered Shipments', summary.totalDelivered],
     ['Total UNDEL Shipments', summary.totalUndel],
+    ['Total Pending Shipments', summary.totalPending],
     ['Total Cancelled Shipments', summary.totalCancelled],
     ['Total RTO Shipments', summary.totalRto],
     ['Overall Delivery Rate (%)', `${summary.overallDeliveryPct}%`],
@@ -73,12 +75,12 @@ export function exportDRSPerformanceWorkbook(
     ['COD Total OFD', paymentMetrics.codOfd],
     ['COD Delivered', paymentMetrics.codDelivered],
     ['COD Delivery Rate (%)', `${paymentMetrics.codDeliveryPct}%`],
-    ['COD Total Amount (₹)', paymentMetrics.codTotalAmount],
-    ['COD Delivered Amount (₹)', paymentMetrics.codDeliveredAmount],
+    ['COD Total Amount (â‚¹)', paymentMetrics.codTotalAmount],
+    ['COD Delivered Amount (â‚¹)', paymentMetrics.codDeliveredAmount],
     ['Prepaid Total OFD', paymentMetrics.prepaidOfd],
     ['Prepaid Delivered', paymentMetrics.prepaidDelivered],
     ['Prepaid Delivery Rate (%)', `${paymentMetrics.prepaidDeliveryPct}%`],
-    ['Prepaid Amount (₹)', paymentMetrics.prepaidTotalAmount],
+    ['Prepaid Amount (â‚¹)', paymentMetrics.prepaidTotalAmount],
   ];
 
   const wsOverview = XLSX.utils.aoa_to_sheet(summaryAoa);
@@ -86,29 +88,21 @@ export function exportDRSPerformanceWorkbook(
 
   // 2. Employee Report Sheet
   addSheet(
-    'Employee Report',
+    'Employee Leaderboard',
     employeeMetrics.map((e, idx) => ({
       Rank: idx + 1,
       Employee: e.employee_name,
       'Total OFD': e.total_ofd,
-      '1st OFD': e.first_attempt_ofd,
-      '1st DEL': e.first_attempt_delivered,
-      '1st Rate (%)': `${e.first_attempt_delivery_pct}%`,
-      'Re OFD': e.reattempt_ofd,
-      'Re DEL': e.reattempt_delivered,
-      'Re Rate (%)': `${e.reattempt_delivery_pct}%`,
-      'Total DEL': e.total_delivered,
+      'Status OFD': e.status_ofd,
+      Delivered: e.total_delivered,
       UNDEL: e.total_undel,
-      RTO: e.total_rto,
-      Cancel: e.total_cancelled,
-      'Overall Rate (%)': `${e.overall_delivery_pct}%`,
-      'COD OFD': e.cod_ofd,
-      'COD DEL': e.cod_delivered,
-      'COD Rate (%)': `${e.cod_delivery_pct}%`,
-      'Prepaid OFD': e.prepaid_ofd,
-      'Prepaid DEL': e.prepaid_delivered,
-      'Prepaid Rate (%)': `${e.prepaid_delivery_pct}%`,
-      'COD Amount (₹)': e.cod_value_total,
+      Pending: e.pending,
+      '1st Attempt %': `${e.first_attempt_delivery_pct}%`,
+      'Retry Count': e.reattempt_ofd,
+      'Retry %': `${e.reattempt_delivery_pct}%`,
+      'Overall %': `${e.overall_delivery_pct}%`,
+      'COD Count': e.cod_shipments_count,
+      Prepaid: e.prepaid_ofd,
     }))
   );
 
@@ -160,8 +154,10 @@ export function exportDRSPerformanceWorkbook(
         Rank: idx + 1,
         Employee: e.employee_name,
         'Total OFD': e.total_ofd,
+        'Status OFD': e.status_ofd,
         'Total DEL': e.total_delivered,
         UNDEL: e.total_undel,
+        Pending: e.pending,
         RTO: e.total_rto,
         Cancel: e.total_cancelled,
         'Overall Delivery %': `${e.overall_delivery_pct}%`,
@@ -182,8 +178,8 @@ export function exportDRSPerformanceWorkbook(
         'COD DEL': e.cod_delivered,
         'COD Pending': e.cod_pending,
         'COD Delivery %': `${e.cod_delivery_pct}%`,
-        'COD Amount Total (₹)': e.cod_value_total,
-        'COD Amount Collected (₹)': e.cod_value_delivered,
+        'COD Amount Total (â‚¹)': e.cod_value_total,
+        'COD Amount Collected (â‚¹)': e.cod_value_delivered,
       }))
   );
 
@@ -199,7 +195,7 @@ export function exportDRSPerformanceWorkbook(
         'Prepaid DEL': e.prepaid_delivered,
         'Prepaid Pending': e.prepaid_pending,
         'Prepaid Delivery %': `${e.prepaid_delivery_pct}%`,
-        'Prepaid Amount (₹)': e.prepaid_amount_total,
+        'Prepaid Amount (â‚¹)': e.prepaid_amount_total,
       }))
   );
 
@@ -217,7 +213,7 @@ export function exportDRSPerformanceWorkbook(
       'COD OFD': c.cod_ofd,
       'COD DEL': c.cod_delivered,
       'COD Rate (%)': `${c.cod_delivery_pct}%`,
-      'COD Value (₹)': c.cod_value_total,
+      'COD Value (â‚¹)': c.cod_value_total,
       'Prepaid OFD': c.prepaid_ofd,
       'Prepaid DEL': c.prepaid_delivered,
       'Prepaid Rate (%)': `${c.prepaid_delivery_pct}%`,
@@ -260,7 +256,7 @@ export function exportDRSPerformanceWorkbook(
     Attempts: r.total_attempts,
     Reason: r.reason,
     OTP: r.otp_details,
-    'Amount (₹)': r.amount_payable,
+    'Amount (â‚¹)': r.amount_payable,
     'Payment Type': r.payment_type,
     Pincode: r.delivery_pincode,
     City: r.city,

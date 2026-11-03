@@ -3,17 +3,10 @@ import { createPortal } from 'react-dom';
 import { exportDRSPerformanceWorkbook } from '@/lib/drs/drsExcelExporter';
 import { DRSReportRow, EmployeeDRSMetrics } from '@/types/drs';
 import {
-  Award,
-  CheckCircle2,
-  CreditCard,
   Download,
-  MapPin,
   Search,
-  ShieldAlert,
   Truck,
-  UserCheck,
   X,
-  XCircle,
 } from 'lucide-react';
 
 interface DRSEmployeeDrawerProps {
@@ -100,6 +93,8 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
       totalDrsCodes: new Set(employeeShipments.map((s) => s.drs_code)).size,
 
       totalOfd: metrics.total_ofd,
+      statusOfd: metrics.status_ofd,
+      totalPending: metrics.pending,
       firstAttemptOfd: metrics.first_attempt_ofd,
       firstAttemptDelivered: metrics.first_attempt_delivered,
       firstAttemptUndel: metrics.first_attempt_undel,
@@ -254,7 +249,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
             <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
               <span className="text-purple-700 dark:text-purple-400 block font-bold">COD Collection</span>
               <span className="text-xl font-black text-purple-600 dark:text-purple-400">{metrics.cod_delivery_pct}%</span>
-              <span className="text-[10px] text-purple-600/80 block font-mono font-bold">₹{metrics.cod_value_delivered.toLocaleString()}</span>
+              <span className="text-[10px] text-purple-600/80 block font-mono font-bold">â‚¹{metrics.cod_value_delivered.toLocaleString()}</span>
             </div>
           </div>
 
@@ -318,7 +313,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
                       <tr key={s.rowIndex} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30">
                         <td className="px-3 py-2 font-mono font-bold">{s.waybill_no}</td>
                         <td className="px-3 py-2">{s.consignee || s.customer_name || '-'}</td>
-                        <td className="px-3 py-2 font-mono">₹{s.amount_payable} ({s.payment_type})</td>
+                        <td className="px-3 py-2 font-mono">â‚¹{s.amount_payable} ({s.payment_type})</td>
                         <td className="px-3 py-2 font-mono font-bold">#{s.total_attempts}</td>
                         <td className="px-3 py-2">
                           <span
