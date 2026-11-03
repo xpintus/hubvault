@@ -30,6 +30,7 @@ import {
 } from '@/lib/drs/drsHistoryManager';
 import { parseDRSFile } from '@/lib/drs/drsParser';
 import { exportDRSPerformancePDF } from '@/lib/drs/drsPdfExporter';
+import { generateDRSSnapshotBlob } from '@/lib/drs/drsSnapshotRenderer';
 import {
   DRSFilterOptions,
   DRSReportComparison,
@@ -415,87 +416,38 @@ export default function DRSPerformanceReport() {
     if (copyingEmployeeSnapshot || filteredEmployeeMetrics.length === 0) return;
     setCopyingEmployeeSnapshot(true);
 
+    const hubDisplayName = selectedHub?.name || activeItem?.hubName || 'Main Hub';
+    const repDate = filteredSummary?.reportDate || summary?.reportDate || activeItem?.reportDate || 'N/A';
     const textSnapshot = [
-      `Employee Performance${filteredSummary?.reportDate ? ` - ${filteredSummary.reportDate}` : ''}`,
-      `Hub: ${selectedHub?.name || 'All hubs'}`,
+      `*HUBVAULT - EMPLOYEE PERFORMANCE REPORT*`,
+      `*Team Leaderboard | ${hubDisplayName}*`,
+      `Date: ${repDate}`,
+      ``,
+      `*SUMMARY METRICS*`,
+      `• Total Employees: ${filteredEmployeeMetrics.length}`,
+      `• Total OFD: ${filteredSummary?.totalOfd ?? 0}`,
+      `• Status OFD (On Road): ${filteredSummary?.statusOfd ?? 0}`,
+      `• Delivered: ${filteredSummary?.totalDelivered ?? 0}`,
+      `• UNDEL: ${filteredSummary?.totalUndel ?? 0}`,
+      `• Pending: ${filteredSummary?.totalPending ?? 0}`,
+      `• Overall Delivery Rate: ${filteredSummary?.overallDeliveryPct ?? 0}%`,
+      ``,
+      `*EMPLOYEE LEADERBOARD*`,
       ...filteredEmployeeMetrics.map(
         (employee, index) =>
-          `#${index + 1} ${employee.employee_name} | Total OFD ${employee.total_ofd} | Status OFD ${employee.status_ofd} | Delivered ${employee.total_delivered} | UNDEL ${employee.total_undel} | Pending ${employee.pending} | 1st ${employee.first_attempt_delivery_pct}% | Reattempt ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall ${employee.overall_delivery_pct}% | COD ${employee.cod_shipments_count} | Prepaid ${employee.prepaid_ofd}`
+          `#${index + 1} ${employee.employee_name} | Total OFD: ${employee.total_ofd} | Status OFD: ${employee.status_ofd} | Delivered: ${employee.total_delivered} | UNDEL: ${employee.total_undel} | Pending: ${employee.pending} | 1st: ${employee.first_attempt_delivery_pct}% | Retry: ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall: ${employee.overall_delivery_pct}% | COD: ${employee.cod_shipments_count} | Prepaid: ${employee.prepaid_ofd}`
       ),
+      ``,
+      `HubVault | Collection Reconciliation Suite`,
     ].join('\n');
 
     try {
-      const width = 1400;
-      const rowHeight = 58;
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = 250 + filteredEmployeeMetrics.length * rowHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas is unavailable');
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const gradient = ctx.createLinearGradient(0, 0, width, 180);
-      gradient.addColorStop(0, '#4338ca');
-      gradient.addColorStop(0.55, '#6d28d9');
-      gradient.addColorStop(1, '#a21caf');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, 180);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '700 16px Arial';
-      ctx.fillText('TEAM LEADERBOARD', 38, 42);
-      ctx.font = '800 30px Arial';
-      ctx.fillText('Employee Performance', 38, 82);
-      ctx.font = '400 14px Arial';
-      ctx.fillStyle = '#e0e7ff';
-      ctx.fillText(`${selectedHub?.name || 'All hubs'} â€¢ ${filteredSummary?.reportDate || 'Current report'}`, 38, 108);
-
-      const cards = [
-        ['EMPLOYEES', String(filteredEmployeeMetrics.length)],
-        ['TOTAL OFD', String(filteredSummary?.totalOfd ?? 0)],
-        ['STATUS OFD', String(filteredSummary?.statusOfd ?? 0)],
-        ['DELIVERED', String(filteredSummary?.totalDelivered ?? 0)],
-        ['UNDEL', String(filteredSummary?.totalUndel ?? 0)],
-        ['PENDING', String(filteredSummary?.totalPending ?? 0)],
-        ['OVERALL', `${filteredSummary?.overallDeliveryPct ?? 0}%`],
-      ];
-      cards.forEach(([label, value], index) => {
-        const x = 38 + index * 190;
-        ctx.fillStyle = 'rgba(255,255,255,0.14)';
-        ctx.fillRect(x, 124, 178, 42);
-        ctx.fillStyle = '#ddd6fe'; ctx.font = '700 9px Arial'; ctx.fillText(label, x + 12, 140);
-        ctx.fillStyle = '#ffffff'; ctx.font = '800 17px Arial'; ctx.fillText(value, x + 12, 160);
+      const blob = await generateDRSSnapshotBlob({
+        hubName: selectedHub?.name || activeItem?.hubName || 'Main Hub',
+        reportDate: filteredSummary?.reportDate || summary?.reportDate || activeItem?.reportDate || 'N/A',
+        summary: filteredSummary || summary,
+        employeeMetrics: filteredEmployeeMetrics,
       });
-
-      const columns = [
-        ['RANK', 35], ['EMPLOYEE', 95], ['TOTAL OFD', 300], ['STATUS OFD', 390],
-        ['DEL.', 480], ['UNDEL', 550], ['PENDING', 620],
-        ['1ST %', 695], ['RETRY', 775], ['RETRY %', 855], ['OVERALL %', 945],
-        ['COD', 1050], ['PREPAID', 1150],
-      ] as const;
-      ctx.fillStyle = '#eef2ff'; ctx.fillRect(0, 180, width, 48);
-      ctx.fillStyle = '#64748b'; ctx.font = '700 11px Arial';
-      columns.forEach(([label, x]) => ctx.fillText(label, x, 210));
-
-      filteredEmployeeMetrics.forEach((employee, index) => {
-        const y = 228 + index * rowHeight;
-        ctx.fillStyle = index % 2 === 0 ? '#ffffff' : '#f8fafc'; ctx.fillRect(0, y, width, rowHeight);
-        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, y + rowHeight - 1, width, 1);
-        ctx.font = '700 14px Arial'; ctx.fillStyle = index < 3 ? '#b45309' : '#64748b'; ctx.fillText(`#${index + 1}`, 35, y + 34);
-        ctx.fillStyle = '#0f172a'; ctx.fillText(employee.employee_name, 95, y + 34);
-        ctx.font = '700 13px Arial'; ctx.fillText(String(employee.total_ofd), 300, y + 34);
-        ctx.fillStyle = '#b45309'; ctx.fillText(String(employee.status_ofd), 390, y + 34);
-        ctx.fillStyle = '#059669'; ctx.fillText(String(employee.total_delivered), 480, y + 34);
-        ctx.fillStyle = '#e11d48'; ctx.fillText(String(employee.total_undel), 550, y + 34);
-        ctx.fillStyle = '#475569'; ctx.fillText(String(employee.pending), 620, y + 34);
-        ctx.fillStyle = '#2563eb'; ctx.fillText(`${employee.first_attempt_delivery_pct}%`, 695, y + 34);
-        ctx.fillStyle = '#7c3aed'; ctx.fillText(String(employee.reattempt_ofd), 775, y + 34);
-        ctx.fillText(`${employee.reattempt_delivery_pct}%`, 855, y + 34);
-        ctx.fillStyle = '#059669'; ctx.fillText(`${employee.overall_delivery_pct}%`, 945, y + 34);
-        ctx.fillStyle = '#0f172a'; ctx.fillText(String(employee.cod_shipments_count), 1050, y + 34);
-        ctx.fillText(String(employee.prepaid_ofd), 1150, y + 34);
-      });
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
 
       if (!blob || !navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
         throw new Error('Image clipboard is not supported');
