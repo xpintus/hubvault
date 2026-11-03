@@ -423,19 +423,24 @@ export default function DRSPerformanceReport() {
       `*Team Leaderboard | ${hubDisplayName}*`,
       `Date: ${repDate}`,
       ``,
-      `*SUMMARY METRICS*`,
+      `*CORE PERCENTAGE METRICS*`,
+      `• COD FAD %: ${filteredSummary?.codFadPercent ?? 0}%`,
+      `• Prepaid FAD %: ${filteredSummary?.prepaidFadPercent ?? 0}%`,
+      `• Overall Delivery %: ${filteredSummary?.overallDeliveryPct ?? 0}%`,
+      `• FAD Delivery %: ${filteredSummary?.firstAttemptDeliveryPct ?? 0}%`,
+      ``,
+      `*SHIPMENT VOLUME & FULFILLMENT*`,
       `• Total Employees: ${filteredEmployeeMetrics.length}`,
       `• Total OFD: ${filteredSummary?.totalOfd ?? 0}`,
       `• Status OFD (On Road): ${filteredSummary?.statusOfd ?? 0}`,
       `• Delivered: ${filteredSummary?.totalDelivered ?? 0}`,
       `• UNDEL: ${filteredSummary?.totalUndel ?? 0}`,
       `• Pending: ${filteredSummary?.totalPending ?? 0}`,
-      `• Overall Delivery Rate: ${filteredSummary?.overallDeliveryPct ?? 0}%`,
       ``,
       `*EMPLOYEE LEADERBOARD*`,
       ...filteredEmployeeMetrics.map(
         (employee, index) =>
-          `#${index + 1} ${employee.employee_name} | Total OFD: ${employee.total_ofd} | Status OFD: ${employee.status_ofd} | Delivered: ${employee.total_delivered} | UNDEL: ${employee.total_undel} | Pending: ${employee.pending} | 1st: ${employee.first_attempt_delivery_pct}% | Retry: ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall: ${employee.overall_delivery_pct}% | COD: ${employee.cod_shipments_count} | Prepaid: ${employee.prepaid_ofd}`
+          `#${index + 1} ${employee.employee_name} | Total OFD: ${employee.total_ofd} | Status OFD: ${employee.status_ofd} | Delivered: ${employee.total_delivered} | UNDEL: ${employee.total_undel} | Pending: ${employee.pending} | FAD: ${employee.first_attempt_delivery_pct}% | COD FAD: ${employee.cod_fad_percent}% | Prepaid FAD: ${employee.prepaid_fad_percent}% | Retry: ${employee.reattempt_ofd} (${employee.reattempt_delivery_pct}%) | Overall: ${employee.overall_delivery_pct}% | COD: ${employee.cod_shipments_count} | Prepaid: ${employee.prepaid_ofd}`
       ),
       ``,
       `HubVault | Collection Reconciliation Suite`,

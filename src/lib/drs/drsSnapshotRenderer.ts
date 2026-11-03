@@ -58,7 +58,7 @@ function drawRoundedRect(
  */
 function getEmployeeInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'E';
+  if (parts.length === 0) return 'EX';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
@@ -78,8 +78,14 @@ function formatReportDate(rawDate: string): string {
 }
 
 /**
- * Renders the Employee Performance Report Snapshot onto an HTML5 canvas.
- * Optimized for crisp high-DPI export, landscape presentation, and official HubVault branding.
+ * Renders the complete HubVault Employee Performance Report Snapshot onto an HTML5 canvas.
+ * Includes:
+ * - Official HubVault Header & Metadata
+ * - 6 Main Shipment Volume KPI Cards (Employees, Total OFD, Status OFD, Delivered, UNDEL, Pending)
+ * - 4 Dedicated Performance Percentage KPI Cards (COD FAD %, Prepaid FAD %, Overall Delivery %, FAD Delivery %)
+ * - 15-Column Leaderboard Table with individual percentage columns for all 4 metrics
+ * - Team Aggregates / Summary Row (Σ)
+ * - Official Verification Footer
  */
 export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTMLCanvasElement {
   const {
@@ -87,28 +93,34 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
     reportDate,
     summary,
     employeeMetrics,
-    scale = 2, // 2x scale produces a crisp 2880px wide image for retina displays & WhatsApp sharing
+    scale = 2, // 2x scale renders at 2880px physical width for crisp mobile/WhatsApp sharing
   } = options;
 
   const width = 1440;
   const paddingX = 36;
   const contentWidth = width - paddingX * 2; // 1368px
 
-  // Header = 110px, Gap = 16px, KPI Cards = 86px, Gap = 18px, Table Header = 44px
-  // Rows = employeeMetrics.length * 44px, Totals Row = 44px, Gap = 14px, Footer = 46px
-  const headerHeight = 110;
-  const kpiHeight = 86;
+  // Vertical Metrics:
+  // Header = 98px, Gap = 14px, Row 1 KPI (Shipment volume) = 74px, Gap = 12px
+  // Row 2 KPI (Percentages section) = 82px, Gap = 16px, Table Header = 44px
+  // Rows = employeeMetrics.length * 42px, Totals Row = 44px, Gap = 14px, Footer = 46px
+  const headerHeight = 98;
+  const kpiRow1Height = 74;
+  const kpiRow2Height = 82;
   const tableHeaderHeight = 44;
-  const rowHeight = 44;
+  const rowHeight = 42;
   const totalsRowHeight = 44;
   const footerHeight = 46;
 
   const totalRows = employeeMetrics.length;
   const totalLogicalHeight =
+    12 +
     headerHeight +
+    14 +
+    kpiRow1Height +
+    12 +
+    kpiRow2Height +
     16 +
-    kpiHeight +
-    18 +
     tableHeaderHeight +
     totalRows * rowHeight +
     totalsRowHeight +
@@ -124,263 +136,316 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
     throw new Error('Failed to obtain 2D canvas context');
   }
 
-  // Scale all drawing operations by scale factor for crisp rendering
+  // High-DPI scaling
   ctx.scale(scale, scale);
 
-  // 1. Overall Background (Crisp pearl white / soft slate background)
+  // 1. Overall Background (Clean pearl white / soft slate)
   ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, width, totalLogicalHeight);
 
-  // Top Accent Strip: Navy to Royal Blue with subtle Gold
+  // Top Accent Bar: Navy to Royal Blue with subtle Gold
   const topStripGradient = ctx.createLinearGradient(0, 0, width, 0);
   topStripGradient.addColorStop(0, '#0f172a'); // Navy
   topStripGradient.addColorStop(0.3, '#1e3a8a'); // Deep Navy
   topStripGradient.addColorStop(0.7, '#2563eb'); // Royal Blue
-  topStripGradient.addColorStop(1, '#f59e0b'); // Subtle Gold
+  topStripGradient.addColorStop(1, '#f59e0b'); // Gold
   ctx.fillStyle = topStripGradient;
   ctx.fillRect(0, 0, width, 4);
 
   // ==========================================
   // 2. HEADER PANEL (White Card with Border)
   // ==========================================
-  drawRoundedRect(ctx, paddingX, 12, contentWidth, 98, 10, '#ffffff', '#e2e8f0', 1);
+  drawRoundedRect(ctx, paddingX, 12, contentWidth, headerHeight, 10, '#ffffff', '#e2e8f0', 1);
 
-  // HubVault Logo / Brand Emblem
-  // Draw rounded vault emblem (38x38)
-  drawRoundedRect(ctx, paddingX + 16, 26, 42, 42, 10, '#0f172a', '#1e293b', 1);
+  // HubVault Logo / Brand Emblem (40x40)
+  drawRoundedRect(ctx, paddingX + 16, 26, 40, 40, 10, '#0f172a', '#1e293b', 1);
 
-  // Stylized Vault / Shield icon inside emblem
+  // Stylized Vault Shield in Emblem
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 2.2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.strokeRect(paddingX + 26, 36, 22, 22);
+  ctx.strokeRect(paddingX + 26, 36, 20, 20);
 
   // Gold vault dial
   ctx.fillStyle = '#f59e0b';
   ctx.beginPath();
-  ctx.arc(paddingX + 37, 47, 3.5, 0, Math.PI * 2);
+  ctx.arc(paddingX + 36, 46, 3.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Dial tick marks
   ctx.strokeStyle = '#f59e0b';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(paddingX + 37, 40);
-  ctx.lineTo(paddingX + 37, 42);
-  ctx.moveTo(paddingX + 44, 47);
-  ctx.lineTo(paddingX + 42, 47);
+  ctx.moveTo(paddingX + 36, 39);
+  ctx.lineTo(paddingX + 36, 41);
   ctx.stroke();
 
   // HubVault Wordmark
   ctx.fillStyle = '#0f172a';
-  ctx.font = '800 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '800 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('HUBVAULT', paddingX + 68, 48);
+  ctx.fillText('HUBVAULT', paddingX + 66, 47);
 
   ctx.fillStyle = '#64748b';
-  ctx.font = '700 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('COLLECTION RECONCILIATION SUITE', paddingX + 69, 62);
+  ctx.font = '700 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('COLLECTION RECONCILIATION SUITE', paddingX + 67, 61);
 
-  // Vertical divider between brand and title
+  // Divider line
   ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(paddingX + 300, 26);
-  ctx.lineTo(paddingX + 300, 78);
+  ctx.moveTo(paddingX + 290, 24);
+  ctx.lineTo(paddingX + 290, 76);
   ctx.stroke();
 
   // Report Title & Subtitle
   ctx.fillStyle = '#0f172a';
-  ctx.font = '800 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('EMPLOYEE PERFORMANCE REPORT', paddingX + 322, 47);
+  ctx.font = '800 17px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('EMPLOYEE PERFORMANCE REPORT', paddingX + 310, 46);
 
   ctx.fillStyle = '#2563eb'; // Royal Blue
-  ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('TEAM LEADERBOARD & LOGISTICS EXECUTIVE ANALYTICS', paddingX + 322, 63);
+  ctx.font = '700 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('TEAM LEADERBOARD & LOGISTICS EXECUTIVE ANALYTICS', paddingX + 310, 61);
 
   // Right Side: Hub Name and Formatted Date Pills
   const formattedDate = formatReportDate(reportDate);
   const rightEdge = paddingX + contentWidth - 16;
 
-  // Date Pill (Rightmost)
-  const datePillWidth = 145;
+  // Date Pill
+  const datePillWidth = 140;
   const datePillX = rightEdge - datePillWidth;
-  drawRoundedRect(ctx, datePillX, 32, datePillWidth, 32, 6, '#f8fafc', '#cbd5e1', 1);
+  drawRoundedRect(ctx, datePillX, 28, datePillWidth, 36, 6, '#f8fafc', '#cbd5e1', 1);
   ctx.fillStyle = '#64748b';
-  ctx.font = '600 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '600 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('REPORT DATE', datePillX + 10, 44);
+  ctx.fillText('REPORT DATE', datePillX + 10, 42);
   ctx.fillStyle = '#0f172a';
   ctx.font = '700 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(formattedDate, datePillX + 10, 58);
+  ctx.fillText(formattedDate, datePillX + 10, 56);
 
   // Hub Pill
   const hubDisplayName = hubName || 'Main Hub';
   ctx.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const hubTextWidth = ctx.measureText(hubDisplayName).width;
   const hubPillWidth = Math.max(hubTextWidth + 48, 140);
-  const hubPillX = datePillX - hubPillWidth - 12;
+  const hubPillX = datePillX - hubPillWidth - 10;
 
-  drawRoundedRect(ctx, hubPillX, 32, hubPillWidth, 32, 6, '#eff6ff', '#bfdbfe', 1);
-  // Hub Icon Dot
+  drawRoundedRect(ctx, hubPillX, 28, hubPillWidth, 36, 6, '#eff6ff', '#bfdbfe', 1);
   ctx.fillStyle = '#2563eb';
   ctx.beginPath();
-  ctx.arc(hubPillX + 14, 48, 4, 0, Math.PI * 2);
+  ctx.arc(hubPillX + 13, 46, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = '#1e40af';
-  ctx.font = '600 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('OPERATIONAL HUB', hubPillX + 24, 44);
+  ctx.font = '600 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('OPERATIONAL HUB', hubPillX + 22, 42);
   ctx.fillStyle = '#0f172a';
-  ctx.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(hubDisplayName, hubPillX + 24, 58);
+  ctx.font = '700 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText(hubDisplayName, hubPillX + 22, 56);
 
-  // Status / Official Badge
+  // Official Badge
   const badgeWidth = 105;
-  const badgeX = hubPillX - badgeWidth - 12;
-  drawRoundedRect(ctx, badgeX, 32, badgeWidth, 32, 6, '#ecfdf5', '#a7f3d0', 1);
+  const badgeX = hubPillX - badgeWidth - 10;
+  drawRoundedRect(ctx, badgeX, 28, badgeWidth, 36, 6, '#ecfdf5', '#a7f3d0', 1);
   ctx.fillStyle = '#059669';
   ctx.beginPath();
-  ctx.arc(badgeX + 14, 48, 3.5, 0, Math.PI * 2);
+  ctx.arc(badgeX + 13, 46, 3.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#065f46';
-  ctx.font = '700 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('VERIFIED DATA', badgeX + 24, 52);
+  ctx.font = '700 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('VERIFIED DATA', badgeX + 22, 50);
 
-  // Thin Accent Line below Header
-  const lineY = 12 + 98;
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(paddingX, lineY);
-  ctx.lineTo(paddingX + contentWidth, lineY);
-  ctx.stroke();
+  // ========================================================
+  // 3. ROW 1 KPI CARDS: MAIN SHIPMENT VOLUME & FULFILLMENT
+  // ========================================================
+  const row1Y = 12 + headerHeight + 14; // 124px
+  const row1Gap = 14;
+  const row1CardWidth = Math.floor((contentWidth - row1Gap * 5) / 6); // 216px
 
-  // ==========================================
-  // 3. KPI SUMMARY CARDS (7 Responsive Cards)
-  // ==========================================
-  const kpiStartY = 126;
-  const kpiGap = 14;
-  const totalGaps = 6;
-  const cardWidth = Math.floor((contentWidth - kpiGap * totalGaps) / 7); // ~183px
-
-  interface KPICardDef {
-    label: string;
-    value: string;
-    sublabel: string;
-    accentColor: string;
-    textColor: string;
-    badgeText?: string;
-  }
-
-  const kpis: KPICardDef[] = [
+  const shipmentKpis = [
     {
       label: 'TOTAL EMPLOYEES',
       value: String(employeeMetrics.length),
       sublabel: 'Active Delivery Staff',
-      accentColor: '#334155', // Slate
+      accentColor: '#334155',
       textColor: '#0f172a',
     },
     {
       label: 'TOTAL OFD',
       value: String(summary?.totalOfd ?? 0),
-      sublabel: 'Assigned Shipments',
-      accentColor: '#1e3a8a', // Deep Navy
+      sublabel: 'Total Assigned Shipments',
+      accentColor: '#1e3a8a',
       textColor: '#1e3a8a',
     },
     {
       label: 'STATUS OFD',
       value: String(summary?.statusOfd ?? 0),
       sublabel: 'Currently On Road',
-      accentColor: '#0284c7', // Sky Blue
+      accentColor: '#0284c7',
       textColor: '#0284c7',
       badgeText: 'On Road',
     },
     {
       label: 'DELIVERED',
       value: String(summary?.totalDelivered ?? 0),
-      sublabel: `${summary?.overallDeliveryPct ?? 0}% Delivery Rate`,
-      accentColor: '#10b981', // Emerald Green
+      sublabel: 'Successfully Completed',
+      accentColor: '#10b981',
       textColor: '#059669',
     },
     {
       label: 'UNDEL',
       value: String(summary?.totalUndel ?? 0),
       sublabel: 'Requires Reattempt',
-      accentColor: '#ef4444', // Crimson Red
+      accentColor: '#ef4444',
       textColor: '#dc2626',
     },
     {
       label: 'PENDING',
       value: String(summary?.totalPending ?? 0),
       sublabel: 'Pending Resolution',
-      accentColor: '#f97316', // Amber / Orange
+      accentColor: '#f97316',
       textColor: '#ea580c',
-    },
-    {
-      label: 'OVERALL PERFORMANCE',
-      value: `${summary?.overallDeliveryPct ?? 0}%`,
-      sublabel: `FAD Rate: ${summary?.firstAttemptDeliveryPct ?? 0}%`,
-      accentColor: '#6366f1', // Royal / Indigo
-      textColor: '#4338ca',
     },
   ];
 
-  kpis.forEach((card, index) => {
-    const cardX = paddingX + index * (cardWidth + kpiGap);
-    const actualWidth = index === 6 ? contentWidth - (cardX - paddingX) : cardWidth;
+  shipmentKpis.forEach((card, index) => {
+    const cardX = paddingX + index * (row1CardWidth + row1Gap);
+    const actualWidth = index === 5 ? contentWidth - (cardX - paddingX) : row1CardWidth;
 
-    // Card background & border
-    drawRoundedRect(ctx, cardX, kpiStartY, actualWidth, kpiHeight, 8, '#ffffff', '#e2e8f0', 1);
+    drawRoundedRect(ctx, cardX, row1Y, actualWidth, kpiRow1Height, 8, '#ffffff', '#e2e8f0', 1);
 
     // Top colored accent bar
-    drawRoundedRect(
-      ctx,
-      cardX,
-      kpiStartY,
-      actualWidth,
-      3.5,
-      [8, 8, 0, 0],
-      card.accentColor
-    );
+    drawRoundedRect(ctx, cardX, row1Y, actualWidth, 3, [8, 8, 0, 0], card.accentColor);
 
     // Label
     ctx.textAlign = 'left';
     ctx.fillStyle = '#64748b';
-    ctx.font = '700 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(card.label, cardX + 12, kpiStartY + 22);
+    ctx.font = '700 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(card.label, cardX + 12, row1Y + 19);
 
-    // Optional Badge (e.g. 'On Road')
     if (card.badgeText) {
-      const badgeText = card.badgeText;
-      ctx.font = '700 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      const bWidth = ctx.measureText(badgeText).width + 10;
+      ctx.font = '700 8px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const bWidth = ctx.measureText(card.badgeText).width + 8;
       const bX = cardX + actualWidth - bWidth - 10;
-      drawRoundedRect(ctx, bX, kpiStartY + 12, bWidth, 15, 4, '#e0f2fe', '#bae6fd', 1);
+      drawRoundedRect(ctx, bX, row1Y + 10, bWidth, 14, 3, '#e0f2fe', '#bae6fd', 1);
       ctx.fillStyle = '#0284c7';
-      ctx.fillText(badgeText, bX + 5, kpiStartY + 23);
+      ctx.fillText(card.badgeText, bX + 4, row1Y + 20);
     }
 
     // Value
     ctx.fillStyle = card.textColor;
-    ctx.font = '800 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(card.value, cardX + 12, kpiStartY + 52);
+    ctx.font = '800 21px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(card.value, cardX + 12, row1Y + 45);
 
     // Sublabel
     ctx.fillStyle = '#94a3b8';
-    ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(card.sublabel, cardX + 12, kpiStartY + 72);
+    ctx.font = '500 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(card.sublabel, cardX + 12, row1Y + 62);
   });
 
-  // ==========================================
-  // 4. EMPLOYEE PERFORMANCE LEADERBOARD TABLE
-  // ==========================================
-  const tableStartY = kpiStartY + kpiHeight + 18; // 230px
+  // =========================================================================
+  // 4. ROW 2 KPI CARDS: COMPLETE PERFORMANCE PERCENTAGE METRICS (4 CARDS)
+  // Required: COD FAD % (Blue), Prepaid FAD % (Purple), Overall Delivery % (Green), FAD Delivery % (Gold/Orange)
+  // =========================================================================
+  const row2Y = row1Y + kpiRow1Height + 12; // 210px
+  const row2Gap = 16;
+  const row2CardWidth = Math.floor((contentWidth - row2Gap * 3) / 4); // 330px
 
-  // Column definitions with exact widths matching 1368px
-  // Order: Rank | Employee | Total OFD | Status OFD | Delivered | UNDEL | Pending | 1st Attempt % | Retry Count | Retry % | Overall % | COD | Prepaid
+  const percentageKpis = [
+    {
+      label: 'COD FAD %',
+      title: 'COD FIRST ATTEMPT DELIVERY RATE',
+      value: `${summary?.codFadPercent ?? 0}%`,
+      sublabel: `${summary?.codFirstAttemptDel ?? 0} delivered of ${summary?.codFirstAttemptOfd ?? 0} COD 1st attempts`,
+      accentColor: '#2563eb', // Royal Blue
+      textColor: '#1e40af',
+      badgeBg: '#dbeafe',
+      badgeBorder: '#bfdbfe',
+      badgeColor: '#1d4ed8',
+      badgeLabel: 'COD FAD',
+    },
+    {
+      label: 'PREPAID FAD %',
+      title: 'PREPAID FIRST ATTEMPT DELIVERY RATE',
+      value: `${summary?.prepaidFadPercent ?? 0}%`,
+      sublabel: `${summary?.prepaidFirstAttemptDel ?? 0} delivered of ${summary?.prepaidFirstAttemptOfd ?? 0} Prepaid 1st attempts`,
+      accentColor: '#7c3aed', // Purple
+      textColor: '#6d28d9',
+      badgeBg: '#f3e8ff',
+      badgeBorder: '#e9d5ff',
+      badgeColor: '#7e22ce',
+      badgeLabel: 'Prepaid FAD',
+    },
+    {
+      label: 'OVERALL DELIVERY %',
+      title: 'OVERALL DELIVERY SUCCESS RATE',
+      value: `${summary?.overallDeliveryPct ?? 0}%`,
+      sublabel: `${summary?.totalDelivered ?? 0} delivered of ${summary?.totalOfd ?? 0} total assigned shipments`,
+      accentColor: '#059669', // Green
+      textColor: '#047857',
+      badgeBg: '#d1fae5',
+      badgeBorder: '#a7f3d0',
+      badgeColor: '#065f46',
+      badgeLabel: 'Overall Del %',
+    },
+    {
+      label: 'FAD DELIVERY %',
+      title: 'TOTAL FIRST ATTEMPT DELIVERY RATE',
+      value: `${summary?.firstAttemptDeliveryPct ?? 0}%`,
+      sublabel: `${summary?.firstAttemptDelivered ?? 0} delivered of ${summary?.firstAttemptOfd ?? 0} total 1st attempts`,
+      accentColor: '#d97706', // Gold / Orange
+      textColor: '#b45309',
+      badgeBg: '#fef3c7',
+      badgeBorder: '#fde68a',
+      badgeColor: '#b45309',
+      badgeLabel: '1st Attempt FAD',
+    },
+  ];
+
+  percentageKpis.forEach((card, index) => {
+    const cardX = paddingX + index * (row2CardWidth + row2Gap);
+    const actualWidth = index === 3 ? contentWidth - (cardX - paddingX) : row2CardWidth;
+
+    // Card Box
+    drawRoundedRect(ctx, cardX, row2Y, actualWidth, kpiRow2Height, 8, '#ffffff', '#e2e8f0', 1);
+
+    // Distinct Top Colored Accent Line (4px)
+    drawRoundedRect(ctx, cardX, row2Y, actualWidth, 4, [8, 8, 0, 0], card.accentColor);
+
+    // Label & Badge Row
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '800 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(card.label, cardX + 14, row2Y + 22);
+
+    // Pill Badge
+    ctx.font = '700 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    const bWidth = ctx.measureText(card.badgeLabel).width + 12;
+    const bX = cardX + actualWidth - bWidth - 12;
+    drawRoundedRect(ctx, bX, row2Y + 12, bWidth, 16, 4, card.badgeBg, card.badgeBorder, 1);
+    ctx.fillStyle = card.badgeColor;
+    ctx.fillText(card.badgeLabel, bX + 6, row2Y + 23);
+
+    // Large Percentage Value
+    ctx.fillStyle = card.textColor;
+    ctx.font = '900 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(card.value, cardX + 14, row2Y + 52);
+
+    // Subtitle Explanation with Denominator
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(card.sublabel, cardX + 14, row2Y + 70);
+  });
+
+  // =========================================================================
+  // 5. EMPLOYEE PERFORMANCE LEADERBOARD TABLE (15 COLUMNS WITH 4 PERCENTAGES)
+  // Columns:
+  // Rank | Employee | Total OFD | Status OFD | Delivered | UNDEL | Pending |
+  // FAD % | COD FAD % | Prepaid FAD % | Retry Count | Retry % | Overall % | COD | Prepaid
+  // =========================================================================
+  const tableStartY = row2Y + kpiRow2Height + 16; // 308px
+
   interface ColumnDef {
     key: string;
     label: string;
@@ -388,20 +453,23 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
     align: 'left' | 'center' | 'right';
   }
 
+  // Exact 15 columns summing to 1368px
   const columns: ColumnDef[] = [
-    { key: 'rank', label: 'RANK', width: 56, align: 'center' },
-    { key: 'employee', label: 'DELIVERY EXECUTIVE', width: 270, align: 'left' },
-    { key: 'total_ofd', label: 'TOTAL OFD', width: 95, align: 'right' },
-    { key: 'status_ofd', label: 'STATUS OFD', width: 95, align: 'right' },
-    { key: 'delivered', label: 'DELIVERED', width: 92, align: 'right' },
-    { key: 'undel', label: 'UNDEL', width: 88, align: 'right' },
-    { key: 'pending', label: 'PENDING', width: 88, align: 'right' },
-    { key: 'first_attempt', label: '1ST ATTEMPT %', width: 112, align: 'right' },
-    { key: 'retry_count', label: 'RETRY COUNT', width: 96, align: 'right' },
-    { key: 'retry_pct', label: 'RETRY %', width: 90, align: 'right' },
-    { key: 'overall_pct', label: 'OVERALL %', width: 116, align: 'right' },
-    { key: 'cod', label: 'COD', width: 85, align: 'right' },
-    { key: 'prepaid', label: 'PREPAID', width: 85, align: 'right' },
+    { key: 'rank', label: 'RANK', width: 50, align: 'center' },
+    { key: 'employee', label: 'DELIVERY EXECUTIVE', width: 245, align: 'left' },
+    { key: 'total_ofd', label: 'TOTAL OFD', width: 85, align: 'right' },
+    { key: 'status_ofd', label: 'STATUS OFD', width: 85, align: 'right' },
+    { key: 'delivered', label: 'DELIVERED', width: 78, align: 'right' },
+    { key: 'undel', label: 'UNDEL', width: 72, align: 'right' },
+    { key: 'pending', label: 'PENDING', width: 72, align: 'right' },
+    { key: 'fad_pct', label: 'FAD %', width: 86, align: 'right' },
+    { key: 'cod_fad_pct', label: 'COD FAD %', width: 92, align: 'right' },
+    { key: 'prepaid_fad_pct', label: 'PREPAID FAD %', width: 98, align: 'right' },
+    { key: 'retry_count', label: 'RETRY', width: 70, align: 'right' },
+    { key: 'retry_pct', label: 'RETRY %', width: 76, align: 'right' },
+    { key: 'overall_pct', label: 'OVERALL %', width: 119, align: 'right' },
+    { key: 'cod', label: 'COD', width: 70, align: 'right' },
+    { key: 'prepaid', label: 'PREPAID', width: 70, align: 'right' },
   ];
 
   // Table Header Background (Dark Navy #0f172a with rounded top corners)
@@ -419,7 +487,7 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
 
   // Table Column Headers
   let curColX = paddingX;
-  ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '700 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#f8fafc';
   ctx.textBaseline = 'middle';
 
@@ -430,10 +498,10 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
       headerTextX = curColX + col.width / 2;
     } else if (col.align === 'right') {
       ctx.textAlign = 'right';
-      headerTextX = curColX + col.width - 12;
+      headerTextX = curColX + col.width - 10;
     } else {
       ctx.textAlign = 'left';
-      headerTextX = curColX + 14;
+      headerTextX = curColX + 12;
     }
 
     ctx.fillText(col.label, headerTextX, tableStartY + tableHeaderHeight / 2);
@@ -468,7 +536,7 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
       switch (col.key) {
         case 'rank': {
           const rankNum = index + 1;
-          const badgeSize = 24;
+          const badgeSize = 22;
           const badgeCenterX = cellX + col.width / 2;
           const badgeCenterY = centerY;
 
@@ -525,7 +593,7 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
             ctx.fillText('3', badgeCenterX, badgeCenterY);
           } else {
             ctx.fillStyle = '#64748b';
-            ctx.font = '700 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(String(rankNum), badgeCenterX, badgeCenterY);
           }
@@ -534,8 +602,8 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
 
         case 'employee': {
           // Circular Avatar with Initials
-          const avatarSize = 24;
-          const avatarX = cellX + 12;
+          const avatarSize = 22;
+          const avatarX = cellX + 10;
           const avatarY = centerY - avatarSize / 2;
           const initials = getEmployeeInitials(emp.employee_name);
 
@@ -552,17 +620,16 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
           );
 
           ctx.fillStyle = '#334155';
-          ctx.font = '700 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(initials, avatarX + avatarSize / 2, centerY);
 
           // Employee Name
           ctx.fillStyle = '#0f172a';
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'left';
 
-          // Measure and prevent overflow
-          const maxNameWidth = col.width - 48;
+          const maxNameWidth = col.width - 44;
           let displayName = emp.employee_name;
           while (ctx.measureText(displayName).width > maxNameWidth && displayName.length > 5) {
             displayName = displayName.slice(0, -1);
@@ -570,113 +637,128 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
           if (displayName !== emp.employee_name) {
             displayName += '…';
           }
-          ctx.fillText(displayName, avatarX + avatarSize + 10, centerY);
+          ctx.fillText(displayName, avatarX + avatarSize + 8, centerY);
           break;
         }
 
         case 'total_ofd': {
           ctx.fillStyle = '#0f172a';
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.total_ofd), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.total_ofd), cellX + col.width - 10, centerY);
           break;
         }
 
         case 'status_ofd': {
-          // Status OFD: Royal/Sky Blue
           ctx.textAlign = 'right';
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#0284c7';
-          ctx.fillText(String(emp.status_ofd), cellX + col.width - 12, centerY);
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillStyle = '#0284c7'; // Sky Blue
+          ctx.fillText(String(emp.status_ofd), cellX + col.width - 10, centerY);
           break;
         }
 
         case 'delivered': {
           ctx.fillStyle = '#059669'; // Emerald Green
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.total_delivered), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.total_delivered), cellX + col.width - 10, centerY);
           break;
         }
 
         case 'undel': {
-          ctx.fillStyle = emp.total_undel > 0 ? '#dc2626' : '#94a3b8'; // Crimson Red or slate
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillStyle = emp.total_undel > 0 ? '#dc2626' : '#94a3b8'; // Red
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.total_undel), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.total_undel), cellX + col.width - 10, centerY);
           break;
         }
 
         case 'pending': {
           ctx.fillStyle = emp.pending > 0 ? '#ea580c' : '#94a3b8'; // Amber / Orange
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.pending), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.pending), cellX + col.width - 10, centerY);
           break;
         }
 
-        case 'first_attempt': {
-          ctx.fillStyle = '#2563eb'; // Royal Blue
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        case 'fad_pct': {
+          // Overall FAD % (Gold/Amber)
+          ctx.fillStyle = '#b45309';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(`${emp.first_attempt_delivery_pct}%`, cellX + col.width - 12, centerY);
+          ctx.fillText(`${emp.first_attempt_delivery_pct}%`, cellX + col.width - 10, centerY);
+          break;
+        }
+
+        case 'cod_fad_pct': {
+          // COD FAD % (Royal Blue)
+          ctx.fillStyle = '#2563eb';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(`${emp.cod_fad_percent}%`, cellX + col.width - 10, centerY);
+          break;
+        }
+
+        case 'prepaid_fad_pct': {
+          // Prepaid FAD % (Purple)
+          ctx.fillStyle = '#7c3aed';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(`${emp.prepaid_fad_percent}%`, cellX + col.width - 10, centerY);
           break;
         }
 
         case 'retry_count': {
-          ctx.fillStyle = '#7c3aed'; // Purple
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillStyle = '#64748b';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.reattempt_ofd), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.reattempt_ofd), cellX + col.width - 10, centerY);
           break;
         }
 
         case 'retry_pct': {
-          ctx.fillStyle = '#8b5cf6'; // Violet / Purple
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillStyle = '#8b5cf6';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(`${emp.reattempt_delivery_pct}%`, cellX + col.width - 12, centerY);
+          ctx.fillText(`${emp.reattempt_delivery_pct}%`, cellX + col.width - 10, centerY);
           break;
         }
 
         case 'overall_pct': {
+          // Overall Delivery % (Green + Micro Progress Bar)
           const pct = Math.min(Math.max(emp.overall_delivery_pct, 0), 100);
-          const barWidth = 34;
-          const barHeight = 5;
-          const barX = cellX + col.width - 12 - 46 - barWidth;
+          const barWidth = 32;
+          const barHeight = 4.5;
+          const barX = cellX + col.width - 10 - 44 - barWidth;
           const barY = centerY - barHeight / 2;
 
-          // Micro Progress Bar Background
-          drawRoundedRect(ctx, barX, barY, barWidth, barHeight, 2.5, '#e2e8f0');
-
-          // Progress Bar Fill
+          drawRoundedRect(ctx, barX, barY, barWidth, barHeight, 2.25, '#e2e8f0');
           const fillWidth = Math.round((pct / 100) * barWidth);
           if (fillWidth > 0) {
             const barColor = pct >= 80 ? '#10b981' : pct >= 65 ? '#f59e0b' : '#ef4444';
-            drawRoundedRect(ctx, barX, barY, fillWidth, barHeight, 2.5, barColor);
+            drawRoundedRect(ctx, barX, barY, fillWidth, barHeight, 2.25, barColor);
           }
 
-          // Percentage Text
           ctx.fillStyle = '#059669';
-          ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(`${emp.overall_delivery_pct}%`, cellX + col.width - 12, centerY);
+          ctx.fillText(`${emp.overall_delivery_pct}%`, cellX + col.width - 10, centerY);
           break;
         }
 
         case 'cod': {
           ctx.fillStyle = '#0f172a';
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.cod_shipments_count), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.cod_shipments_count), cellX + col.width - 10, centerY);
           break;
         }
 
         case 'prepaid': {
           ctx.fillStyle = '#0f172a';
-          ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '700 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(String(emp.prepaid_ofd), cellX + col.width - 12, centerY);
+          ctx.fillText(String(emp.prepaid_ofd), cellX + col.width - 10, centerY);
           break;
         }
       }
@@ -688,7 +770,7 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
   });
 
   // ==========================================
-  // 5. TABLE TOTALS / TEAM SUMMARY ROW
+  // 6. TABLE TOTALS / TEAM SUMMARY ROW
   // ==========================================
   drawRoundedRect(
     ctx,
@@ -729,97 +811,113 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
 
       case 'employee': {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '800 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(`TEAM SUMMARY (${employeeMetrics.length} EXECUTIVES)`, totCellX + 14, totCenterY);
+        ctx.fillText(`TOTALS (${employeeMetrics.length} EXECS)`, totCellX + 12, totCenterY);
         break;
       }
 
       case 'total_ofd': {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(totalOfdSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(totalOfdSum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'status_ofd': {
         ctx.fillStyle = '#0284c7';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(statusOfdSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(statusOfdSum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'delivered': {
         ctx.fillStyle = '#059669';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(deliveredSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(deliveredSum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'undel': {
         ctx.fillStyle = '#dc2626';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(undelSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(undelSum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'pending': {
         ctx.fillStyle = '#ea580c';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(pendingSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(pendingSum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
-      case 'first_attempt': {
-        ctx.fillStyle = '#2563eb';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      case 'fad_pct': {
+        ctx.fillStyle = '#b45309';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(`${summary?.firstAttemptDeliveryPct ?? 0}%`, totCellX + col.width - 12, totCenterY);
+        ctx.fillText(`${summary?.firstAttemptDeliveryPct ?? 0}%`, totCellX + col.width - 10, totCenterY);
+        break;
+      }
+
+      case 'cod_fad_pct': {
+        ctx.fillStyle = '#2563eb';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${summary?.codFadPercent ?? 0}%`, totCellX + col.width - 10, totCenterY);
+        break;
+      }
+
+      case 'prepaid_fad_pct': {
+        ctx.fillStyle = '#7c3aed';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${summary?.prepaidFadPercent ?? 0}%`, totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'retry_count': {
-        ctx.fillStyle = '#7c3aed';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(retrySum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(retrySum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'retry_pct': {
         ctx.fillStyle = '#8b5cf6';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(`${summary?.reattemptDeliveryPct ?? 0}%`, totCellX + col.width - 12, totCenterY);
+        ctx.fillText(`${summary?.reattemptDeliveryPct ?? 0}%`, totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'overall_pct': {
         ctx.fillStyle = '#059669';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(`${summary?.overallDeliveryPct ?? 0}%`, totCellX + col.width - 12, totCenterY);
+        ctx.fillText(`${summary?.overallDeliveryPct ?? 0}%`, totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'cod': {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(codSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(codSum), totCellX + col.width - 10, totCenterY);
         break;
       }
 
       case 'prepaid': {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = '800 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(String(prepaidSum), totCellX + col.width - 12, totCenterY);
+        ctx.fillText(String(prepaidSum), totCellX + col.width - 10, totCenterY);
         break;
       }
     }
@@ -828,7 +926,7 @@ export function generateDRSSnapshotCanvas(options: GenerateSnapshotOptions): HTM
   });
 
   // ==========================================
-  // 6. FOOTER SECTION
+  // 7. FOOTER SECTION
   // ==========================================
   const footerY = curRowY + totalsRowHeight + 14;
   drawRoundedRect(ctx, paddingX, footerY, contentWidth, footerHeight, 8, '#ffffff', '#e2e8f0', 1);
