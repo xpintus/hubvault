@@ -9,6 +9,7 @@ import {
   RTOAnalyticsMetrics,
 } from '@/types/drs';
 import { isShipmentStatusOFD } from './drsParser';
+import { safeAmount, normalizeMoney } from '@/lib/financeCalculations';
 
 export function computeOverallDRSSummary(
   uniqueRows: DRSReportRow[],
@@ -60,6 +61,8 @@ export function computeOverallDRSSummary(
 
   let totalCodValue = 0;
   let deliveredCodValue = 0;
+  let totalPrepaidValue = 0;
+  let deliveredPrepaidValue = 0;
   let sumAttempts = 0;
   let maximumAttempts = 0;
 
@@ -77,12 +80,14 @@ export function computeOverallDRSSummary(
     if (r.employee_name) employeesSet.add(r.employee_name);
     if (r.drs_code) drsCodesSet.add(r.drs_code);
 
+    const amount = safeAmount(r.amount_payable);
+
     if (isCod) {
       codOfd++;
-      totalCodValue += r.amount_payable;
+      totalCodValue += amount;
       if (status === 'Delivered') {
         codDelivered++;
-        deliveredCodValue += r.amount_payable;
+        deliveredCodValue += amount;
       }
       if (attempts <= 1) {
         codFirstAttemptOfd++;
@@ -90,7 +95,11 @@ export function computeOverallDRSSummary(
       }
     } else {
       prepaidOfd++;
-      if (status === 'Delivered') prepaidDelivered++;
+      totalPrepaidValue += amount;
+      if (status === 'Delivered') {
+        prepaidDelivered++;
+        deliveredPrepaidValue += amount;
+      }
       if (attempts <= 1) {
         prepaidFirstAttemptOfd++;
         if (status === 'Delivered') prepaidFirstAttemptDel++;
@@ -195,8 +204,10 @@ export function computeOverallDRSSummary(
     firstAttemptContributionPct: Number(firstAttemptContributionPct.toFixed(2)),
     reattemptContributionPct: Number(reattemptContributionPct.toFixed(2)),
 
-    totalCodValue,
-    deliveredCodValue,
+    totalCodValue: normalizeMoney(totalCodValue),
+    deliveredCodValue: normalizeMoney(deliveredCodValue),
+    totalPrepaidValue: normalizeMoney(totalPrepaidValue),
+    deliveredPrepaidValue: normalizeMoney(deliveredPrepaidValue),
     averageAttempts: Number(averageAttempts.toFixed(2)),
     maximumAttempts,
 
@@ -280,12 +291,14 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
       sumAttempts += attempts;
       if (attempts > maxAttempts) maxAttempts = attempts;
 
+      const amount = safeAmount(r.amount_payable);
+
       if (isCod) {
         codCount++;
-        codTotalValue += r.amount_payable;
+        codTotalValue += amount;
         if (status === 'Delivered') {
           codDelivered++;
-          codDeliveredValue += r.amount_payable;
+          codDeliveredValue += amount;
         } else if (status === 'Undelivered') {
           codUndel++;
         }
@@ -295,7 +308,7 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
         }
       } else {
         prepaidCount++;
-        prepaidAmountTotal += r.amount_payable;
+        prepaidAmountTotal += amount;
         if (status === 'Delivered') prepaidDelivered++;
         else if (status === 'Undelivered') prepaidUndel++;
         if (attempts <= 1) {
@@ -397,8 +410,8 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
 
       cod_shipments_count: codCount,
       prepaid_shipments_count: prepaidCount,
-      cod_value_total: codTotalValue,
-      cod_value_delivered: codDeliveredValue,
+      cod_value_total: normalizeMoney(codTotalValue),
+      cod_value_delivered: normalizeMoney(codDeliveredValue),
 
       cod_ofd: codCount,
       cod_delivered: codDelivered,
@@ -414,7 +427,7 @@ export function computeEmployeeDRSMetrics(uniqueRows: DRSReportRow[]): EmployeeD
       prepaid_undel: prepaidUndel,
       prepaid_delivery_pct: Number(prepaidDeliveryPct.toFixed(2)),
       prepaid_pending: prepaidCount - prepaidDelivered,
-      prepaid_amount_total: prepaidAmountTotal,
+      prepaid_amount_total: normalizeMoney(prepaidAmountTotal),
       prepaid_first_attempt_ofd: prepaidFirstAttemptOfd,
       prepaid_first_attempt_del: prepaidFirstAttemptDel,
       prepaid_fad_percent: Number(prepaidFadPercent.toFixed(2)),
@@ -464,13 +477,14 @@ export function computeClientDRSMetrics(uniqueRows: DRSReportRow[]): ClientDRSMe
       else if (status === 'RTO') totalRto++;
       else if (status === 'Cancelled') totalCancel++;
 
+      const amount = safeAmount(r.amount_payable);
       if (isCod) {
         codOfd++;
-        codValTotal += r.amount_payable;
+        codValTotal += amount;
         if (status === 'Delivered') codDel++;
       } else {
         prepaidOfd++;
-        prepaidValTotal += r.amount_payable;
+        prepaidValTotal += amount;
         if (status === 'Delivered') prepaidDel++;
       }
     });
@@ -491,12 +505,12 @@ export function computeClientDRSMetrics(uniqueRows: DRSReportRow[]): ClientDRSMe
       cod_ofd: codOfd,
       cod_delivered: codDel,
       cod_delivery_pct: Number(codPct.toFixed(2)),
-      cod_value_total: codValTotal,
+      cod_value_total: normalizeMoney(codValTotal),
 
       prepaid_ofd: prepaidOfd,
       prepaid_delivered: prepaidDel,
       prepaid_delivery_pct: Number(prepaidPct.toFixed(2)),
-      prepaid_value_total: prepaidValTotal,
+      prepaid_value_total: normalizeMoney(prepaidValTotal),
     });
   });
 
@@ -528,12 +542,14 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
     const status = r.shipment_status_normalized;
     const attempts = r.total_attempts || 1;
 
+    const amount = safeAmount(r.amount_payable);
+
     if (isCod) {
       codOfd++;
-      codTotalAmount += r.amount_payable;
+      codTotalAmount += amount;
       if (status === 'Delivered') {
         codDelivered++;
-        codDeliveredAmount += r.amount_payable;
+        codDeliveredAmount += amount;
       } else if (status === 'Undelivered') {
         codUndel++;
       }
@@ -543,10 +559,10 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
       }
     } else {
       prepaidOfd++;
-      prepaidTotalAmount += r.amount_payable;
+      prepaidTotalAmount += amount;
       if (status === 'Delivered') {
         prepaidDelivered++;
-        prepaidDeliveredAmount += r.amount_payable;
+        prepaidDeliveredAmount += amount;
       } else if (status === 'Undelivered') {
         prepaidUndel++;
       }
@@ -570,8 +586,9 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
     codUndel,
     codDeliveryPct: Number(codDeliveryPct.toFixed(2)),
     codPending: codOfd - codDelivered,
-    codTotalAmount,
-    codDeliveredAmount,
+    codTotalAmount: normalizeMoney(codTotalAmount),
+    codDeliveredAmount: normalizeMoney(codDeliveredAmount),
+    codPendingAmount: normalizeMoney(Math.max(codTotalAmount - codDeliveredAmount, 0)),
     codFirstAttemptOfd,
     codFirstAttemptDel,
     codFadPercent: Number(codFadPercent.toFixed(2)),
@@ -581,8 +598,9 @@ export function computePaymentAnalytics(uniqueRows: DRSReportRow[]): PaymentAnal
     prepaidUndel,
     prepaidDeliveryPct: Number(prepaidDeliveryPct.toFixed(2)),
     prepaidPending: prepaidOfd - prepaidDelivered,
-    prepaidTotalAmount,
-    prepaidDeliveredAmount,
+    prepaidTotalAmount: normalizeMoney(prepaidTotalAmount),
+    prepaidDeliveredAmount: normalizeMoney(prepaidDeliveredAmount),
+    prepaidPendingAmount: normalizeMoney(Math.max(prepaidTotalAmount - prepaidDeliveredAmount, 0)),
     prepaidFirstAttemptOfd,
     prepaidFirstAttemptDel,
     prepaidFadPercent: Number(prepaidFadPercent.toFixed(2)),

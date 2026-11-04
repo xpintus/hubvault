@@ -117,7 +117,7 @@ export async function fetchDRSHistoryFromDB(): Promise<DRSReportHistoryItem[]> {
         prepaidFadPercent: Number(d.prepaid_fad_percent ?? snapSummary?.prepaidFadPercent ?? 0),
 
         codAmount: Number(d.cod_amount || snapSummary?.totalCodValue || 0),
-        prepaidAmount: Number(d.prepaid_amount || snapSummary?.deliveredCodValue || 0),
+        prepaidAmount: Number(d.prepaid_amount || snapSummary?.totalPrepaidValue || snapSummary?.deliveredCodValue || 0),
         averageAttempt: Number(d.average_attempt || snapSummary?.averageAttempts || 1),
         rows: d.json_snapshot?.rows || [],
         summary: snapSummary || null,

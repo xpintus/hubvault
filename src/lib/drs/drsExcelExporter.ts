@@ -75,12 +75,15 @@ export function exportDRSPerformanceWorkbook(
     ['COD Total OFD', paymentMetrics.codOfd],
     ['COD Delivered', paymentMetrics.codDelivered],
     ['COD Delivery Rate (%)', `${paymentMetrics.codDeliveryPct}%`],
-    ['COD Total Amount (â‚¹)', paymentMetrics.codTotalAmount],
-    ['COD Delivered Amount (â‚¹)', paymentMetrics.codDeliveredAmount],
+    ['COD Total Amount (₹)', paymentMetrics.codTotalAmount],
+    ['COD Delivered Amount (₹)', paymentMetrics.codDeliveredAmount],
+    ['COD Pending Amount (₹)', paymentMetrics.codPendingAmount],
     ['Prepaid Total OFD', paymentMetrics.prepaidOfd],
     ['Prepaid Delivered', paymentMetrics.prepaidDelivered],
     ['Prepaid Delivery Rate (%)', `${paymentMetrics.prepaidDeliveryPct}%`],
-    ['Prepaid Amount (â‚¹)', paymentMetrics.prepaidTotalAmount],
+    ['Prepaid Total Amount (₹)', paymentMetrics.prepaidTotalAmount],
+    ['Prepaid Delivered Amount (₹)', paymentMetrics.prepaidDeliveredAmount],
+    ['Prepaid Pending Amount (₹)', paymentMetrics.prepaidPendingAmount],
   ];
 
   const wsOverview = XLSX.utils.aoa_to_sheet(summaryAoa);
@@ -180,8 +183,8 @@ export function exportDRSPerformanceWorkbook(
         'COD DEL': e.cod_delivered,
         'COD Pending': e.cod_pending,
         'COD Delivery %': `${e.cod_delivery_pct}%`,
-        'COD Amount Total (â‚¹)': e.cod_value_total,
-        'COD Amount Collected (â‚¹)': e.cod_value_delivered,
+        'COD Amount Total (₹)': e.cod_value_total,
+        'COD Amount Collected (₹)': e.cod_value_delivered,
       }))
   );
 
@@ -197,7 +200,7 @@ export function exportDRSPerformanceWorkbook(
         'Prepaid DEL': e.prepaid_delivered,
         'Prepaid Pending': e.prepaid_pending,
         'Prepaid Delivery %': `${e.prepaid_delivery_pct}%`,
-        'Prepaid Amount (â‚¹)': e.prepaid_amount_total,
+        'Prepaid Amount (₹)': e.prepaid_amount_total,
       }))
   );
 
@@ -215,7 +218,7 @@ export function exportDRSPerformanceWorkbook(
       'COD OFD': c.cod_ofd,
       'COD DEL': c.cod_delivered,
       'COD Rate (%)': `${c.cod_delivery_pct}%`,
-      'COD Value (â‚¹)': c.cod_value_total,
+      'COD Value (₹)': c.cod_value_total,
       'Prepaid OFD': c.prepaid_ofd,
       'Prepaid DEL': c.prepaid_delivered,
       'Prepaid Rate (%)': `${c.prepaid_delivery_pct}%`,
@@ -258,7 +261,7 @@ export function exportDRSPerformanceWorkbook(
     Attempts: r.total_attempts,
     Reason: r.reason,
     OTP: r.otp_details,
-    'Amount (â‚¹)': r.amount_payable,
+    'Amount (₹)': r.amount_payable,
     'Payment Type': r.payment_type,
     Pincode: r.delivery_pincode,
     City: r.city,

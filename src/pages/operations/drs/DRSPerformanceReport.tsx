@@ -28,7 +28,8 @@ import {
   saveDRSHistorySnapshot,
   setActiveReportId,
 } from '@/lib/drs/drsHistoryManager';
-import { parseDRSFile } from '@/lib/drs/drsParser';
+import { isShipmentStatusOFD, parseDRSFile } from '@/lib/drs/drsParser';
+import { formatINR } from '@/lib/format';
 import { exportDRSPerformancePDF } from '@/lib/drs/drsPdfExporter';
 import { generateDRSSnapshotBlob } from '@/lib/drs/drsSnapshotRenderer';
 import {
@@ -298,10 +299,9 @@ export default function DRSPerformanceReport() {
     return filterDRSRows(uniqueRows, filters);
   }, [uniqueRows, filters]);
 
-  // OFD pending means the shipment has no final delivery outcome yet.
-  // Delivered, Undelivered, RTO and Cancelled shipments are excluded.
+  // Out on Road / OFD shipments: active shipments currently out for delivery
   const pendingOfdRows = useMemo(
-    () => filteredUniqueRows.filter((row) => row.shipment_status_normalized === 'Unknown'),
+    () => filteredUniqueRows.filter(isShipmentStatusOFD),
     [filteredUniqueRows]
   );
 
@@ -679,13 +679,13 @@ export default function DRSPerformanceReport() {
         <div className="relative z-[1] mt-6 grid grid-cols-2 gap-2.5 border-t border-white/10 pt-5 sm:grid-cols-4 xl:grid-cols-8">
           {[
             { label: 'Hub', value: selectedHub?.name || activeItem?.hubName || 'Main Hub', icon: Building2, tone: 'text-cyan-200 bg-cyan-300/10' },
-            { label: 'Report Date', value: summary?.reportDate || 'N/A', icon: Calendar, tone: 'text-blue-200 bg-blue-300/10' },
-            { label: 'COD FAD', value: `${summary?.codFadPercent ?? 0}%`, icon: Banknote, tone: 'text-purple-200 bg-purple-300/10' },
-            { label: 'Prepaid FAD', value: `${summary?.prepaidFadPercent ?? 0}%`, icon: CreditCard, tone: 'text-sky-200 bg-sky-300/10' },
-            { label: 'Overall Performance', value: `${summary?.overallDeliveryPct ?? 0}%`, icon: TrendingUp, tone: 'text-emerald-200 bg-emerald-300/10' },
-            { label: 'First Attempt', value: `${summary?.firstAttemptDeliveryPct ?? 0}%`, icon: Target, tone: 'text-indigo-200 bg-indigo-300/10' },
-            { label: 'Reattempt', value: `${summary?.reattemptDeliveryPct ?? 0}%`, icon: RotateCcw, tone: 'text-violet-200 bg-violet-300/10' },
-            { label: 'Out on Road', value: pendingOfdRows.length, icon: Clock, tone: 'text-amber-200 bg-amber-300/10' },
+            { label: 'Report Date', value: (filteredSummary || summary)?.reportDate || 'N/A', icon: Calendar, tone: 'text-blue-200 bg-blue-300/10' },
+            { label: 'COD FAD', value: `${(filteredSummary || summary)?.codFadPercent ?? 0}%`, icon: Banknote, tone: 'text-purple-200 bg-purple-300/10' },
+            { label: 'Prepaid FAD', value: `${(filteredSummary || summary)?.prepaidFadPercent ?? 0}%`, icon: CreditCard, tone: 'text-sky-200 bg-sky-300/10' },
+            { label: 'Overall Performance', value: `${(filteredSummary || summary)?.overallDeliveryPct ?? 0}%`, icon: TrendingUp, tone: 'text-emerald-200 bg-emerald-300/10' },
+            { label: 'First Attempt', value: `${(filteredSummary || summary)?.firstAttemptDeliveryPct ?? 0}%`, icon: Target, tone: 'text-indigo-200 bg-indigo-300/10' },
+            { label: 'Reattempt', value: `${(filteredSummary || summary)?.reattemptDeliveryPct ?? 0}%`, icon: RotateCcw, tone: 'text-violet-200 bg-violet-300/10' },
+            { label: 'Total Out on Road', value: pendingOfdRows.length, icon: Clock, tone: 'text-amber-200 bg-amber-300/10' },
           ].map((metric) => (
             <div key={metric.label} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.065] p-3 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/10">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${metric.tone}`}><metric.icon className="h-4.5 w-4.5" /></span>
@@ -925,6 +925,83 @@ export default function DRSPerformanceReport() {
               </div>
 
               {/* ----------------------------------------------------- */}
+              {/* FINANCIAL VALUE & COLLECTION OVERVIEW (4 CARDS)        */}
+              {/* ----------------------------------------------------- */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {/* 1. Total COD Value */}
+                <button type="button" onClick={() => setActiveTab('COD')} className="group relative min-h-[120px] overflow-hidden rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white to-purple-50/40 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-md dark:border-purple-900/60 dark:from-neutral-900 dark:to-purple-950/20 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-purple-500" />
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">
+                      <span>Total COD Value</span>
+                      <span className="rounded-xl bg-purple-100 p-1.5 dark:bg-purple-950"><Banknote className="h-4 w-4 text-purple-600" /></span>
+                    </div>
+                    <span className="font-mono text-2xl font-black leading-none tracking-tight text-purple-700 dark:text-purple-300 sm:text-3xl">
+                      {formatINR(paymentMetrics.codTotalAmount)}
+                    </span>
+                    <div className="flex items-center justify-between text-[10px] font-semibold text-purple-600/80 dark:text-purple-400">
+                      <span>{paymentMetrics.codOfd} COD shipments</span>
+                      <span className="transition-transform group-hover:translate-x-0.5">Details →</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* 2. Delivered COD Collected */}
+                <button type="button" onClick={() => setActiveTab('COD')} className="group relative min-h-[120px] overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/40 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md dark:border-emerald-900/60 dark:from-neutral-900 dark:to-emerald-950/20 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      <span>Delivered COD Collected</span>
+                      <span className="rounded-xl bg-emerald-100 p-1.5 dark:bg-emerald-950"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></span>
+                    </div>
+                    <span className="font-mono text-2xl font-black leading-none tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
+                      {formatINR(paymentMetrics.codDeliveredAmount)}
+                    </span>
+                    <div className="flex items-center justify-between text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      <span>{paymentMetrics.codDelivered} delivered</span>
+                      <span>{paymentMetrics.codDeliveryPct}% collection</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* 3. Pending COD Amount */}
+                <button type="button" onClick={() => setActiveTab('COD')} className="group relative min-h-[120px] overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/40 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:border-amber-900/60 dark:from-neutral-900 dark:to-amber-950/20 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-amber-500" />
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                      <span>Pending COD Amount</span>
+                      <span className="rounded-xl bg-amber-100 p-1.5 dark:bg-amber-950"><Clock className="h-4 w-4 text-amber-600" /></span>
+                    </div>
+                    <span className="font-mono text-2xl font-black leading-none tracking-tight text-amber-600 dark:text-amber-400 sm:text-3xl">
+                      {formatINR(paymentMetrics.codPendingAmount)}
+                    </span>
+                    <div className="flex items-center justify-between text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                      <span>{paymentMetrics.codPending} pending COD</span>
+                      <span>Out on road / NDR</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* 4. Total Prepaid Value */}
+                <button type="button" onClick={() => setActiveTab('PREPAID')} className="group relative min-h-[120px] overflow-hidden rounded-2xl border border-blue-200/80 bg-gradient-to-br from-white to-blue-50/40 p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-blue-900/60 dark:from-neutral-900 dark:to-blue-950/20 sm:p-5">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-blue-500" />
+                  <div className="flex h-full flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">
+                      <span>Total Prepaid Value</span>
+                      <span className="rounded-xl bg-blue-100 p-1.5 dark:bg-blue-950"><CreditCard className="h-4 w-4 text-blue-600" /></span>
+                    </div>
+                    <span className="font-mono text-2xl font-black leading-none tracking-tight text-blue-600 dark:text-blue-400 sm:text-3xl">
+                      {formatINR(paymentMetrics.prepaidTotalAmount)}
+                    </span>
+                    <div className="flex items-center justify-between text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                      <span>{paymentMetrics.prepaidOfd} prepaid shipments</span>
+                      <span>{formatINR(paymentMetrics.prepaidDeliveredAmount)} DEL</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* ----------------------------------------------------- */}
               {/* EXECUTIVE SECTIONS (TREND, DONUT, EMPLOYEES, NDR, COD, PREPAID) */}
               {/* ----------------------------------------------------- */}
               <div className="grid grid-cols-1 gap-4 text-xs md:grid-cols-2 xl:grid-cols-3">
@@ -1022,16 +1099,28 @@ export default function DRSPerformanceReport() {
                 <div className="min-h-[190px] space-y-4 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-white to-violet-50 p-5 shadow-sm transition hover:shadow-md dark:border-violet-900/50 dark:from-neutral-900 dark:to-violet-950/30">
                   <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
                     <h3 className="font-bold text-purple-600 uppercase tracking-wider text-xs flex items-center gap-1.5">
-                      <CreditCard className="h-4 w-4" /> COD Summary
+                      <Banknote className="h-4 w-4" /> COD Summary
                     </h3>
                     <span className="font-mono font-bold text-purple-600">FAD: {paymentMetrics.codFadPercent}%</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><span className="text-neutral-400 block">COD OFD</span><span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">{paymentMetrics.codOfd}</span></div>
-                    <div><span className="text-neutral-400 block">Delivered</span><span className="font-bold font-mono text-emerald-600">{paymentMetrics.codDelivered}</span></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><span className="text-neutral-400 block text-[10px] uppercase font-bold">COD OFD</span><span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">{paymentMetrics.codOfd}</span></div>
+                    <div><span className="text-neutral-400 block text-[10px] uppercase font-bold">Delivered</span><span className="font-bold font-mono text-emerald-600">{paymentMetrics.codDelivered}</span></div>
+                    <div><span className="text-neutral-400 block text-[10px] uppercase font-bold">Pending</span><span className="font-bold font-mono text-amber-600">{paymentMetrics.codPending}</span></div>
                   </div>
-                  <div className="pt-1 font-mono font-bold text-neutral-700 dark:text-neutral-300">
-                    Collected: â‚¹{paymentMetrics.codDeliveredAmount.toLocaleString()}
+                  <div className="space-y-1.5 border-t border-purple-100 dark:border-purple-900/30 pt-2.5 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500 font-sans font-medium">Total COD:</span>
+                      <strong className="text-neutral-900 dark:text-neutral-100 font-bold">{formatINR(paymentMetrics.codTotalAmount)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-emerald-700 dark:text-emerald-400 font-sans font-semibold">Collected:</span>
+                      <strong className="text-emerald-600 font-bold">{formatINR(paymentMetrics.codDeliveredAmount)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-amber-700 dark:text-amber-400 font-sans font-medium">Pending:</span>
+                      <strong className="text-amber-600 font-bold">{formatINR(paymentMetrics.codPendingAmount)}</strong>
+                    </div>
                   </div>
                 </div>
 
@@ -1043,12 +1132,24 @@ export default function DRSPerformanceReport() {
                     </h3>
                     <span className="font-mono font-bold text-blue-600">FAD: {paymentMetrics.prepaidFadPercent}%</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><span className="text-neutral-400 block">Prepaid OFD</span><span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">{paymentMetrics.prepaidOfd}</span></div>
-                    <div><span className="text-neutral-400 block">Delivered</span><span className="font-bold font-mono text-emerald-600">{paymentMetrics.prepaidDelivered}</span></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><span className="text-neutral-400 block text-[10px] uppercase font-bold">Prepaid OFD</span><span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">{paymentMetrics.prepaidOfd}</span></div>
+                    <div><span className="text-neutral-400 block text-[10px] uppercase font-bold">Delivered</span><span className="font-bold font-mono text-emerald-600">{paymentMetrics.prepaidDelivered}</span></div>
+                    <div><span className="text-neutral-400 block text-[10px] uppercase font-bold">Pending</span><span className="font-bold font-mono text-amber-600">{paymentMetrics.prepaidPending}</span></div>
                   </div>
-                  <div className="pt-1 font-mono font-bold text-neutral-700 dark:text-neutral-300">
-                    Total Value: â‚¹{paymentMetrics.prepaidTotalAmount.toLocaleString()}
+                  <div className="space-y-1.5 border-t border-blue-100 dark:border-blue-900/30 pt-2.5 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500 font-sans font-medium">Total Value:</span>
+                      <strong className="text-neutral-900 dark:text-neutral-100 font-bold">{formatINR(paymentMetrics.prepaidTotalAmount)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-emerald-700 dark:text-emerald-400 font-sans font-semibold">Delivered:</span>
+                      <strong className="text-emerald-600 font-bold">{formatINR(paymentMetrics.prepaidDeliveredAmount)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-amber-700 dark:text-amber-400 font-sans font-medium">Pending:</span>
+                      <strong className="text-amber-600 font-bold">{formatINR(paymentMetrics.prepaidPendingAmount)}</strong>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1108,7 +1209,7 @@ export default function DRSPerformanceReport() {
                           <td className="px-4 py-3"><strong className="block text-neutral-900 dark:text-white">{row.employee_name || '-'}</strong><span className="text-[10px] text-neutral-400">{row.partner_name || '-'}</span></td>
                           <td className="px-4 py-3"><strong className="block max-w-[180px] truncate text-neutral-800 dark:text-neutral-200">{row.consignee || '-'}</strong><span className="block max-w-[180px] truncate text-[10px] text-neutral-400">{row.customer_name || '-'}</span></td>
                           <td className="px-4 py-3 font-bold text-neutral-700 dark:text-neutral-300">{row.payment_type || '-'}</td>
-                          <td className="px-4 py-3 text-right font-mono font-bold">â‚¹{row.amount_payable.toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold">{formatINR(row.amount_payable)}</td>
                           <td className="px-4 py-3 text-center"><span className="rounded-lg bg-neutral-100 px-2 py-1 font-mono font-bold dark:bg-neutral-800">{row.total_attempts || 1}</span></td>
                           <td className="min-w-[260px] max-w-[360px] whitespace-normal px-4 py-3 leading-relaxed text-neutral-600 dark:text-neutral-300">{row.reason || 'No remark available'}</td>
                         </tr>
@@ -1300,7 +1401,7 @@ export default function DRSPerformanceReport() {
                 </div>
                 <div className="p-4 rounded-2xl bg-emerald-600/10 border border-emerald-600/20 shadow-sm space-y-1">
                   <span className="text-emerald-800 dark:text-emerald-300 font-bold block text-xs">COD Amount</span>
-                  <span className="text-xl font-black text-emerald-600 font-mono">â‚¹{paymentMetrics.codDeliveredAmount.toLocaleString()}</span>
+                  <span className="text-xl font-black text-emerald-600 font-mono">{formatINR(paymentMetrics.codDeliveredAmount)}</span>
                 </div>
               </div>
 
@@ -1316,7 +1417,7 @@ export default function DRSPerformanceReport() {
                         <th className="px-4 py-3 font-bold text-emerald-600">COD Delivered</th>
                         <th className="px-4 py-3 font-bold text-rose-600">COD Pending</th>
                         <th className="px-4 py-3 font-black text-purple-600">COD FAD %</th>
-                        <th className="px-4 py-3 text-right">COD Collection (â‚¹)</th>
+                        <th className="px-4 py-3 text-right">COD Collection</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -1328,7 +1429,7 @@ export default function DRSPerformanceReport() {
                           <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.cod_delivered}</td>
                           <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.cod_pending}</td>
                           <td className="px-4 py-3 font-mono font-black text-purple-600">{e.cod_fad_percent}%</td>
-                          <td className="px-4 py-3 font-mono font-bold text-right">â‚¹{e.cod_value_delivered.toLocaleString()}</td>
+                          <td className="px-4 py-3 font-mono font-bold text-right">{formatINR(e.cod_value_delivered)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1363,7 +1464,7 @@ export default function DRSPerformanceReport() {
                 </div>
                 <div className="p-4 rounded-2xl bg-blue-600/10 border border-blue-600/20 shadow-sm space-y-1">
                   <span className="text-blue-800 dark:text-blue-300 font-bold block text-xs">Amount</span>
-                  <span className="text-xl font-black text-blue-600 font-mono">â‚¹{paymentMetrics.prepaidTotalAmount.toLocaleString()}</span>
+                  <span className="text-xl font-black text-blue-600 font-mono">{formatINR(paymentMetrics.prepaidTotalAmount)}</span>
                 </div>
               </div>
 
@@ -1379,7 +1480,7 @@ export default function DRSPerformanceReport() {
                         <th className="px-4 py-3 font-bold text-emerald-600">Delivered</th>
                         <th className="px-4 py-3 font-bold text-rose-600">Pending</th>
                         <th className="px-4 py-3 font-black text-blue-600">FAD %</th>
-                        <th className="px-4 py-3 text-right">Prepaid Amount (â‚¹)</th>
+                        <th className="px-4 py-3 text-right">Prepaid Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -1391,7 +1492,7 @@ export default function DRSPerformanceReport() {
                           <td className="px-4 py-3 font-bold font-mono text-emerald-600">{e.prepaid_delivered}</td>
                           <td className="px-4 py-3 font-semibold font-mono text-rose-600">{e.prepaid_pending}</td>
                           <td className="px-4 py-3 font-mono font-black text-blue-600">{e.prepaid_fad_percent}%</td>
-                          <td className="px-4 py-3 font-mono font-bold text-right">â‚¹{e.prepaid_amount_total.toLocaleString()}</td>
+                          <td className="px-4 py-3 font-mono font-bold text-right">{formatINR(e.prepaid_amount_total)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1597,7 +1698,7 @@ export default function DRSPerformanceReport() {
               </div>
               <div className="p-3.5 rounded-xl bg-purple-500/10">
                 <span className="text-purple-700 dark:text-purple-400 block font-semibold">COD Amount Shift</span>
-                <span className="text-lg font-bold font-mono text-purple-600">â‚¹{comparisonResult.codAmountChange.toLocaleString()}</span>
+                <span className="text-lg font-bold font-mono text-purple-600">{comparisonResult.codAmountChange >= 0 ? `+${formatINR(comparisonResult.codAmountChange)}` : `-${formatINR(Math.abs(comparisonResult.codAmountChange))}`}</span>
               </div>
             </div>
           </div>

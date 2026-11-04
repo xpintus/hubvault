@@ -1,9 +1,17 @@
 import { format,isValid,parseISO } from 'date-fns';
 
 export function formatINR(amount: number | null | undefined): string {
-  const value = Number(amount ?? 0);
+  if (amount === null || amount === undefined) return '₹0';
+  const value = Number(amount);
   if (!isFinite(value)) return '₹0';
-  return '₹' + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(value));
+  const hasDecimals = Math.abs(value % 1) > 0.001;
+  return (
+    '₹' +
+    new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: hasDecimals ? 2 : 0,
+    }).format(value)
+  );
 }
 
 export function formatINRDecimal(amount: number | null | undefined): string {

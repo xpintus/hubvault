@@ -125,6 +125,7 @@ export interface PaymentAnalyticsMetrics {
   codPending: number;
   codTotalAmount: number;
   codDeliveredAmount: number;
+  codPendingAmount: number;
   codFirstAttemptOfd: number;
   codFirstAttemptDel: number;
   codFadPercent: number;
@@ -136,6 +137,7 @@ export interface PaymentAnalyticsMetrics {
   prepaidPending: number;
   prepaidTotalAmount: number;
   prepaidDeliveredAmount: number;
+  prepaidPendingAmount: number;
   prepaidFirstAttemptOfd: number;
   prepaidFirstAttemptDel: number;
   prepaidFadPercent: number;
@@ -203,6 +205,8 @@ export interface OverallDRSSummary {
 
   totalCodValue: number;
   deliveredCodValue: number;
+  totalPrepaidValue: number;
+  deliveredPrepaidValue: number;
   averageAttempts: number;
   maximumAttempts: number;
 

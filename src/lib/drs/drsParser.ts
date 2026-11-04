@@ -28,7 +28,7 @@ export function normalizeStatus(rawStatus: unknown): NormalizedShipmentStatus {
   return 'Unknown';
 }
 
-// Determines if a shipment's operational status is currently OFD (Out for Delivery)
+// Determines if a shipment's operational status is currently OFD (Out for Delivery / Out on Road)
 export function isShipmentStatusOFD(row: DRSReportRow): boolean {
   if (row.shipment_status_normalized === 'OFD') return true;
   const raw = String(row.shipment_status_raw ?? '').trim().toUpperCase().replace(/[\s_-]+/g, ' ');
@@ -43,9 +43,17 @@ export function isShipmentStatusOFD(row: DRSReportRow): boolean {
 }
 
 export function normalizeAmount(rawAmount: unknown): number {
-  const cleaned = String(rawAmount ?? '').replace(/[^0-9.-]/g, '');
+  if (rawAmount === null || rawAmount === undefined || rawAmount === '') return 0;
+  if (typeof rawAmount === 'number') {
+    return Number.isFinite(rawAmount) ? Math.max(0, Math.round((rawAmount + Number.EPSILON) * 100) / 100) : 0;
+  }
+  const str = String(rawAmount).trim();
+  const cleaned = str
+    .replace(/(?:rs\.?|inr|[₹$\u20B9]|\/[-=])/gi, '')
+    .replace(/,/g, '')
+    .trim();
   const value = Number.parseFloat(cleaned);
-  return Number.isFinite(value) ? value : 0;
+  return Number.isFinite(value) && value >= 0 ? Math.round((value + Number.EPSILON) * 100) / 100 : 0;
 }
 
 // Normalize attempt count: integer conversion, defaulting to 1 for valid rows with missing attempt string
@@ -112,7 +120,29 @@ export async function parseDRSFile(file: File): Promise<{
   // CRITICAL: Shipment delivery status MUST use 'status' / 'shipment_status' and NEVER 'drs_status'
   const keyStatus = getKey(['status', 'shipment_status', 'shipmentstatus', 'delivery_status', 'deliverystatus']);
   
-  const keyAmount = getKey(['amount_payable', 'amount', 'cod_amount', 'collectable_amount', 'amountpayable', 'codamount']);
+  // Expanded comprehensive aliases for Amount Payable / COD Amount
+  const keyAmount = getKey([
+    'amount_payable',
+    'amount',
+    'cod_amount',
+    'collectable_amount',
+    'collectable_value',
+    'payable_amount',
+    'payableamount',
+    'cod_value',
+    'codvalue',
+    'amountpayable',
+    'codamount',
+    'collectible_amount',
+    'collectible_value',
+    'total_amount',
+    'totalamount',
+    'invoice_amount',
+    'invoice_value',
+    'declared_value',
+    'pkg_amount',
+    'value',
+  ]);
   const keyPayment = getKey(['payment_type', 'paymenttype', 'pay_mode', 'payment_mode', 'cod_prepaid', 'paymentmode', 'paymode']);
   const keyPodDate = getKey(['POD_date', 'pod_date', 'poddate', 'delivery_date', 'deliverydate']);
   const keyFirstAttempt = getKey(['1st_attempt_date', 'first_attempt_date', 'first_ofd_date', '1stattemptdate', 'firstattemptdate']);
@@ -212,6 +242,13 @@ export async function parseDRSFile(file: File): Promise<{
       });
 
       const primary = { ...group[0], is_duplicate: true, duplicate_count: group.length };
+      // If primary row has 0 amount, inherit from any duplicate row with valid positive amount
+      if (primary.amount_payable === 0) {
+        const rowWithAmount = group.find((r) => r.amount_payable > 0);
+        if (rowWithAmount) {
+          primary.amount_payable = rowWithAmount.amount_payable;
+        }
+      }
       uniqueRows.push(primary);
 
       for (let i = 1; i < group.length; i++) {

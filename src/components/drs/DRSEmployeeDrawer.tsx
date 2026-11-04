@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { exportDRSPerformanceWorkbook } from '@/lib/drs/drsExcelExporter';
+import { formatINR } from '@/lib/format';
 import { DRSReportRow, EmployeeDRSMetrics } from '@/types/drs';
 import {
   Download,
@@ -127,6 +128,8 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
 
       totalCodValue: metrics.cod_value_total,
       deliveredCodValue: metrics.cod_value_delivered,
+      totalPrepaidValue: metrics.prepaid_amount_total,
+      deliveredPrepaidValue: metrics.prepaid_amount_total,
       averageAttempts: metrics.average_attempts,
       maximumAttempts: metrics.maximum_attempts,
 
@@ -155,6 +158,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
         codPending: metrics.cod_pending,
         codTotalAmount: metrics.cod_value_total,
         codDeliveredAmount: metrics.cod_value_delivered,
+        codPendingAmount: Math.max(metrics.cod_value_total - metrics.cod_value_delivered, 0),
         codFirstAttemptOfd: metrics.cod_first_attempt_ofd,
         codFirstAttemptDel: metrics.cod_first_attempt_del,
         codFadPercent: metrics.cod_fad_percent,
@@ -166,6 +170,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
         prepaidPending: metrics.prepaid_pending,
         prepaidTotalAmount: metrics.prepaid_amount_total,
         prepaidDeliveredAmount: metrics.prepaid_amount_total,
+        prepaidPendingAmount: 0,
         prepaidFirstAttemptOfd: metrics.prepaid_first_attempt_ofd,
         prepaidFirstAttemptDel: metrics.prepaid_first_attempt_del,
         prepaidFadPercent: metrics.prepaid_fad_percent,
@@ -249,7 +254,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
             <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
               <span className="text-purple-700 dark:text-purple-400 block font-bold">COD Collection</span>
               <span className="text-xl font-black text-purple-600 dark:text-purple-400">{metrics.cod_delivery_pct}%</span>
-              <span className="text-[10px] text-purple-600/80 block font-mono font-bold">â‚¹{metrics.cod_value_delivered.toLocaleString()}</span>
+              <span className="text-[10px] text-purple-600/80 block font-mono font-bold">{formatINR(metrics.cod_value_delivered)}</span>
             </div>
           </div>
 
@@ -313,7 +318,7 @@ export const DRSEmployeeDrawer: React.FC<DRSEmployeeDrawerProps> = ({
                       <tr key={s.rowIndex} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/30">
                         <td className="px-3 py-2 font-mono font-bold">{s.waybill_no}</td>
                         <td className="px-3 py-2">{s.consignee || s.customer_name || '-'}</td>
-                        <td className="px-3 py-2 font-mono">â‚¹{s.amount_payable} ({s.payment_type})</td>
+                        <td className="px-3 py-2 font-mono">{formatINR(s.amount_payable)} ({s.payment_type})</td>
                         <td className="px-3 py-2 font-mono font-bold">#{s.total_attempts}</td>
                         <td className="px-3 py-2">
                           <span
