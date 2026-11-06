@@ -109,23 +109,23 @@ export default function PublicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
-      {/* Top Utility Bar */}
-      <div className="bg-slate-900 text-white text-xs py-2 px-4 border-b border-slate-800 hidden sm:block">
+      {/* Top Festive Utility Bar */}
+      <div className="bg-gradient-to-r from-[#030614] via-[#0b102b] to-[#030614] text-white text-xs py-2 px-4 border-b border-amber-500/25 hidden sm:block">
         <div className="mx-auto max-w-7xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-400 font-semibold px-2 py-0.5 text-[11px] border border-amber-500/30">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 text-[11px] border border-amber-400/35 shadow-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-              Logistics Suite
+              🪔 Shubh Deepavali
             </span>
-            <span className="text-slate-300">
-              HubVault: Real-time collection reconciliation &amp; employee dues recovery for last-mile delivery.
+            <span className="text-amber-100/90 font-medium">
+              Celebrate Diwali with HubVault: Illuminate your logistics operations with zero-discrepancy reconciliation.
             </span>
           </div>
-          <div className="flex items-center gap-4 text-[11px] text-slate-400">
-            <Link to="/tools/cash-calculator" className="hover:text-amber-400 transition-colors">
-              Free Cash Denomination Calculator &rarr;
+          <div className="flex items-center gap-4 text-[11px] text-amber-200/80">
+            <Link to="/buy-hubvault" className="text-amber-300 hover:text-white font-semibold transition-colors flex items-center gap-1">
+              Festive Deal: ₹999 Lifetime License &rarr;
             </Link>
-            <span className="text-slate-700">|</span>
+            <span className="text-slate-600">|</span>
             <a href="mailto:hello@hubvault.in" className="hover:text-white transition-colors">
               hello@hubvault.in
             </a>
@@ -151,9 +151,14 @@ export default function PublicLayout() {
                 <Wallet className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <span className="text-[17px] font-bold text-slate-900 dark:text-white tracking-tight block leading-tight">
-                  HubVault
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[17px] font-bold text-slate-900 dark:text-white tracking-tight block leading-tight">
+                    HubVault
+                  </span>
+                  <span className="hidden xl:inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 text-[10px] border border-amber-500/30">
+                    🪔 Happy Diwali
+                  </span>
+                </div>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block leading-tight">
                   Collection Reconciliation Suite
                 </span>
@@ -285,10 +290,12 @@ export default function PublicLayout() {
       {/* Footer (Section 11) */}
       <footer
         className={clsx(
-          'border-t border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400',
+          'relative border-t border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400',
           isMobileToolMode && 'hidden'
         )}
       >
+        {/* Festive Golden Ambient Hairline */}
+        <div className="pointer-events-none absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-12">
             {/* Brand Col */}

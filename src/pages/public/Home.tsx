@@ -1,4 +1,13 @@
 import SEO from '@/components/SEO';
+import {
+  FestiveStyles,
+  HangingFairyLights,
+  HeroDiya,
+  MarigoldToran,
+  RangoliMandala,
+  SkyLantern,
+} from '@/components/home/DiwaliDecorations';
+import DiwaliHeroCanvas from '@/components/home/DiwaliFireworksCanvas';
 import AdSlot from '@/components/ui/AdSlot';
 import { clsx } from 'clsx';
 import {
@@ -8,23 +17,17 @@ import {
   Building2,
   Check,
   CheckCircle2,
-  Clock,
-  Database,
+  Compass,
   FileSpreadsheet,
-  FileText,
+  Flame,
   Layers,
-  Lock,
-  RotateCcw,
   Scale,
-  ShieldCheck,
-  Smartphone,
   Sparkles,
   Tag,
   TrendingUp,
-  Truck,
-  Users,
   Wallet,
   XCircle,
+  Zap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -40,7 +43,7 @@ const BUY_FEATURES = [
   'One-click Day Closing reports & Excel exports',
   'Offline-resilient local sync & cloud backup',
   'Full multi-hub role hierarchy (Admin, Hub Admin, Supervisor)',
-  'Free updates, priority support & new features included',
+  'Free updates, priority support & festive feature drops',
 ];
 
 // Interactive Showcase Tabs
@@ -72,1390 +75,329 @@ export default function Home() {
     },
   ];
 
+  const handleSmoothScroll = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <>
+      <FestiveStyles />
       <SEO
-        title="HubVault — Collection Reconciliation Suite for Logistics & Delivery"
-        description="Digital collection reconciliation platform for logistics and last-mile delivery businesses. Track COD and online collections, manage employee dues, monitor hub-wise performance, and reconcile collections across multiple hubs in real time."
+        title="HubVault — Collection Reconciliation Suite for Logistics & Delivery | Happy Diwali"
+        description="Celebrate Diwali with HubVault. Digital collection reconciliation platform for logistics and last-mile delivery businesses. Track COD & UPI collections, manage employee dues, and illuminate operations."
         path="/"
         structuredData={softwareSchema}
       />
 
       {/* ============================================================
-          SECTION 2: HERO SECTION
+          SECTION 1: GRAND DIWALI HERO SECTION
+          Cinematic fireworks, traditional diyas, hanging toran & lanterns
           ============================================================ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50/70 to-white dark:from-slate-950 dark:via-slate-900/60 dark:to-slate-950 pt-10 pb-20 lg:pt-16 lg:pb-28 border-b border-slate-200/80 dark:border-slate-800/80">
-        {/* Subtle background tech grid */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#030614] via-[#090726] to-[#04081c] text-white pt-10 pb-20 lg:pt-14 lg:pb-32 border-b border-amber-500/20">
+        {/* HTML5 Fireworks Animation Engine */}
+        <DiwaliHeroCanvas />
+
+        {/* Traditional Hanging Marigold Toran Garland along the top */}
+        <MarigoldToran />
+
+        {/* Decorative String Fairy Lights */}
+        <HangingFairyLights />
+
+        {/* Floating Sky Lanterns (Kandils) in top corners */}
+        <div className="absolute top-12 left-4 sm:left-12 z-10 pointer-events-none hidden md:block">
+          <SkyLantern className="animate-festive-lantern" color="gold" />
+        </div>
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.12]"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 1px 1px, #94a3b8 1px, transparent 0)',
-            backgroundSize: '36px 36px',
-          }}
-          aria-hidden="true"
-        />
-
-        {/* Ambient subtle glow (Navy & subtle amber) */}
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-br from-indigo-500/10 via-blue-600/5 to-amber-500/5 blur-[120px] rounded-full" />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            {/* Left Column: Value Proposition */}
-            <div className="lg:col-span-6 space-y-6 text-left">
-              {/* Category Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/5 dark:bg-white/10 border border-slate-900/10 dark:border-white/15 px-3.5 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                <span className="flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 animate-pulse" />
-                Digital Collection Reconciliation Platform
-              </div>
-
-              {/* Exact Requested Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
-                Complete Control Over{' '}
-                <span className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 dark:from-white dark:via-slate-200 dark:to-blue-300 bg-clip-text text-transparent">
-                  Every Collection.
-                </span>
-              </h1>
-
-              {/* Exact Requested Subheadline */}
-              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
-                One powerful platform to track collections, manage dues and reconcile cash across all your logistics
-                hubs — in real time.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                <Link
-                  to="/trial-signup"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 px-6 py-3.5 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95"
-                >
-                  Start Free Trial
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a
-                  href="#features"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900/80 px-6 py-3.5 text-sm font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
-                >
-                  Explore Features
-                </a>
-                <Link
-                  to="/tools/cash-calculator"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                >
-                  <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  Free Cash Calculator
-                </Link>
-              </div>
-
-              {/* Trust Indicators (Section 2 Required) */}
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Enterprise Operational Standard
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Built for Last-Mile Logistics</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Multi-Hub Management</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Real-Time Reconciliation</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Realistic High-Fidelity Product Dashboard Preview */}
-            <div className="lg:col-span-6">
-              <div className="relative rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden transition-all duration-300 hover:shadow-3xl">
-                {/* Mock Application Top Navigation Bar */}
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-slate-900 text-white px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-rose-500/80" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
-                    </div>
-                    <div className="h-4 w-px bg-slate-700 mx-1 hidden sm:block" />
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-amber-400" />
-                      <span className="text-xs font-semibold text-slate-200">
-                        North Delhi Central Hub <span className="text-slate-400 font-mono text-[11px]">(#ND-104)</span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Shift Active · Reconciled 98.8%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Dashboard Inner Body */}
-                <div className="p-4 sm:p-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/60">
-                  {/* KPI Cards Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {/* Total Collection */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                        Total Collection
-                      </span>
-                      <p className="mt-1 text-base sm:text-lg font-bold text-slate-900 dark:text-white tabular-nums tracking-tight">
-                        ₹14,82,450
-                      </p>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-0.5 mt-0.5">
-                        <TrendingUp className="h-2.5 w-2.5" /> +12.4% vs yest.
-                      </span>
-                    </div>
-
-                    {/* Cash Collection */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                        Cash in Safe
-                      </span>
-                      <p className="mt-1 text-base sm:text-lg font-bold text-slate-900 dark:text-white tabular-nums tracking-tight">
-                        ₹9,42,100
-                      </p>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400">100% Notes Counted</span>
-                    </div>
-
-                    {/* Online (UPI / QR) */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                        Online (UPI)
-                      </span>
-                      <p className="mt-1 text-base sm:text-lg font-bold text-slate-900 dark:text-white tabular-nums tracking-tight">
-                        ₹5,40,350
-                      </p>
-                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
-                        342 Verified UTRs
-                      </span>
-                    </div>
-
-                    {/* Pending Dues */}
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                        Pending Dues
-                      </span>
-                      <p className="mt-1 text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums tracking-tight">
-                        ₹18,400
-                      </p>
-                      <span className="text-[10px] text-amber-600/90 dark:text-amber-400/90">3 Riders in Recovery</span>
-                    </div>
-                  </div>
-
-                  {/* Reconciliation Status Overview Bar */}
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">
-                        Daily Handover Reconciliation Status
-                      </span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">98.8% Reconciled</span>
-                    </div>
-                    {/* Visual Segmented Progress */}
-                    <div className="h-2.5 w-full bg-slate-200 dark:bg-slate-750 rounded-full overflow-hidden flex">
-                      <div className="h-full bg-emerald-500" style={{ width: '98.8%' }} title="Reconciled Collections" />
-                      <div className="h-full bg-amber-400" style={{ width: '1.2%' }} title="Pending Rider Handover" />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                        Reconciled: ₹14,64,050
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-amber-400" />
-                        Handover Pending: ₹18,400
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-slate-400" />
-                        Discrepancy: ₹0.00
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Active Rider DRS Run-Sheet Settlement Feed */}
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 pb-2 border-b border-slate-100 dark:border-slate-800">
-                      <span>Evening Check-In &amp; DRS Settlement</span>
-                      <span className="text-[11px] font-normal text-slate-400">Live Counter Feed</span>
-                    </div>
-                    <div className="mt-2.5 space-y-2">
-                      {/* Rider 1 */}
-                      <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-750">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
-                            VS
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900 dark:text-slate-100 leading-tight">
-                              Vikas Sharma <span className="font-mono text-[10px] text-slate-400">· DRS-48291</span>
-                            </p>
-                            <p className="text-[10px] text-slate-500">Rohini Sec 14 · 48/50 Delivered</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                            ₹18,650 <span className="text-[10px] font-normal text-slate-400">(Cash + UPI)</span>
-                          </p>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            <Check className="h-3 w-3" /> Reconciled
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Rider 2 */}
-                      <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-750">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
-                            RY
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900 dark:text-slate-100 leading-tight">
-                              Rahul Yadav <span className="font-mono text-[10px] text-slate-400">· DRS-48294</span>
-                            </p>
-                            <p className="text-[10px] text-slate-500">Pitampura Hub · 36/38 Delivered</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                            ₹14,200 <span className="text-[10px] font-normal text-slate-400">(UPI Verified)</span>
-                          </p>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            <Check className="h-3 w-3" /> Reconciled
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Rider 3 (With Dues Detection) */}
-                      <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold">
-                            AK
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900 dark:text-slate-100 leading-tight">
-                              Amit Kumar <span className="font-mono text-[10px] text-slate-400">· DRS-48301</span>
-                            </p>
-                            <p className="text-[10px] text-amber-700 dark:text-amber-300">
-                              Shortage ₹1,200 recorded to rider dues
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                            ₹16,400 <span className="text-[10px] font-normal text-slate-400">/ ₹17,600</span>
-                          </p>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                            <Clock className="h-3 w-3" /> In Recovery Ledger
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cash Drawer Denomination Strip */}
-                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 text-white text-[11px] font-mono">
-                    <span className="text-amber-400 font-semibold">Vault Safe Denomination:</span>
-                    <span className="text-slate-300">₹500 × 1,420 | ₹200 × 850 | ₹100 × 621</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          className="absolute top-16 right-4 sm:right-12 z-10 pointer-events-none hidden md:block"
+          style={{ animationDelay: '1.8s' }}
+        >
+          <SkyLantern className="animate-festive-lantern" color="crimson" />
         </div>
-      </section>
 
-      {/* ============================================================
-          SECTION 3: TRUST / SOCIAL PROOF SECTION
-          ============================================================ */}
-      <section className="py-16 sm:py-20 bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800/80">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              Operational Reliability at Scale
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Built for Modern Logistics Operations
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Engineered specifically for the daily operating cadence of last-mile delivery centers, 3PL partners, and
-              high-volume courier distribution networks handling millions in daily COD.
-            </p>
-          </div>
-
-          {/* 4 Authentic Operational Pillars */}
-          <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Building2 className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Multi-Hub Operational Scale</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Connect 5 to 100+ delivery stations to a single centralized dashboard without spreadsheets, delayed
-                WhatsApp photos, or server bottlenecks.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Truck className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Courier Network Compatible</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Seamlessly handles standard Delivery Run Sheet (DRS) structures and handover procedures used across
-                Delhivery, Shadowfax, Xpressbees, Ekart, and Valmo partner hubs.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Scale className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Zero-Variance Cash Desk</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Structured note-by-note denomination counting with live mathematical validation eliminates counting
-                arguments between cashiers and delivery associates.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Database className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Offline-Resilient Architecture</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Local storage caching ensures evening collections continue smoothly even during local hub internet
-                outages, auto-syncing securely when reconnected.
-              </p>
-            </div>
-          </div>
+        {/* Rangoli Watermark Motifs in Background */}
+        <div className="absolute -top-10 -left-10 w-96 h-96 pointer-events-none opacity-15">
+          <RangoliMandala className="w-full h-full" />
         </div>
-      </section>
-
-      {/* ============================================================
-          SECTION 4: PROBLEM & SOLUTION SECTION
-          ============================================================ */}
-      <section
-        id="solutions"
-        className="py-20 lg:py-28 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 px-3 py-1 text-xs font-bold uppercase tracking-wider border border-rose-500/20">
-              The Collection Problem &amp; The Solution
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Why Traditional Logistics Cash Desks Leak Revenue
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              When 50+ delivery associates return to the hub at 7:30 PM with bags of cash and digital payment slips,
-              manual tallying creates errors, delayed closings, and untracked rider shortages.
-            </p>
-          </div>
-
-          {/* 5 Problem vs Solution Comparison Cards */}
-          <div className="mt-14 space-y-4">
-            {[
-              {
-                title: 'Manual Paper & Excel Registers',
-                problem:
-                  'Cashiers scribble counts on paper run sheets and manually re-enter numbers into Excel late at night, leading to transcription typos and missing rows.',
-                solution:
-                  'Structured digital collection registers with instantaneous totals, keyboard-first navigation, and error-proof validation.',
-                impact: 'Eliminates 1.5 hours of manual data entry every evening.',
-              },
-              {
-                title: 'Unverified COD Shortages at Handover',
-                problem:
-                  'Cash bundles are accepted hurriedly; counting mistakes are caught only hours later after the delivery associate has already left the hub.',
-                solution:
-                  'Note-by-note denomination counter matches cash in hand against expected COD before the rider leaves the counter.',
-                impact: '100% mathematical certainty before the handover receipt is finalized.',
-              },
-              {
-                title: 'Unmanaged Employee Dues Left for Days',
-                problem:
-                  'Shortages and partial handovers sit in memory, paper notebooks, or sticky notes, turning into accumulated unpaid losses.',
-                solution:
-                  'Centralized Dues & Recovery ledger that tracks every rupee owed by employee, with historical recovery audit trails and supervisor approvals.',
-                impact: 'Direct recovery accountability for every outstanding rupee.',
-              },
-              {
-                title: 'Multi-Hub Reconciliation Confusion',
-                problem:
-                  'Corporate finance spends entire mornings calling 20 different hub managers and waiting for emailed spreadsheets to verify bank deposits.',
-                solution:
-                  'Consolidated multi-hub visibility where corporate leadership sees live collections, cash-in-safe, and closing status across all branches.',
-                impact: 'Instant company-wide financial control with independent station autonomy.',
-              },
-              {
-                title: 'Lack of Real-Time Management Visibility',
-                problem:
-                  'Operations directors discover cash leakage, delayed bank deposits, and high delivery failure rates days after the closing cycle.',
-                solution:
-                  'Live executive dashboards displaying collection speed, pending amounts, and closing status across every hub in real time.',
-                impact: 'Proactive decisions instead of reactive end-of-month fire drills.',
-              },
-            ].map((item, index) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                  <div className="lg:col-span-3">
-                    <span className="text-xs font-mono font-bold text-slate-400">0{index + 1} / CHALLENGE</span>
-                    <h3 className="text-base font-bold text-slate-950 dark:text-white mt-1">{item.title}</h3>
-                    <span className="inline-block mt-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                      {item.impact}
-                    </span>
-                  </div>
-
-                  {/* The Problem */}
-                  <div className="lg:col-span-4 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 p-4">
-                    <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 text-xs font-bold uppercase tracking-wider mb-1">
-                      <XCircle className="h-3.5 w-3.5" />
-                      Manual Operation (Problem)
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {item.problem}
-                    </p>
-                  </div>
-
-                  {/* Arrow Indicator */}
-                  <div className="hidden lg:flex lg:col-span-1 justify-center">
-                    <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </div>
-
-                  {/* The HubVault Solution */}
-                  <div className="lg:col-span-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 p-4">
-                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      HubVault Solution
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {item.solution}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="absolute -bottom-16 -right-16 w-96 h-96 pointer-events-none opacity-15">
+          <RangoliMandala className="w-full h-full" />
         </div>
-      </section>
 
-      {/* ============================================================
-          SECTION 5: KEY FEATURES SECTION (8 REQUIRED CARDS)
-          ============================================================ */}
-      <section
-        id="features"
-        className="py-20 lg:py-28 bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              Core System Capabilities
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Everything You Need to Reconcile Collections
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Purpose-built for the high-velocity requirements of delivery hub cash desks, supervisor closing shifts,
-              and executive finance audits.
-            </p>
-          </div>
+        {/* Ambient Golden & Indigo Radial Glow */}
+        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[480px] bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-indigo-600/15 blur-[140px] rounded-full" />
 
-          {/* 8 Feature Cards Grid */}
-          <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 1. Smart Collection Tracking */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Wallet className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Smart Collection Tracking</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Track COD cash and digital collections per rider, per DRS, and per delivery trip with automatic totals
-                and zero manual arithmetic.
-              </p>
-            </div>
-
-            {/* 2. Cash & Online Reconciliation */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Smartphone className="h-5 w-5 text-emerald-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Cash &amp; Online Reconciliation</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Separate physical currency notes from UPI / QR / payment link collections with individual UTR logging
-                and instant reconciliation proof.
-              </p>
-            </div>
-
-            {/* 3. Multi-Hub Management */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Building2 className="h-5 w-5 text-indigo-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Multi-Hub Management</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Operate decentralized delivery stations with independent cash desks while giving regional leadership
-                unified multi-hub oversight.
-              </p>
-            </div>
-
-            {/* 4. Employee Dues & Recovery */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <RotateCcw className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Employee Dues &amp; Recovery</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Track outstanding rider balances, partial payments, and recovery schedules with an auditable historical
-                dues ledger and receipts.
-              </p>
-            </div>
-
-            {/* 5. Real-Time Performance Reports */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Real-Time Performance Reports</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Generate instant daily closing summaries, supervisor shift logs, and employee leaderboard reports
-                exportable to Excel in seconds.
-              </p>
-            </div>
-
-            {/* 6. Role-Based Access Control */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Users className="h-5 w-5 text-indigo-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Role-Based Access Control</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Strict role hierarchies (Super Admin, Hub Admin, Hub Supervisor, Cashier) ensuring staff access only
-                authorized hub records and actions.
-              </p>
-            </div>
-
-            {/* 7. Collection Analytics */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <BarChart3 className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Collection Analytics</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Spot cash trends, track delivery-to-collection ratios, monitor recurring shortages, and identify
-                top-performing routes and riders.
-              </p>
-            </div>
-
-            {/* 8. Digital Cash Calculator */}
-            <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/70 p-6 hover:border-slate-400 dark:hover:border-slate-700 transition-all">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Banknote className="h-5 w-5 text-emerald-400" />
-              </div>
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-950 dark:text-white">Digital Cash Calculator</h3>
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">
-                  Free Tool
-                </span>
-              </div>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Built-in high-speed denomination counter with keyboard navigation, slip generation, and instant error
-                prevention.
-              </p>
-              <Link
-                to="/tools/cash-calculator"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-slate-900 dark:text-white hover:underline"
-              >
-                Try Free Calculator &rarr;
-              </Link>
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Top Festive Badge */}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-500/20 border border-amber-400/40 px-4 py-1.5 text-xs sm:text-sm font-bold tracking-widest text-amber-300 uppercase shadow-[0_0_20px_rgba(245,158,11,0.25)] backdrop-blur-md">
+              <Sparkles className="h-4 w-4 text-amber-300 animate-pulse" />
+              <span>SHUBH DEEPAVALI 2026</span>
+              <span className="text-amber-500">·</span>
+              <span className="text-amber-200">FESTIVAL OF GROWTH &amp; LIGHTS</span>
+              <Sparkles className="h-4 w-4 text-amber-300 animate-pulse" />
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ============================================================
-          SECTION 6: HOW IT WORKS SECTION (3 CLEAR STEPS)
-          ============================================================ */}
-      <section
-        id="how-it-works"
-        className="py-20 lg:py-28 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              <Layers className="h-4 w-4 text-emerald-500" />
-              Standardized Hub Workflow
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Reconcile Daily Collections in Three Clear Steps
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Transform chaotic evening check-ins into an organized, mathematically verified procedure that wraps up in
-              minutes instead of hours.
-            </p>
-          </div>
+          {/* Main Festive Banner with Traditional Glowing Diyas on Both Sides */}
+          <div className="relative rounded-3xl border border-amber-400/40 bg-gradient-to-r from-[#030614]/85 via-[#0c1033]/90 to-[#030614]/85 p-6 sm:p-10 lg:p-12 shadow-[0_0_50px_rgba(245,158,11,0.22)] backdrop-blur-xl mb-12">
+            {/* Top & Bottom Golden Accent Hairlines */}
+            <div className="pointer-events-none absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+            <div className="pointer-events-none absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/70 to-transparent" />
 
-          {/* 3 Steps Timeline Cards */}
-          <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* Step 1 */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm relative overflow-hidden flex flex-col justify-between">
-              <span className="absolute -top-3 -right-2 text-7xl font-black text-slate-100 dark:text-slate-800/60 select-none pointer-events-none">
-                01
-              </span>
-              <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-5">
-                  <FileText className="h-6 w-6 text-amber-400" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 dark:text-white">1. Record Daily Collections</h3>
-                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Delivery associates hand over cash and digital payment proof at the hub counter. The cashier enters
-                  note denominations (₹500, ₹200, ₹100, etc.) and logs UPI reference IDs in a fast, keyboard-first form.
-                </p>
+            {/* Traditional Corner Ornaments */}
+            <div className="pointer-events-none absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-amber-400 rounded-tl" />
+            <div className="pointer-events-none absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-amber-400 rounded-tr" />
+            <div className="pointer-events-none absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-amber-400 rounded-bl" />
+            <div className="pointer-events-none absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-amber-400 rounded-br" />
+
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8">
+              {/* Left Diya (Large glowing diya) */}
+              <div className="shrink-0 flex items-center justify-center">
+                <HeroDiya side="left" size="lg" />
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 font-medium">
-                &bull; Instant note tallying &bull; UPI UTR logging
-              </div>
-            </div>
 
-            {/* Step 2 */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm relative overflow-hidden flex flex-col justify-between">
-              <span className="absolute -top-3 -right-2 text-7xl font-black text-slate-100 dark:text-slate-800/60 select-none pointer-events-none">
-                02
-              </span>
-              <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-5">
-                  <Scale className="h-6 w-6 text-emerald-400" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 dark:text-white">2. Monitor Dues &amp; Auto-Reconcile</h3>
-                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  HubVault cross-references actual cash and UPI collected against expected DRS delivery values. Any
-                  shortage or excess is instantly flagged and attributed to the specific rider's ledger.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 font-medium">
-                &bull; Gap detection &bull; Automatic rider dues entry
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm relative overflow-hidden flex flex-col justify-between">
-              <span className="absolute -top-3 -right-2 text-7xl font-black text-slate-100 dark:text-slate-800/60 select-none pointer-events-none">
-                03
-              </span>
-              <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-5">
-                  <BarChart3 className="h-6 w-6 text-indigo-400" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-950 dark:text-white">3. Settle Hub &amp; Export Reports</h3>
-                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Generate the official Day Closing Report with one click. Cashiers balance the physical safe, finance
-                  verifies bank deposits, and management reviews multi-hub numbers in real time.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 font-medium">
-                &bull; Day-closing summary &bull; One-click Excel export
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          SECTION 7: DASHBOARD SHOWCASE (INTERACTIVE PRODUCT TABS)
-          ============================================================ */}
-      <section
-        id="showcase"
-        className="py-20 lg:py-28 bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              <Building2 className="h-4 w-4 text-amber-500" />
-              Live Product Experience
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Experience the HubVault Operations Suite
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Switch between the core operational modules used by hub managers, supervisors, and finance teams every
-              day.
-            </p>
-          </div>
-
-          {/* Tab Selector Buttons */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
-            {[
-              { id: 'register', label: '1. Daily Collection Register', icon: Wallet },
-              { id: 'dues', label: '2. Dues & Recovery Ledger', icon: RotateCcw },
-              { id: 'multihub', label: '3. Multi-Hub Performance', icon: Building2 },
-              { id: 'analytics', label: '4. DRS Delivery Analytics', icon: BarChart3 },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as ShowcaseTab)}
-                  className={clsx(
-                    'flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer',
-                    isActive
-                      ? 'bg-slate-950 text-white shadow-md dark:bg-white dark:text-slate-950'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 dark:bg-slate-850 dark:text-slate-300 dark:hover:bg-slate-800'
-                  )}
-                >
-                  <Icon className={clsx('h-4 w-4', isActive ? 'text-amber-400 dark:text-amber-500' : 'text-slate-400')} />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Interactive Screen Display */}
-          <div className="mt-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-900 text-white shadow-2xl overflow-hidden">
-            {/* Screen Header Bar */}
-            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-5 py-3.5">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-rose-500/80" />
-                  <span className="h-3 w-3 rounded-full bg-amber-500/80" />
-                  <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                </div>
-                <div className="h-4 w-px bg-slate-800" />
-                <span className="text-xs font-mono text-slate-300">
-                  app.hubvault.in / {activeTab === 'register' && 'collections/daily-register'}
-                  {activeTab === 'dues' && 'employee-dues/ledger'}
-                  {activeTab === 'multihub' && 'hubs/performance-matrix'}
-                  {activeTab === 'analytics' && 'reports/drs-analytics'}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-slate-400">
-                <span className="hidden sm:inline-block">Status: Live Sync Active</span>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              </div>
-            </div>
-
-            {/* TAB CONTENT 1: DAILY COLLECTION REGISTER */}
-            {activeTab === 'register' && (
-              <div className="p-5 sm:p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Daily Collection Register</h3>
-                    <p className="text-xs text-slate-400">
-                      North Delhi Hub &bull; Shift Closing: Today &bull; 48 Delivery Associates Checked In
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
-                      Total Expected: ₹14,82,450
-                    </span>
-                    <span className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold">
-                      Collected: ₹14,82,450
-                    </span>
-                  </div>
-                </div>
-
-                {/* Table Mockup */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300 border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
-                        <th className="py-2.5 px-3">Rider</th>
-                        <th className="py-2.5 px-3">DRS No.</th>
-                        <th className="py-2.5 px-3">Delivered</th>
-                        <th className="py-2.5 px-3 text-right">Expected COD</th>
-                        <th className="py-2.5 px-3 text-right">Cash Handover</th>
-                        <th className="py-2.5 px-3 text-right">Online (UPI)</th>
-                        <th className="py-2.5 px-3 text-right">Variance</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
-                      <tr>
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Vikas Sharma</td>
-                        <td className="py-3 px-3 text-slate-400">DRS-48291</td>
-                        <td className="py-3 px-3">48 / 50</td>
-                        <td className="py-3 px-3 text-right text-slate-200">₹22,850</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹18,650</td>
-                        <td className="py-3 px-3 text-right text-indigo-400">₹4,200</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹0.00</td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
-                            Reconciled
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Rahul Yadav</td>
-                        <td className="py-3 px-3 text-slate-400">DRS-48294</td>
-                        <td className="py-3 px-3">36 / 38</td>
-                        <td className="py-3 px-3 text-right text-slate-200">₹21,300</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹12,400</td>
-                        <td className="py-3 px-3 text-right text-indigo-400">₹8,900</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹0.00</td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
-                            Reconciled
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="bg-amber-500/5">
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Amit Kumar</td>
-                        <td className="py-3 px-3 text-slate-400">DRS-48301</td>
-                        <td className="py-3 px-3">42 / 45</td>
-                        <td className="py-3 px-3 text-right text-slate-200">₹17,600</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹16,400</td>
-                        <td className="py-3 px-3 text-right text-slate-500">₹0</td>
-                        <td className="py-3 px-3 text-right text-amber-400">-₹1,200</td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-semibold">
-                            Due Incurred
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Rajesh Meena</td>
-                        <td className="py-3 px-3 text-slate-400">DRS-48305</td>
-                        <td className="py-3 px-3">52 / 55</td>
-                        <td className="py-3 px-3 text-right text-slate-200">₹31,400</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹24,000</td>
-                        <td className="py-3 px-3 text-right text-indigo-400">₹7,400</td>
-                        <td className="py-3 px-3 text-right text-emerald-400">₹0.00</td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
-                            Reconciled
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Vault Safe Denomination Strip */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4 text-emerald-400" />
-                    <span className="font-semibold text-slate-200">Physical Cash Vault Drawer:</span>
-                    <span className="text-emerald-400 font-bold tabular-nums">₹9,42,100</span>
-                  </div>
-                  <div className="font-mono text-[11px] text-slate-400 space-x-2">
-                    <span>₹500: 1,420</span> &bull; <span>₹200: 850</span> &bull; <span>₹100: 621</span> &bull;{' '}
-                    <span>₹50: 0</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB CONTENT 2: DUES & RECOVERY LEDGER */}
-            {activeTab === 'dues' && (
-              <div className="p-5 sm:p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Employee Dues &amp; Recovery Ledger</h3>
-                    <p className="text-xs text-slate-400">
-                      Track outstanding rider shortages, daily recovery deductions, and settlement history.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-semibold">
-                      Total Active Dues: ₹18,400
-                    </span>
-                    <span className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
-                      Recovered Today: ₹6,500
-                    </span>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300 border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
-                        <th className="py-2.5 px-3">Rider Name</th>
-                        <th className="py-2.5 px-3">Date Incurred</th>
-                        <th className="py-2.5 px-3">Original Due</th>
-                        <th className="py-2.5 px-3">Recovered Amount</th>
-                        <th className="py-2.5 px-3 text-right">Balance Due</th>
-                        <th className="py-2.5 px-3">Recovery Status</th>
-                        <th className="py-2.5 px-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
-                      <tr>
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Amit Kumar</td>
-                        <td className="py-3 px-3 text-slate-400">Today (DRS-48301)</td>
-                        <td className="py-3 px-3 text-slate-300">₹1,200</td>
-                        <td className="py-3 px-3 text-emerald-400">₹0</td>
-                        <td className="py-3 px-3 text-right font-bold text-amber-400">₹1,200</td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">
-                            Under Recovery
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right font-sans">
-                          <button className="text-xs text-indigo-400 hover:text-indigo-300">Record Recovery</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Suresh Patel</td>
-                        <td className="py-3 px-3 text-slate-400">Yesterday</td>
-                        <td className="py-3 px-3 text-slate-300">₹5,000</td>
-                        <td className="py-3 px-3 text-emerald-400">₹2,500</td>
-                        <td className="py-3 px-3 text-right font-bold text-amber-400">₹2,500</td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">
-                            Partial Recovery
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right font-sans">
-                          <button className="text-xs text-indigo-400 hover:text-indigo-300">Record Recovery</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-3 font-sans font-semibold text-white">Mohd. Irfan</td>
-                        <td className="py-3 px-3 text-slate-400">3 Days Ago</td>
-                        <td className="py-3 px-3 text-slate-300">₹4,000</td>
-                        <td className="py-3 px-3 text-emerald-400">₹4,000</td>
-                        <td className="py-3 px-3 text-right font-bold text-emerald-400">₹0</td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px]">
-                            Fully Settled
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right font-sans">
-                          <span className="text-xs text-slate-500">Audited</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-                  <span>Audited by: Supervisor Sunita Verma</span>
-                  <span className="text-emerald-400 font-semibold">&bull; All recoveries auto-credited to hub safe</span>
-                </div>
-              </div>
-            )}
-
-            {/* TAB CONTENT 3: MULTI-HUB PERFORMANCE */}
-            {activeTab === 'multihub' && (
-              <div className="p-5 sm:p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Multi-Hub Operations Matrix</h3>
-                    <p className="text-xs text-slate-400">
-                      Consolidated view across regional stations with local cashier independence.
-                    </p>
-                  </div>
-                  <span className="text-xs text-slate-400 font-mono">Total Active Stations: 4 Hubs</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { name: 'North Delhi Central', riders: 48, col: '₹14,82,450', rate: '98.8%', status: 'Active' },
-                    { name: 'West Gurugram Hub', riders: 35, col: '₹11,40,200', rate: '99.4%', status: 'Active' },
-                    { name: 'Bengaluru South', riders: 62, col: '₹19,85,600', rate: '97.9%', status: 'Shift End' },
-                    { name: 'Mumbai Bhiwandi Hub', riders: 54, col: '₹17,20,900', rate: '99.1%', status: 'Reconciled' },
-                  ].map((hub) => (
-                    <div key={hub.name} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">{hub.name}</span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
-                          {hub.status}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Total Collection</span>
-                        <p className="text-base font-bold text-white font-mono">{hub.col}</p>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-850">
-                        <span>{hub.riders} Active Riders</span>
-                        <span className="text-emerald-400 font-bold">{hub.rate} Reconciled</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* TAB CONTENT 4: DRS DELIVERY ANALYTICS */}
-            {activeTab === 'analytics' && (
-              <div className="p-5 sm:p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div>
-                    <h3 className="text-lg font-bold text-white">DRS &amp; Last-Mile Delivery Analytics</h3>
-                    <p className="text-xs text-slate-400">
-                      Track delivery conversion, First Attempt Delivery (FAD %), and cash collection ratios.
-                    </p>
-                  </div>
-                  <span className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs font-semibold">
-                    Overall FAD Delivery: 88.4%
+              {/* Center Hero Content */}
+              <div className="flex-1 text-center space-y-4 max-w-3xl mx-auto">
+                {/* 1. Main Festive Greeting Heading */}
+                <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight uppercase leading-none select-none">
+                  <span className="inline-block mr-2 sm:mr-3 text-amber-400 drop-shadow-[0_0_20px_rgba(245,158,11,0.9)]">
+                    🪔
                   </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                    <span className="text-xs text-slate-400 block">Total Out on Road (OFD)</span>
-                    <p className="text-2xl font-bold text-white font-mono mt-1">2,480</p>
-                    <span className="text-[10px] text-slate-500">Across 48 Riders</span>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                    <span className="text-xs text-slate-400 block">Delivered Shipments</span>
-                    <p className="text-2xl font-bold text-emerald-400 font-mono mt-1">2,342</p>
-                    <span className="text-[10px] text-emerald-500 font-semibold">94.4% Success Rate</span>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                    <span className="text-xs text-slate-400 block">Undelivered (UNDEL)</span>
-                    <p className="text-2xl font-bold text-amber-400 font-mono mt-1">138</p>
-                    <span className="text-[10px] text-amber-500">Returned to Hub Safe</span>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                    <span className="text-xs text-slate-400 block">COD FAD %</span>
-                    <p className="text-2xl font-bold text-indigo-400 font-mono mt-1">87.2%</p>
-                    <span className="text-[10px] text-indigo-400 font-semibold">First Attempt Cash</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          SECTION 8: WHO CAN USE HUBVAULT? (5 TARGETED CARDS)
-          ============================================================ */}
-      <section
-        id="solutions-audience"
-        className="py-20 lg:py-28 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              <Users className="h-4 w-4 text-emerald-500" />
-              Built for Your Operational Role
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Tailored for Every Level of Logistics Operations
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              From on-ground hub cashiers to regional finance directors, HubVault brings speed, clarity, and accountability
-              to every collection handover.
-            </p>
-          </div>
-
-          {/* 5 Targeted Cards */}
-          <div className="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* 1. Logistics Companies & 3PLs */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Truck className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Logistics Companies &amp; 3PLs</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Consolidate cash flows across regional distribution centers, eliminate leakage, and achieve same-day
-                reconciliation across the entire courier network.
-              </p>
-              <ul className="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Multi-branch consolidated balance sheet
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Zero end-of-month reconciliation backlog
-                </li>
-              </ul>
-            </div>
-
-            {/* 2. Last-Mile Delivery Partners (DSPs) */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Building2 className="h-5 w-5 text-emerald-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Last-Mile Delivery Partners</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Manage franchised delivery stations, track courier run sheet settlements, and protect working capital
-                against uncollected COD and client debit notes.
-              </p>
-              <ul className="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Prevent client COD debit penalties
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Transparent rider settlement history
-                </li>
-              </ul>
-            </div>
-
-            {/* 3. Delivery Centers & Franchises */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Layers className="h-5 w-5 text-indigo-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Delivery Centers &amp; Franchises</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Replace manual counter logbooks with a standardized counter software that trains cashiers in minutes
-                and prevents counting mistakes under rush.
-              </p>
-              <ul className="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Faster evening check-in per associate
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Automated cash-in-safe calculation
-                </li>
-              </ul>
-            </div>
-
-            {/* 4. Hub Managers & Cashiers */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Wallet className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Hub Managers &amp; Cashiers</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Speed up evening rider settlement by 70%, eliminate cash discrepancy disputes at the counter, and close
-                the physical safe with 100% confidence.
-              </p>
-              <ul className="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Built-in denomination counter
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> One-click Day Closing PDF &amp; print
-                </li>
-              </ul>
-            </div>
-
-            {/* 5. Operations & Finance Teams */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-sm md:col-span-2 lg:col-span-2">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <BarChart3 className="h-5 w-5 text-emerald-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Operations &amp; Finance Teams</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Gain instant auditability into cash-in-transit, track bank deposits against system collection records,
-                and maintain an indisputable rider dues ledger with zero paperwork.
-              </p>
-              <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Real-time bank deposit verification
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Immutable historical audit logs
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Instant Excel export for any hub &amp; date
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Role-based permission controls
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          SECTION 9: SECURITY & ACCESS CONTROL
-          ============================================================ */}
-      <section
-        id="security"
-        className="py-20 lg:py-28 bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              <Lock className="h-4 w-4 text-emerald-500" />
-              Enterprise Governance &amp; Security
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Enterprise-Grade Protection for Every Rupee
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Your financial records and rider dues require uncompromising data security, strict role permissions, and
-              tamper-proof audit trails.
-            </p>
-          </div>
-
-          {/* 4 Security Pillars */}
-          <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Users className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Role-Based Access (RBAC)</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Super Admins, Hub Admins, Supervisors, and Cashiers each get strictly scoped permissions. Cashiers cannot
-                modify previous days or other hubs.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <ShieldCheck className="h-5 w-5 text-emerald-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Immutable Audit Trails</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Every cash entry, dues adjustment, and day closing event is stamped with employee identity, timestamp, and
-                IP attribution.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Lock className="h-5 w-5 text-indigo-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">End-to-End Encryption</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Data is encrypted in transit via TLS 1.3 and at rest with AES-256 standard encryption on enterprise-grade
-                cloud infrastructure.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm mb-4">
-                <Database className="h-5 w-5 text-amber-400" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950 dark:text-white">Multi-Hub Data Isolation</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Strict multi-tenant architecture ensures each logistics partner and branch operates in safe, isolated data
-                environments.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Discrete In-content Ad Slot */}
-      <section className="py-6 bg-slate-50 dark:bg-slate-900/60">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <AdSlot slot="1111111111" className="rounded-2xl overflow-hidden" />
-        </div>
-      </section>
-
-      {/* ============================================================
-          SECTION 10: PRICING SECTION
-          ============================================================ */}
-      <section
-        id="pricing"
-        className="py-20 lg:py-28 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200/80 dark:border-slate-800/80 scroll-mt-16"
-      >
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 dark:bg-white/10 border border-slate-900/10 dark:border-white/15 px-3 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
-              <Tag className="h-3.5 w-3.5 text-amber-500" />
-              Transparent, Direct Pricing
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-              Invest Once, Reconcile Forever
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              No complex tiered billing, no hidden fees. Choose lifetime access or flexible monthly subscriptions.
-            </p>
-          </div>
-
-          <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-            {/* Lifetime License Card */}
-            <div className="relative rounded-3xl bg-slate-950 text-white p-8 sm:p-10 shadow-xl border border-slate-800 flex flex-col justify-between overflow-hidden">
-              <div className="absolute top-0 right-0 h-40 w-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 text-amber-300 px-3 py-1 text-xs font-bold border border-amber-500/30">
-                    <Sparkles className="h-3.5 w-3.5" /> Most Popular &bull; Lifetime
+                  <span className="bg-gradient-to-r from-amber-100 via-yellow-200 via-amber-300 to-amber-100 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(245,158,11,0.85)] font-serif animate-gold-shimmer">
+                    HAPPY DIWALI
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">Pay Once &bull; Use Forever</span>
-                </div>
-
-                <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-5xl font-extrabold tracking-tight text-white">₹{LIFETIME_PRICE}</span>
-                  <span className="text-lg text-slate-500 line-through">₹2,999</span>
-                  <span className="text-xs text-emerald-400 font-semibold ml-2">Save ₹2,000</span>
-                </div>
-                <p className="mt-2 text-xs text-slate-400">One-time payment for lifetime access across unlimited hubs.</p>
-
-                <div className="mt-8 space-y-3">
-                  {BUY_FEATURES.map((feat) => (
-                    <div key={feat} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-300">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mt-0.5">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                      <span>{feat}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-slate-800 space-y-3">
-                <Link
-                  to="/buy-now"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold px-6 py-3.5 text-sm shadow-md transition-all active:scale-95"
-                >
-                  Buy Lifetime License — ₹{LIFETIME_PRICE}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <p className="text-center text-[11px] text-slate-400">
-                  Instant activation &bull; 7-Day Money-Back Guarantee
-                </p>
-              </div>
-            </div>
-
-            {/* Monthly Subscription Card */}
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 sm:p-10 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                    Monthly Plan
+                  <span className="inline-block ml-2 sm:mr-3 text-amber-400 drop-shadow-[0_0_20px_rgba(245,158,11,0.9)]">
+                    🪔
                   </span>
-                  <span className="text-xs text-slate-500 font-medium">Cancel Anytime</span>
-                </div>
+                </h1>
 
-                <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
-                    ₹{MONTHLY_PRICE}
-                  </span>
-                  <span className="text-slate-500 text-sm">/ month</span>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  Ideal for single hubs or testing HubVault in active production.
+                {/* Festival of Lights Tagline */}
+                <p className="text-base sm:text-xl md:text-2xl font-bold text-amber-200 tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                  &ldquo;Celebrate the Festival of Lights&rdquo;
                 </p>
 
-                <div className="mt-8 space-y-3">
-                  {[
-                    'Full access to all collection reconciliation tools',
-                    'Cash & UPI denomination counters',
-                    'Employee dues & recovery ledger',
-                    'Day-end closing reports & Excel export',
-                    'Email & WhatsApp customer support',
-                  ].map((feat) => (
-                    <div key={feat} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 mt-0.5">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                      <span>{feat}</span>
-                    </div>
-                  ))}
+                {/* Subtitle */}
+                <p className="text-sm sm:text-base md:text-lg font-semibold text-amber-100/90 tracking-normal drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                  Wishing You Prosperity, Happiness, Growth &amp; New Beginnings.
+                </p>
+
+                {/* Small Inspirational Festive Message */}
+                <p className="text-xs sm:text-sm text-slate-300/90 italic max-w-xl mx-auto leading-relaxed pt-1">
+                  &ldquo;This Diwali, let&rsquo;s illuminate new possibilities and celebrate success together with
+                  flawless logistics reconciliation.&rdquo;
+                </p>
+
+                {/* Festive Dual CTAs */}
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                  <button
+                    onClick={() => handleSmoothScroll('festival-of-growth')}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 px-6 py-3.5 text-sm sm:text-base font-extrabold shadow-[0_0_25px_rgba(245,158,11,0.55)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <Compass className="h-5 w-5 text-slate-950" />
+                    Explore HubVault
+                    <ArrowRight className="h-4 w-4 text-slate-950" />
+                  </button>
+
+                  <Link
+                    to="/trial-signup"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-amber-400/50 hover:border-amber-300 text-amber-200 hover:text-white px-6 py-3.5 text-sm sm:text-base font-bold shadow-md transition-all active:scale-95"
+                  >
+                    <Sparkles className="h-4 w-4 text-amber-300" />
+                    Start Free Trial
+                  </Link>
+
+                  <Link
+                    to="/buy-hubvault"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 text-amber-300 px-5 py-3.5 text-sm font-semibold transition-all"
+                  >
+                    <Tag className="h-4 w-4 text-amber-400" />
+                    Lifetime Deal · ₹{LIFETIME_PRICE}
+                  </Link>
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                <Link
-                  to="/buy-now?plan=monthly"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold px-6 py-3.5 text-sm shadow-sm transition-all"
-                >
-                  Choose Monthly — ₹{MONTHLY_PRICE}/mo
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <div className="text-center">
-                  <Link to="/trial-signup" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                    Or start with 30 days free trial &rarr;
+              {/* Right Diya (Large glowing diya) */}
+              <div className="shrink-0 flex items-center justify-center">
+                <HeroDiya side="right" size="lg" />
+              </div>
+            </div>
+          </div>
+
+          {/* Social Proof / Trust Metrics Ribbon */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            <div className="rounded-2xl border border-amber-400/20 bg-slate-900/60 p-4 text-center backdrop-blur-md">
+              <div className="text-2xl sm:text-3xl font-black text-amber-300">₹45+ Cr</div>
+              <div className="text-xs text-slate-400 font-medium mt-1">Reconciled Collections</div>
+            </div>
+            <div className="rounded-2xl border border-amber-400/20 bg-slate-900/60 p-4 text-center backdrop-blur-md">
+              <div className="text-2xl sm:text-3xl font-black text-amber-300">100%</div>
+              <div className="text-xs text-slate-400 font-medium mt-1">Cash &amp; Online Audit</div>
+            </div>
+            <div className="rounded-2xl border border-amber-400/20 bg-slate-900/60 p-4 text-center backdrop-blur-md">
+              <div className="text-2xl sm:text-3xl font-black text-amber-300">0%</div>
+              <div className="text-xs text-slate-400 font-medium mt-1">Discrepancy Tolerance</div>
+            </div>
+            <div className="rounded-2xl border border-amber-400/20 bg-slate-900/60 p-4 text-center backdrop-blur-md">
+              <div className="text-2xl sm:text-3xl font-black text-amber-300">₹999</div>
+              <div className="text-xs text-slate-400 font-medium mt-1">Festive Lifetime Access</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION A: FESTIVAL OF GROWTH — ILLUMINATE YOUR BUSINESS OPERATIONS
+          5 Core Capabilities Cards with Gold Accents
+          ============================================================ */}
+      <section id="festival-of-growth" className="relative py-20 lg:py-28 bg-white dark:bg-slate-950 transition-colors">
+        {/* Subtle decorative rangoli background watermark */}
+        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-80 h-80 pointer-events-none opacity-5 dark:opacity-10">
+          <RangoliMandala className="w-full h-full text-amber-500" />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3">
+              <Flame className="h-3.5 w-3.5 text-amber-500" />
+              <span>Section A · Festival of Growth</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+              Illuminate Your Business Operations
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+              Just as Diwali lights up every home, HubVault brings radiant clarity, accountability, and effortless
+              reconciliation to your daily last-mile operations.
+            </p>
+          </div>
+
+          {/* 5 Core Capability Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {/* Card 1: Digital Collection Tracking */}
+            <div className="group rounded-3xl border border-amber-500/30 hover:border-amber-400 bg-gradient-to-b from-amber-500/[0.04] via-white to-white dark:from-amber-500/[0.06] dark:via-slate-900 dark:to-slate-900 p-8 shadow-sm hover:shadow-[0_10px_35px_rgba(245,158,11,0.18)] transition-all duration-300 hover:-translate-y-1">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-6 group-hover:scale-110 transition-transform">
+                <Banknote className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Digital Collection Tracking</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                Record Cash on Delivery (COD) and Online/UPI collections in real time for every delivery rider as runs
+                finish.
+              </p>
+              <ul className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Instant payment mode breakdown (Cash vs UPI)
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Denomination note counter with auto-totaling
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 2: Cash & Online Reconciliation */}
+            <div className="group rounded-3xl border border-amber-500/30 hover:border-amber-400 bg-gradient-to-b from-amber-500/[0.04] via-white to-white dark:from-amber-500/[0.06] dark:via-slate-900 dark:to-slate-900 p-8 shadow-sm hover:shadow-[0_10px_35px_rgba(245,158,11,0.18)] transition-all duration-300 hover:-translate-y-1">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-6 group-hover:scale-110 transition-transform">
+                <Scale className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Cash &amp; Online Reconciliation</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                Achieve zero discrepancy between rider field submissions, supervisor handovers, and final bank deposits.
+              </p>
+              <ul className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Automated short/excess calculation
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  UPI transaction reference cross-checking
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 3: Multi-Hub Management */}
+            <div className="group rounded-3xl border border-amber-500/30 hover:border-amber-400 bg-gradient-to-b from-amber-500/[0.04] via-white to-white dark:from-amber-500/[0.06] dark:via-slate-900 dark:to-slate-900 p-8 shadow-sm hover:shadow-[0_10px_35px_rgba(245,158,11,0.18)] transition-all duration-300 hover:-translate-y-1">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-6 group-hover:scale-110 transition-transform">
+                <Building2 className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Multi-Hub Management</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                Monitor and balance 1 or 50 delivery hubs, franchise branches, and cross-docks under one master
+                reconciliation umbrella.
+              </p>
+              <ul className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Station-level permissions &amp; segregation
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Executive multi-hub performance roll-up
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 4: Dues & Recovery Tracking */}
+            <div className="group rounded-3xl border border-amber-500/30 hover:border-amber-400 bg-gradient-to-b from-amber-500/[0.04] via-white to-white dark:from-amber-500/[0.06] dark:via-slate-900 dark:to-slate-900 p-8 shadow-sm hover:shadow-[0_10px_35px_rgba(245,158,11,0.18)] transition-all duration-300 hover:-translate-y-1">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-6 group-hover:scale-110 transition-transform">
+                <Wallet className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Dues &amp; Recovery Tracking</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                Eliminate unpaid shortages and rider disputes with transparent running dues balances and partial recovery
+                logs.
+              </p>
+              <ul className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Automated short-collection rollover to rider ledger
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Full settlement receipt audit trail
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 5: Real-Time Performance Reports (Span 2 cols on lg) */}
+            <div className="group lg:col-span-2 rounded-3xl border border-amber-500/30 hover:border-amber-400 bg-gradient-to-r from-amber-500/[0.05] via-amber-400/[0.03] to-slate-900/5 dark:from-amber-500/[0.08] dark:to-slate-900 p-8 shadow-sm hover:shadow-[0_10px_35px_rgba(245,158,11,0.18)] transition-all duration-300 hover:-translate-y-1">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 mb-4 group-hover:scale-110 transition-transform">
+                    <BarChart3 className="h-7 w-7" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    Real-Time Performance Reports &amp; Team Leaderboard
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl mb-4">
+                    Track Total OFD, Status OFD, Delivered, First Attempt Delivery (COD FAD %, Prepaid FAD %), and team
+                    productivity metrics with 1-click clipboard snapshot generation.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      1-Click Day Closing Report
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                      <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
+                      FAD Delivery Analytics
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                      <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+                      Instant Excel / CSV Exports
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 w-full md:w-auto">
+                  <Link
+                    to="/trial-signup"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300 text-white px-6 py-3.5 text-sm font-bold shadow-md transition-all active:scale-95"
+                  >
+                    Try Performance Hub
+                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
@@ -1465,55 +407,569 @@ export default function Home() {
       </section>
 
       {/* ============================================================
-          SECTION 10: FINAL CTA SECTION
+          SECTION B: WHY HUBVAULT? — A BRIGHTER WAY TO MANAGE COLLECTIONS
+          Contrasting dark manual chaos with illuminated HubVault solutions
           ============================================================ */}
-      <section className="relative py-20 lg:py-24 bg-gradient-to-b from-white to-slate-100/80 dark:from-slate-950 dark:to-slate-900 overflow-hidden">
-        {/* Glow */}
-        <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-t from-indigo-500/10 via-amber-500/5 to-transparent blur-[100px] rounded-full" />
-
-        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/5 dark:bg-white/10 px-3.5 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-900/10 dark:border-white/15">
-            <Wallet className="h-3.5 w-3.5 text-amber-500" />
-            Ready for Effortless Daily Reconciliations?
+      <section
+        id="solutions"
+        className="relative py-20 lg:py-28 bg-slate-50 dark:bg-[#070b1a] border-y border-slate-200/80 dark:border-amber-500/20"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/15 border border-amber-500/30 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-3">
+              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <span>Section B · Why HubVault</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+              A Brighter Way to Manage Collections
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+              Step out of the dark maze of messy registers, disputed rider balances, and 2 AM spreadsheets. Step into
+              pure operational clarity.
+            </p>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white leading-tight">
-            Take Control of Your Logistics Collections.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Comparison 1 */}
+            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 shadow-sm overflow-hidden relative">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-500">The Dark Manual Way</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-500">The Radiant HubVault Way</span>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+                  <span>Manual paper slips &amp; physical registers get smudged, torn, or misplaced by midnight.</span>
+                </div>
+                <div className="flex items-start gap-3 text-sm font-semibold text-slate-900 dark:text-amber-200 bg-amber-500/10 dark:bg-amber-500/15 p-3.5 rounded-2xl border border-amber-500/20">
+                  <CheckCircle2 className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    Digital closing entries stored securely with instantaneous sync, verified counts, and tamper audit.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison 2 */}
+            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 shadow-sm overflow-hidden relative">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-500">The Dark Manual Way</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-500">The Radiant HubVault Way</span>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+                  <span>Riders dispute shortages next morning, claiming they submitted correct cash without receipts.</span>
+                </div>
+                <div className="flex items-start gap-3 text-sm font-semibold text-slate-900 dark:text-amber-200 bg-amber-500/10 dark:bg-amber-500/15 p-3.5 rounded-2xl border border-amber-500/20">
+                  <CheckCircle2 className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    Instant digital counter receipt showing exact cash note denominations &amp; online UTR numbers.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison 3 */}
+            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 shadow-sm overflow-hidden relative">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-500">The Dark Manual Way</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-500">The Radiant HubVault Way</span>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+                  <span>Hub managers spend 2 to 3 hours nightly calling supervisors and merging conflicting Excel files.</span>
+                </div>
+                <div className="flex items-start gap-3 text-sm font-semibold text-slate-900 dark:text-amber-200 bg-amber-500/10 dark:bg-amber-500/15 p-3.5 rounded-2xl border border-amber-500/20">
+                  <CheckCircle2 className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    1-Click Day Closing aggregates all station runs automatically, giving owners instant clarity.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison 4 */}
+            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 shadow-sm overflow-hidden relative">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-500">The Dark Manual Way</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-500">The Radiant HubVault Way</span>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+                  <span>Unrecovered dues pile up silently across months until riders leave the company unannounced.</span>
+                </div>
+                <div className="flex items-start gap-3 text-sm font-semibold text-slate-900 dark:text-amber-200 bg-amber-500/10 dark:bg-amber-500/15 p-3.5 rounded-2xl border border-amber-500/20">
+                  <CheckCircle2 className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    Automated dues ledger warns supervisors immediately when a rider reaches the safe credit limit.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION C: LIVE OPERATIONS SUITE SHOWCASE
+          Interactive live demonstration of the software
+          ============================================================ */}
+      <section id="showcase" className="relative py-20 lg:py-28 bg-white dark:bg-slate-950 transition-colors">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3">
+              <Layers className="h-3.5 w-3.5 text-indigo-500" />
+              <span>Section C · Operations Suite Showcase</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+              Built for High-Velocity Logistics Hubs
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+              Experience the exact interfaces that cashiers, supervisors, and operations managers use every single evening
+              at delivery stations.
+            </p>
+          </div>
+
+          {/* Interactive Tabs */}
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex rounded-2xl bg-slate-100 dark:bg-slate-900 p-1.5 border border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setActiveTab('register')}
+                className={clsx(
+                  'rounded-xl px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer',
+                  activeTab === 'register'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                Collection Register
+              </button>
+              <button
+                onClick={() => setActiveTab('dues')}
+                className={clsx(
+                  'rounded-xl px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer',
+                  activeTab === 'dues'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                Dues &amp; Recovery
+              </button>
+              <button
+                onClick={() => setActiveTab('multihub')}
+                className={clsx(
+                  'rounded-xl px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer',
+                  activeTab === 'multihub'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                Multi-Hub Matrix
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={clsx(
+                  'rounded-xl px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer',
+                  activeTab === 'analytics'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                Leaderboard &amp; FAD %
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Screen Showcase */}
+          <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-900 text-white shadow-2xl overflow-hidden">
+            {/* Top Browser Bar */}
+            <div className="flex items-center justify-between px-6 py-3.5 bg-slate-950/80 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-rose-500/80" />
+                <span className="w-3 h-3 rounded-full bg-amber-500/80" />
+                <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
+                <span className="ml-3 text-xs font-mono text-slate-400">hubvault.in/app/reconciliation-live</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Sync
+                </span>
+              </div>
+            </div>
+
+            {/* Tab 1: Collection Register */}
+            {activeTab === 'register' && (
+              <div className="p-6 sm:p-8 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Daily Collection Register — Hub #04 South Bangalore</h3>
+                    <p className="text-xs text-slate-400 mt-1">Shift: Evening Closing · Cashier: Rohit Verma</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-amber-300 font-mono bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl">
+                      Expected: ₹1,84,520
+                    </span>
+                    <span className="text-xs text-emerald-300 font-mono bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
+                      Reconciled: ₹1,84,520
+                    </span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase text-[11px] font-bold">
+                        <th className="py-3 px-3">Rider Name</th>
+                        <th className="py-3 px-3">Run ID</th>
+                        <th className="py-3 px-3">COD Delivered</th>
+                        <th className="py-3 px-3">Cash Handover</th>
+                        <th className="py-3 px-3">UPI Received</th>
+                        <th className="py-3 px-3">Diff / Due</th>
+                        <th className="py-3 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono text-xs">
+                      <tr>
+                        <td className="py-3 px-3 font-sans font-bold text-slate-200">Arun Kumar (R-104)</td>
+                        <td className="py-3 px-3 text-slate-400">DRS-8821</td>
+                        <td className="py-3 px-3 text-slate-200">₹32,450</td>
+                        <td className="py-3 px-3 text-emerald-400">₹24,000</td>
+                        <td className="py-3 px-3 text-indigo-400">₹8,450</td>
+                        <td className="py-3 px-3 text-emerald-400">₹0.00</td>
+                        <td className="py-3 px-3">
+                          <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px] font-bold border border-emerald-500/30">
+                            MATCHED
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 px-3 font-sans font-bold text-slate-200">Vikas Patil (R-112)</td>
+                        <td className="py-3 px-3 text-slate-400">DRS-8824</td>
+                        <td className="py-3 px-3 text-slate-200">₹28,100</td>
+                        <td className="py-3 px-3 text-emerald-400">₹20,500</td>
+                        <td className="py-3 px-3 text-indigo-400">₹7,600</td>
+                        <td className="py-3 px-3 text-emerald-400">₹0.00</td>
+                        <td className="py-3 px-3">
+                          <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px] font-bold border border-emerald-500/30">
+                            MATCHED
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 px-3 font-sans font-bold text-slate-200">Sanjay Maurya (R-109)</td>
+                        <td className="py-3 px-3 text-slate-400">DRS-8828</td>
+                        <td className="py-3 px-3 text-slate-200">₹41,200</td>
+                        <td className="py-3 px-3 text-emerald-400">₹32,000</td>
+                        <td className="py-3 px-3 text-indigo-400">₹9,000</td>
+                        <td className="py-3 px-3 text-amber-400 font-bold">-₹200 (Due)</td>
+                        <td className="py-3 px-3">
+                          <span className="rounded-full bg-amber-500/20 text-amber-300 px-2 py-0.5 text-[10px] font-bold border border-amber-500/30">
+                            PARTIAL DUE
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Dues & Recovery */}
+            {activeTab === 'dues' && (
+              <div className="p-6 sm:p-8 space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Employee Dues &amp; Recovery Ledger</h3>
+                  <p className="text-xs text-slate-400 mt-1">Automatic balance rollover from short daily collection</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-xs text-slate-400">Total Active Riders</div>
+                    <div className="text-2xl font-bold text-white mt-1">42</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-xs text-slate-400">Outstanding Dues</div>
+                    <div className="text-2xl font-bold text-amber-400 mt-1">₹3,420</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-xs text-slate-400">Recovered Today</div>
+                    <div className="text-2xl font-bold text-emerald-400 mt-1">₹1,850</div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700 text-xs text-slate-300 leading-relaxed">
+                  Every short submission registers immediately to the rider profile with reason stamps (e.g., customer
+                  change issue, pending UPI settlement). Clear audits mean zero disputes upon settlement.
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Multi-Hub */}
+            {activeTab === 'multihub' && (
+              <div className="p-6 sm:p-8 space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Central Operations Multi-Hub Overview</h3>
+                  <p className="text-xs text-slate-400 mt-1">Live status across 5 active delivery stations</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-emerald-500/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">Bangalore South Hub</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono">
+                        CLOSED
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-2">Collections: ₹1,84,520</div>
+                    <div className="text-xs text-emerald-400 font-semibold mt-1">Discrepancy: ₹0.00</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-amber-500/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">Whitefield Hub</span>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-mono">
+                        CLOSING (85%)
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-2">Collections: ₹2,15,800</div>
+                    <div className="text-xs text-amber-400 font-semibold mt-1">Pending Riders: 4</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-800/80 border border-indigo-500/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">Electronic City Hub</span>
+                      <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-mono">
+                        CLOSING (92%)
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-2">Collections: ₹1,62,400</div>
+                    <div className="text-xs text-indigo-400 font-semibold mt-1">Pending Riders: 2</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 4: Analytics */}
+            {activeTab === 'analytics' && (
+              <div className="p-6 sm:p-8 space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Employee Performance Leaderboard &amp; FAD % Metrics</h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Complete metrics: Total OFD, Status OFD, Delivered, COD FAD %, Prepaid FAD %, and Overall %
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-center">
+                  <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-[11px] text-slate-400 font-sans">COD FAD %</div>
+                    <div className="text-lg font-bold text-emerald-400 mt-0.5">88.4%</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-[11px] text-slate-400 font-sans">Prepaid FAD %</div>
+                    <div className="text-lg font-bold text-indigo-400 mt-0.5">93.2%</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-[11px] text-slate-400 font-sans">Overall Delivery %</div>
+                    <div className="text-lg font-bold text-amber-400 mt-0.5">91.8%</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div className="text-[11px] text-slate-400 font-sans">FAD Delivery %</div>
+                    <div className="text-lg font-bold text-white mt-0.5">89.6%</div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
+                  <span>Export high-resolution report snapshots formatted for WhatsApp and leadership updates.</span>
+                  <Link to="/trial-signup" className="text-amber-300 font-semibold hover:underline">
+                    View Live Leaderboard &rarr;
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION D: TRANSPARENT FESTIVE PRICING
+          Diwali Special Offer — Flat ₹999 Lifetime License
+          ============================================================ */}
+      <section
+        id="pricing"
+        className="relative py-20 lg:py-28 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-[#05091a] dark:via-slate-950 dark:to-[#05091a] border-t border-slate-200 dark:border-amber-500/20"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/40 px-4 py-1 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300 mb-3 shadow-sm">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              <span>Diwali Special Offer · Flat ₹999</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+              Invest Once in Operational Peace of Mind
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+              No hidden fees, no per-rider charges, no surprise price escalations. Simple, honest pricing built for
+              growing logistics businesses.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+            {/* Plan 1: Lifetime License (Featured Festive Deal) */}
+            <div className="relative rounded-3xl border-2 border-amber-400 bg-white dark:bg-slate-900 p-8 sm:p-10 shadow-[0_0_40px_rgba(245,158,11,0.22)] flex flex-col justify-between">
+              {/* Top Banner Tag */}
+              <div className="absolute -top-4 right-8 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 px-4 py-1 text-xs font-black uppercase tracking-wider shadow-md">
+                <Sparkles className="h-3.5 w-3.5" />
+                Diwali Special Deal
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">Lifetime License</h3>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mt-0.5">
+                      Pay once · Use forever across all hubs
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-baseline justify-end gap-1">
+                      <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">
+                        ₹{LIFETIME_PRICE}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium line-through">
+                      Regular ₹4,999
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-3.5">
+                  {BUY_FEATURES.map((feature, i) => (
+                    <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+                      <Check className="h-4 w-4 text-amber-500 shrink-0 mt-0.5 font-bold" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+                <Link
+                  to="/buy-hubvault"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 px-6 py-4 text-base font-extrabold shadow-[0_4px_20px_rgba(245,158,11,0.4)] transition-all transform hover:scale-[1.02] active:scale-95"
+                >
+                  Buy Lifetime License for ₹{LIFETIME_PRICE}
+                  <ArrowRight className="h-5 w-5 text-slate-950" />
+                </Link>
+                <div className="text-center text-[11px] text-slate-500 dark:text-slate-400 mt-2.5">
+                  Instant activation via UPI QR · No subscription recurring charges
+                </div>
+              </div>
+            </div>
+
+            {/* Plan 2: Monthly Subscription */}
+            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 sm:p-10 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Monthly Plan</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      Flexible month-to-month subscription
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-baseline justify-end gap-1">
+                      <span className="text-4xl font-black text-slate-900 dark:text-white">₹{MONTHLY_PRICE}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/mo</span>
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Cancel anytime</span>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-3.5">
+                  <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5 font-bold" />
+                    <span>Unlimited daily collection register &amp; DRS tracking</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5 font-bold" />
+                    <span>Multi-hub role management &amp; supervisor permissions</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5 font-bold" />
+                    <span>Employee dues ledger &amp; recovery history</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5 font-bold" />
+                    <span>Excel closing reports &amp; snapshot generator</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5 font-bold" />
+                    <span>Standard email support &amp; documentation</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+                <Link
+                  to="/trial-signup"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100 text-white px-6 py-4 text-base font-bold shadow-sm transition-all active:scale-95"
+                >
+                  Start 14-Day Free Trial
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <div className="text-center text-[11px] text-slate-500 dark:text-slate-400 mt-2.5">
+                  No credit card required · Full feature access during trial
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Ad slot for public monetization */}
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <AdSlot slot="4444444444" format="horizontal" className="rounded-2xl overflow-hidden" />
+      </div>
+
+      {/* ============================================================
+          SECTION E: FINAL FESTIVE CALL TO ACTION
+          "Start Your Journey Towards Smarter Operations"
+          ============================================================ */}
+      <section className="relative overflow-hidden py-20 lg:py-24 bg-gradient-to-r from-[#030614] via-[#0b1030] to-[#030614] text-white border-t border-amber-500/30">
+        <div className="pointer-events-none absolute -bottom-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-500/10 blur-[120px] rounded-full" />
+
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 border border-amber-400/40 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300">
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            <span>Celebrate Growth &amp; Efficiency</span>
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+          </div>
+
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight uppercase leading-tight">
+            Start Your Journey Towards{' '}
+            <span className="bg-gradient-to-r from-amber-200 via-yellow-200 to-amber-300 bg-clip-text text-transparent">
+              Smarter Operations
+            </span>{' '}
+            This Diwali
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Simplify reconciliation. Reduce collection gaps. Manage every hub with confidence.
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            Join logistics and last-mile delivery operations across India that trust HubVault to reconcile collections
+            flawlessly every evening.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/trial-signup"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 px-8 py-4 text-base font-bold shadow-lg transition-all active:scale-95"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 px-8 py-4 text-base font-extrabold shadow-[0_0_30px_rgba(245,158,11,0.55)] transition-all transform hover:scale-105 active:scale-95"
             >
-              Start Free Trial
-              <ArrowRight className="h-4 w-4" />
+              Start Free Trial Now
+              <ArrowRight className="h-5 w-5 text-slate-950" />
             </Link>
+
             <Link
               to="/contact"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900 px-8 py-4 text-base font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-amber-400/40 text-amber-200 hover:text-white px-8 py-4 text-base font-bold shadow-md transition-all active:scale-95"
             >
-              Contact Us
+              Contact Our Team
             </Link>
-          </div>
-
-          <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-emerald-500" /> 30-Day Free Access
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-emerald-500" /> No Credit Card Required
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-emerald-500" /> Setup in Under 5 Minutes
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3.5 w-3.5 text-emerald-500" /> Multi-Hub Ready
-            </span>
           </div>
         </div>
       </section>
