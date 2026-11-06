@@ -10,7 +10,7 @@ import { Button,Card,EmptyState,SkeletonCard,Spinner } from '@/components/ui/pri
 import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
 import { exportEntriesToExcel } from '@/lib/excel';
-import { computeExcessAmount,computePendingAmount,normalizeRecoveryMode,safeAmount } from '@/lib/financeCalculations';
+import { normalizeRecoveryMode,safeAmount } from '@/lib/financeCalculations';
 import { formatDate,formatDateLong,formatINR,toISODate } from '@/lib/format';
 import { useHub } from '@/lib/hubContext';
 import { db } from '@/lib/offline/db';
@@ -35,16 +35,16 @@ ChevronLeft,ChevronRight,
 Clock,
 Copy,
 Download,
-Eye,
+
 Inbox,
-Pencil,
+
 Plus,
 RotateCcw,
 Scale,
 Search,
 Smartphone,
 Target,
-Trash2,
+
 TrendingDown,TrendingUp,
 Upload,
 Wallet
@@ -53,6 +53,7 @@ import { useCallback,useEffect,useMemo,useState } from 'react';
 
 import AvailableCollectionModal from '@/components/dashboard/AvailableCollectionModal';
 import StaffActivityMobile from '@/components/dashboard/StaffActivityMobile';
+import DiwaliCelebration from '@/components/dashboard/DiwaliCelebration';
 import StaffActivityTable from '@/components/dashboard/StaffActivityTable';
 
 type FilterStatus = 'all' | EntryStatus;
@@ -641,6 +642,9 @@ export default function Dashboard() {
   return (
     <ErrorBoundary fallbackTitle="Dashboard Error">
       <div className="space-y-6 max-w-full overflow-x-hidden">
+      {/* Happy Diwali Celebration Greeting & Fireworks */}
+      <DiwaliCelebration />
+
       {/* Page Header */}
       <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between border-b border-neutral-200/80 dark:border-neutral-800/80 pb-5">
         <div className="min-w-0 flex-1">

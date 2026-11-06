@@ -1,3 +1,4 @@
+import DiwaliCelebration from '@/components/dashboard/DiwaliCelebration';
 import PurchaseFormModal from '@/components/PurchaseFormModal';
 import { Card } from '@/components/ui/primitives';
 import { useAuth } from '@/lib/auth';
@@ -192,6 +193,7 @@ export default function GuestDashboard() {
 
   return (
     <div className="space-y-5">
+      <DiwaliCelebration />
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
