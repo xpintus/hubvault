@@ -46,6 +46,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
+  { to: '/dues-book', label: 'Dues Book', icon: BookOpenText, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/operations', label: 'Hub Operations', icon: Truck, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
   { to: '/khatabook', label: 'KhataBook', icon: BookOpen, roles: ['super_admin', 'hub_admin', 'supervisor', 'collector'] },
 

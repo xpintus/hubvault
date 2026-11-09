@@ -43,6 +43,7 @@ const Hubs = lazy(() => import('@/pages/Hubs'));
 const Collectors = lazy(() => import('@/pages/Collectors'));
 const Users = lazy(() => import('@/pages/Users'));
 const TrialUsers = lazy(() => import('@/pages/TrialUsers'));
+const DuesBook = lazy(() => import('@/pages/DuesBook'));
 const Dues = lazy(() => import('@/pages/Dues'));
 const Recovery = lazy(() => import('@/pages/Recovery'));
 const Messages = lazy(() => import('@/pages/Messages'));
@@ -322,6 +323,14 @@ export default function App() {
                             }
                           />
                           <Route
+                            path="/dues-book"
+                            element={
+                              <Suspense fallback={<FullPageSpinner message="Loading Dues Book…" />}>
+                                <DuesBook />
+                              </Suspense>
+                            }
+                          />
+                          <Route
                             path="/dues"
                             element={
                               <Suspense fallback={<FullPageSpinner message="Loading dues…" />}>
@@ -523,6 +532,7 @@ function GuestAppLayout() {
             { label: 'Reports', icon: FileBarChart },
             { label: 'Hub Management', icon: Building2 },
             { label: 'Employees', icon: UsersIcon },
+            { label: 'Dues Book', icon: BookOpen },
             { label: 'Dues', icon: AlertCircle },
             { label: 'Recovery', icon: RotateCcw },
             { label: 'Users & Access', icon: UserCog },

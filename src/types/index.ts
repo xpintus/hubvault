@@ -575,4 +575,120 @@ export interface KhataBookFilterState {
   status: 'all' | 'pending' | 'excess' | 'settled' | 'cash' | 'online';
   search_query: string;
 }
+// ============================================================
+// RIDER DUES BOOK & RECOVERY TYPES
+// ============================================================
+
+export type RiderDueCategory =
+  | 'COD Short'
+  | 'Cash Short'
+  | 'Penalty'
+  | 'Damage'
+  | 'Advance'
+  | 'Salary Adjustment'
+  | 'Other';
+
+export type RiderDueStatus = 'pending' | 'partially_recovered' | 'fully_recovered' | 'cancelled' | 'overdue';
+
+export type RiderRecoveryPaymentMode = 'Cash' | 'UPI' | 'Bank Transfer' | 'Salary Deduction' | 'Other';
+
+export type RiderMessageType =
+  | 'Dues Reminder'
+  | 'Payment Follow-up'
+  | 'Recovery Confirmation'
+  | 'Final Payment Reminder'
+  | 'Custom Message';
+
+export interface RiderDue {
+  id: string;
+  rider_id: string;
+  hub_id: string;
+  dues_date: string;
+  category: RiderDueCategory | string;
+  amount: number;
+  recovered_amount: number;
+  remaining_amount: number;
+  status: RiderDueStatus;
+  description?: string | null;
+  reference_id?: string | null;
+  remarks?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  rider?: Collector | null;
+  hub?: Hub | null;
+}
+
+export interface RiderDueRecovery {
+  id: string;
+  rider_id: string;
+  hub_id: string;
+  due_id?: string | null;
+  recovery_date: string;
+  amount: number;
+  payment_mode: RiderRecoveryPaymentMode | string;
+  transaction_id?: string | null;
+  remarks?: string | null;
+  collected_by?: string | null;
+  is_reversed: boolean;
+  reversal_reason?: string | null;
+  reversal_date?: string | null;
+  reversed_by?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  rider?: Collector | null;
+  hub?: Hub | null;
+  due?: RiderDue | null;
+}
+
+export interface RiderDueMessage {
+  id: string;
+  rider_id: string;
+  hub_id: string;
+  message_type: RiderMessageType | string;
+  recipient_phone: string;
+  message_body: string;
+  channel: 'WhatsApp' | 'SMS' | 'Other' | string;
+  status: 'drafted' | 'sent_via_whatsapp' | 'sent_via_sms' | 'failed' | string;
+  snapshot_dues: number;
+  snapshot_recovered: number;
+  snapshot_balance: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  rider?: Collector | null;
+  hub?: Hub | null;
+}
+
+export interface RiderLedgerSummary {
+  riderId: string;
+  riderName: string;
+  feId: string;
+  phone: string;
+  hubId: string;
+  hubName: string;
+  totalDues: number;
+  totalRecovered: number;
+  outstandingBalance: number;
+  lastRecoveryDate: string | null;
+  oldestDueDate: string | null;
+  status: 'Pending' | 'Partially Recovered' | 'Fully Recovered' | 'Overdue';
+  duesCount: number;
+  recoveriesCount: number;
+  dues: RiderDue[];
+  recoveries: RiderDueRecovery[];
+  messages: RiderDueMessage[];
+  rider: Collector;
+}
+
+export interface RiderDuesKPIs {
+  totalRidersWithDues: number;
+  totalOutstandingAmount: number;
+  totalDuesGenerated: number;
+  totalAmountRecovered: number;
+  todaysRecovery: number;
+  overdueAmount: number;
+}
+
 export * from './ndr';
